@@ -1,4 +1,4 @@
-2013-07-30
+2014-07-22
 
 Prerequisites
 -------------
@@ -183,4 +183,33 @@ Map a word to an index for use with lookup_ngram().
     double lookup_ngram(const int *ngram, int n);
 
 Look up the log-probability of ngram.
+
+Training a neural network translation model (New in v0.2)
+---------------------------------------------------------
+
+The prepareNeuralTM.cpp script allows you to produce data for training
+a neural network translation model as described in "Fast and Robust 
+Neural Network Joint Models for Statistical Machine Translation" (Devlin
+et al., ACL 2014)
+
+Having prepared the data, you can train the translation model with
+trainNeuralNetwork. 
+
+A typical invocation would be:
+
+   prepareNeuralTM  --train_text mydata.txt  \
+                    --train_file train.ngrams \
+                    --validation_size 500 \
+                    --validation_file validation.ngrams \
+                    --source_context_size 11 \
+                    --target_context_size 3 \
+                    --write_input_words_file input.words \
+                    --write_output_words_file output.words
+
+Note that for 11 source word and 3 target words, each line in the training file should have the format:
+
+<src_context_word_1> <src_context_word_2>...<src_context_word_11> <target_context_word_1>...<target_context_word_3> <output_target_word>
+    
+
+
 
