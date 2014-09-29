@@ -4,6 +4,7 @@
 #include <vector>
 #include <boost/shared_ptr.hpp>
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 
 #include "util.h"
 #include "model.h"

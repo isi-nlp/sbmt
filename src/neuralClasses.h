@@ -8,6 +8,7 @@
 
 #include <boost/unordered_map.hpp> 
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 #include "maybe_omp.h"
 
 #include "util.h"
