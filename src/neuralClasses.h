@@ -147,7 +147,7 @@ class Linear_layer
   template <typename DerivedGOut, typename DerivedIn>
   void computeGradient( const MatrixBase<DerivedGOut> &bProp_input, 
      const MatrixBase<DerivedIn> &fProp_input, 
-     double learning_rate, double momentum, double L2_reg)
+     double learning_rate, double momentum, double L2_reg, double L1_reg)
   {
       U_gradient.noalias() = bProp_input*fProp_input.transpose();
       
@@ -186,7 +186,7 @@ class Linear_layer
   void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input, 
       const MatrixBase<DerivedIn> &fProp_input, 
       double learning_rate,
-      double L2_reg)
+      double L2_reg, double L1_reg)
   {
       U_gradient.noalias() = bProp_input*fProp_input.transpose();
 
@@ -226,6 +226,7 @@ class Linear_layer
       const MatrixBase<DerivedIn> &fProp_input, 
       double learning_rate,
       double L2_reg,
+      double L1_reg,
       double conditioning_constant,
       double decay)
   {
@@ -815,7 +816,7 @@ class Input_word_embeddings
   template <typename DerivedGOut, typename DerivedIn>
   void computeGradient(const MatrixBase<DerivedGOut> &bProp_input,
      const MatrixBase<DerivedIn> &input_words,
-     double learning_rate, double momentum, double L2_reg)
+     double learning_rate, double momentum, double L2_reg, double L1_reg)
   {
       int embedding_dimension = W->cols();
 
@@ -885,7 +886,7 @@ class Input_word_embeddings
     void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input,
 				    const MatrixBase<DerivedIn> &input_words,
 				    double learning_rate,
-            double L2_reg)
+            double L2_reg, double L1_reg)
     {
             int embedding_dimension = W->cols();
 	    //W_gradient.setZero(W->rows(), W->cols());
@@ -939,6 +940,7 @@ class Input_word_embeddings
 				    const MatrixBase<DerivedIn> &input_words,
 				    double learning_rate,
             double L2_reg,
+            double L1_reg,
             double conditioning_constant,
             double decay)
     {

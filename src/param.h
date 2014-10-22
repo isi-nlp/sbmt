@@ -48,6 +48,7 @@ struct param
     double final_momentum;
 
     double L2_reg;
+    double L1_reg;
 
     bool normalization;
     double normalization_init;
