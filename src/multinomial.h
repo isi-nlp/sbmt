@@ -52,9 +52,9 @@ public:
       double p = unif_real(eng);
       int s;
       if (q[m] > p)
-	  s = m;
+	  	s = m;
       else
-          s = J[m];
+        s = J[m];
       assert (s >= 0);
       return s;
   }
@@ -125,6 +125,7 @@ private:
       {
 	std::cerr << "warning: multinomial: probability differs from one by " << std::fabs(q[*l_it]-1) << std::endl;
       }
+	  q[*l_it] = 1.0;
     }
   }
 

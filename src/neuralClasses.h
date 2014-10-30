@@ -406,7 +406,7 @@ class Output_word_embeddings
           void computeGradient(const MatrixBase<DerivedIn> &predicted_embeddings,
              const MatrixBase<DerivedGOut> &bProp_input,
              double learning_rate,
-             double momentum) //not sure if we want to use momentum here
+             double momentum) //not sure if we want 	to use momentum here
     {
         // W is vocab_size x output_embedding_dimension
         // b is vocab_size x 1
@@ -834,7 +834,7 @@ class Input_word_embeddings
 	        uscgemm(learning_rate, 
 			USCMatrix<double>(W->rows(), input_words.middleRows(ngram, 1), Matrix<double,1,Dynamic>::Ones(input_words.cols())),
 			bProp_input.block(ngram*embedding_dimension,0,embedding_dimension,input_words.cols()).transpose(),
-      *W);
+      	  	*W);
 	    }
 
       /*
