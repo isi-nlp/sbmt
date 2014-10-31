@@ -1,4 +1,4 @@
-#ifndef SOFTMAXLOSS_H
+	#ifndef SOFTMAXLOSS_H
 #define SOFTMAXLOSS_H
 
 #include <Eigen/Dense>
