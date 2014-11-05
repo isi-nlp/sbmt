@@ -144,6 +144,7 @@ class Linear_layer
 	    my_output.noalias() = U.transpose()*input;
 	}
 
+
   template <typename DerivedGOut, typename DerivedIn>
   void computeGradient( const MatrixBase<DerivedGOut> &bProp_input, 
      const MatrixBase<DerivedIn> &fProp_input, 
@@ -160,17 +161,34 @@ class Linear_layer
           U_gradient -=  2*L2_reg*U;
           b_gradient -= 2*L2_reg*b;
       }
+      if (L1_reg > 0.0)
+      {
+          //U_gradient += ((U.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((U.cwiseAbs() + U).cwiseQuotient(U)).array()-1).matrix()));
+          U_gradient -= ((U.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((U.cwiseAbs() + U).cwiseQuotient(U)).array()-1).matrix()));
+          b_gradient -= ((b.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((b.cwiseAbs() + b).cwiseQuotient(b)).array()-1).matrix()));
+          /* This code is quite concise to prevent creating additional matrices ... it is hard to read.
+          *  Here is what is going on:
+          *  Min(Abs(U),L1_reg*learning_rate)
+          *  That is taken and multiplied by 1 or -1
+          *    which is done by (Abs(U) + U)/U
+          *    which yields 2 or 0
+          *    we then subtract 1 */
+      }
       if (momentum > 0.0)
       {
           U_velocity = momentum*U_velocity + U_gradient;
           U += learning_rate * U_velocity;
           b_velocity = momentum*b_velocity + b_gradient;
           b += learning_rate * b_velocity;
+
+          //TODO: L1 for momentum
       }
       else
       {
+          
           U += learning_rate * U_gradient;
           b += learning_rate * b_gradient;
+          
           /* 
           //UPDATE CLIPPING
           U += (learning_rate*U_gradient).array().unaryExpr(Clipper()).matrix();
@@ -179,6 +197,8 @@ class Linear_layer
           //U += learning_rate*(U_gradient.array().unaryExpr(Clipper())).matrix();
           //b += learning_rate*(b_gradient.array().unaryExpr(Clipper())).matrix();
           */
+
+
       }
 	}
 
@@ -200,6 +220,15 @@ class Linear_layer
           U_gradient -=  2*L2_reg*U;
           b_gradient -= 2*L2_reg*b;
       }
+      /*if (L1_reg != 0.0)
+      {
+          double w_U = U.rowwise().sum();
+          double w_b = b.sum();
+          //U_gradient -= L1_reg*w_U;
+          //b_gradient -= L1_reg*w_b;
+          U_gradient = U_gradient.array() - L1_reg*w_U;
+          b_gradient = b_gradient.array() - L1_reg*w_b;
+      }*/
 
       // ignore momentum?
       #pragma omp parallel for
@@ -244,6 +273,15 @@ class Linear_layer
           U_gradient -=  2*L2_reg*U;
           b_gradient -= 2*L2_reg*b;
       }
+      /*if (L1_reg != 0.0)
+      {
+          double w_U = U.rowwise().sum();
+          double w_b = b.sum();
+          //U_gradient -= L1_reg*w_U;
+          //b_gradient -= L1_reg*w_b;
+          U_gradient = U_gradient.array() - L1_reg*w_U;
+          b_gradient = b_gradient.array() - L1_reg*w_b;
+      }*/
 
       // ignore momentum?
       #pragma omp parallel for
