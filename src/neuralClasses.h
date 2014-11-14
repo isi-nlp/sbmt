@@ -161,19 +161,6 @@ class Linear_layer
           U_gradient -=  2*L2_reg*U;
           b_gradient -= 2*L2_reg*b;
       }
-      if (L1_reg > 0.0)
-      {
-          //U_gradient += ((U.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((U.cwiseAbs() + U).cwiseQuotient(U)).array()-1).matrix()));
-          U_gradient -= ((U.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((U.cwiseAbs() + U).cwiseQuotient(U)).array()-1).matrix()));
-          b_gradient -= ((b.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((b.cwiseAbs() + b).cwiseQuotient(b)).array()-1).matrix()));
-          /* This code is quite concise to prevent creating additional matrices ... it is hard to read.
-          *  Here is what is going on:
-          *  Min(Abs(U),L1_reg*learning_rate)
-          *  That is taken and multiplied by 1 or -1
-          *    which is done by (Abs(U) + U)/U
-          *    which yields 2 or 0
-          *    we then subtract 1 */
-      }
       if (momentum > 0.0)
       {
           U_velocity = momentum*U_velocity + U_gradient;
@@ -200,6 +187,27 @@ class Linear_layer
 
 
       }
+
+      //Debugging
+      //cout << "Before L1: 0,0 " << U(0,0) << "\t 5,5 " << U(5,5) << endl;
+
+      if (L1_reg > 0.0)
+      {
+          U -= ((U.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((U.cwiseAbs() + U).cwiseQuotient((U.cwiseMax(0.000000000000001)))).array()-1).matrix()));
+          b -= ((b.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((b.cwiseAbs() + b).cwiseQuotient((b.cwiseMax(0.000000000000001)))).array()-1).matrix()));
+          /* This code is quite concise to prevent creating additional matrices ... it is hard to read.
+          *  Here is what is going on:
+          *  Min(Abs(U),L1_reg*learning_rate)
+          *  That is taken and multiplied by 1 or -1
+          *    which is done by (Abs(U) + U)/U
+          *    which yields 2 or 0 .... or NaN ... hence the max with a small number => 0/0.00000000000001
+          *    we then subtract 1 */
+      }
+
+      //Debugging
+      //cout << "After L1: 0,0 " << U(0,0) << "\t 5,5 " << U(5,5) << endl;
+      //sleep(5);
+
 	}
 
   template <typename DerivedGOut, typename DerivedIn>
