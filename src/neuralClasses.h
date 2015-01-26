@@ -148,7 +148,7 @@ class Linear_layer
   template <typename DerivedGOut, typename DerivedIn>
   void computeGradient( const MatrixBase<DerivedGOut> &bProp_input, 
      const MatrixBase<DerivedIn> &fProp_input, 
-     double learning_rate, double momentum, double L2_reg, double L1_reg)
+     double learning_rate, double momentum, double L2_reg, double L1_reg, double L1Inf_reg)
   {
       U_gradient.noalias() = bProp_input*fProp_input.transpose();
       
@@ -193,8 +193,41 @@ class Linear_layer
 
       if (L1_reg > 0.0)
       {
-          U -= ((U.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((U.cwiseAbs() + U).cwiseQuotient((U.cwiseMax(0.000000000000001)))).array()-1).matrix()));
-          b -= ((b.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((b.cwiseAbs() + b).cwiseQuotient((b.cwiseMax(0.000000000000001)))).array()-1).matrix()));
+          //U -= learning_rate * U_gradient; //Ascent done in else statement above
+          for (int i = 0; i < U.rows(); i++)
+          {
+              for (int j = 0; j < U.cols(); j++)
+              {
+                  double current_cell = std::min(std::abs(U(i,j)),(learning_rate*L1_reg));
+                  if (i == 0 && j == 0)
+                  {
+                      cout << "Previous_cell: " << U(i,j) << endl;
+                      cout << "Current_cell: " << current_cell << endl;
+                  }
+                  //current_cell = U(i,j) - current_cell * ((signbit(U(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
+                  double sign_bit = (signbit(U(i,j))*-2) + 1; //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
+                  current_cell = U(i,j) - current_cell * ((signbit(U(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
+                  if (i == 0 && j == 0)
+                  {
+                      cout << "Current_cell: " << current_cell << endl;
+                      cout << "Sign_bit: " << sign_bit << endl;
+                  }
+                  U(i,j) = current_cell;
+              }
+          }
+          for (int i = 0; i < b.rows(); i++)
+          {
+              for (int j = 0; j < b.cols(); j++)
+              {
+                  double current_cell = std::min(std::abs(b(i,j)),(learning_rate*L1_reg));
+                  //current_cell = b(i,j) - current_cell * ((signbit(b(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
+                  current_cell = b(i,j) - current_cell * ((signbit(b(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
+                  b(i,j) = current_cell;
+              }
+          }
+          //U -= sgn(U) min(|U|, (learning_rate * L1_reg))
+          //U -= ((U.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((U.cwiseAbs() + U).cwiseQuotient((U.cwiseMax(0.000000000000001)))).array()-1).matrix()));
+          //b -= ((b.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((b.cwiseAbs() + b).cwiseQuotient((b.cwiseMax(0.000000000000001)))).array()-1).matrix()));
           /* This code is quite concise to prevent creating additional matrices ... it is hard to read.
           *  Here is what is going on:
           *  Min(Abs(U),L1_reg*learning_rate)
@@ -203,6 +236,100 @@ class Linear_layer
           *    which yields 2 or 0 .... or NaN ... hence the max with a small number => 0/0.00000000000001
           *    we then subtract 1 */
       }
+
+      if (L1Inf_reg > 0.0)
+      {
+          //double squash = 0.0;
+          //cout << U(2,3); //DEBUGGING
+          for (int i = 0; i < U.rows(); i++)
+          {
+              std::vector<double> v;
+              for (int j = 0; j < U.cols(); j++)
+              {
+                  v.push_back(U(i,j));
+              }
+              double linfl;
+              linfl = L1Inf_reg * learning_rate; 
+              //v_new = linf(v, linfl);
+              linf(v, linfl);
+              //vector<double> v_new = linf(v,L1Inf_reg * learning_rate);
+              //vector v_new = linf(v,L1Inf_reg * learning_rate);
+              for (int j = 0; j < U.cols(); j++)
+              {
+                  //U(i,j) = v_new[j];
+                  U(i,j) = v[j];
+              }
+          }
+          //cout << " " << U(2,3) << endl; //DEBUGGING
+          //
+          // Bias
+          for (int i = 0; i < b.rows(); i++)
+          {
+              std::vector<double> v;
+              for (int j = 0; j < b.cols(); j++)
+              {
+                  v.push_back(b(i,j));
+              }
+              double linfl;
+              linfl = L1Inf_reg * learning_rate; 
+              linf(v, linfl);
+              for (int j = 0; j < b.cols(); j++)
+              {
+                  //U(i,j) = v_new[j];
+                  b(i,j) = v[j];
+              }
+          }
+      }
+      // DEBUGGING
+      if (L1Inf_reg < 0.0)
+      {
+          //double squash = 0.0;
+          //cout << U(2,3); //DEBUGGING
+          std::vector<double> v;
+          for (int i = 0; i < 5; i++)
+          {
+              v.push_back(i+0.2);
+          }
+          linf(v, 0.3);
+          cout << "Did it work? " << v[4] << endl; //DEBUGGING
+          //cout << " " << U(2,3) << endl; //DEBUGGING
+      }
+
+
+/*              double row_max = 0.0;
+              for (int j = 0; j < U.cols(); j++)
+              {
+                  double current_cell = std::abs(U(i,j));
+                  if (current_cell > row_max)
+                  {
+                      row_max = current_cell;
+                  }
+              }
+              squash += row_max;
+          }
+          // Iterate again and update the rows
+          for (int i = 0; i < U.rows(); i++)
+          {
+              double row_max = 0.0;
+              double index_max = 0;
+              for (int j = 0; j < U.cols(); j++)
+              {
+                  double current_cell = std::abs(U(i,j));
+                  if (current_cell > row_max)
+                  {
+                      row_max = current_cell;
+                      index_max = j;
+                  }
+              }
+              // Actually update the highest value in that row
+              //double current_cell2 = std::min(std::abs(U(index_max,j)),(learning_rate*L1Inf_reg));
+              //double current_cell2 = std::abs(U(index_max,j)); //Is this one better?
+              double current_cell2 = std::min(std::abs(U(i,index_max)),(learning_rate*L1Inf_reg*squash)); //Or this one?
+              double sign_bit = (signbit(U(i,index_max))*-2) + 1; //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
+              current_cell2 = U(i,index_max) - current_cell2 * ((signbit(U(i,index_max))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
+              U(i,index_max) = current_cell2;
+          }
+      }*/
 
       //Debugging
       //cout << "After L1: 0,0 " << U(0,0) << "\t 5,5 " << U(5,5) << endl;
@@ -214,7 +341,7 @@ class Linear_layer
   void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input, 
       const MatrixBase<DerivedIn> &fProp_input, 
       double learning_rate,
-      double L2_reg, double L1_reg)
+      double L2_reg, double L1_reg, double L1Inf_reg)
   {
       U_gradient.noalias() = bProp_input*fProp_input.transpose();
 
@@ -264,6 +391,7 @@ class Linear_layer
       double learning_rate,
       double L2_reg,
       double L1_reg,
+      double L1Inf_reg,
       double conditioning_constant,
       double decay)
   {
@@ -862,7 +990,7 @@ class Input_word_embeddings
   template <typename DerivedGOut, typename DerivedIn>
   void computeGradient(const MatrixBase<DerivedGOut> &bProp_input,
      const MatrixBase<DerivedIn> &input_words,
-     double learning_rate, double momentum, double L2_reg, double L1_reg)
+     double learning_rate, double momentum, double L2_reg, double L1_reg, double L1Inf_reg)
   {
       int embedding_dimension = W->cols();
 
@@ -932,7 +1060,7 @@ class Input_word_embeddings
     void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input,
 				    const MatrixBase<DerivedIn> &input_words,
 				    double learning_rate,
-            double L2_reg, double L1_reg)
+            double L2_reg, double L1_reg, double L1Inf_reg)
     {
             int embedding_dimension = W->cols();
 	    //W_gradient.setZero(W->rows(), W->cols());
@@ -987,6 +1115,7 @@ class Input_word_embeddings
 				    double learning_rate,
             double L2_reg,
             double L1_reg,
+            double L1Inf_reg,
             double conditioning_constant,
             double decay)
     {

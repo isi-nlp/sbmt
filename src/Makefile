@@ -1,8 +1,9 @@
 ### Compilation options.
 
 # C++ compiler. Tested with g++ and Intel icpc.
+CXX=g++
 #CXX=/usr/bin/g++
-CXX=/opt/local/bin/g++-mp-4.7
+#CXX=/opt/local/bin/g++-mp-4.7
 #CXX=icpc
 
 # Compiler options. Note that -DEIGEN_NO_DEBUG is essential for good performance!
@@ -22,13 +23,15 @@ OS:=$(shell uname -s)
 # Set this to the root directory of Boost (should have a subdirectory named boost):
 
 #BOOST=/usr/usc/boost/1.51.0
+BOOST=/afs/nd.edu/user26/kmurray4/code/boost_1_56_0
 #BOOST=/usr
-BOOST=/opt/local
+#BOOST=/opt/local
 # Where to find Boost header files
 BOOST_INC=$(BOOST)/include
 
 # Set this to the root directory of Eigen (should have a subdirectory named Eigen):
-EIGEN=../3rdparty
+#EIGEN=../3rdparty
+EIGEN=/afs/nd.edu/user26/kmurray4/code/Eigen
 
 ### Optional libraries.
 
@@ -36,10 +39,10 @@ EIGEN=../3rdparty
 OMP=1
 
 # To use the MKL library, uncomment the line below and set it to the MKL root:
-#MKL=/usr/usc/intel/12.1.1/mkl
+###MKL=/usr/usc/intel/12.1.1/mkl
 # Set to 1 if you want to use the Single Dynamic Library; comment out otherwise.
 # This is required for building the Python extensions, but doesn't work with building a static binary.
-MKL_SINGLE=1
+###MKL_SINGLE=1
 
 # For Python bindings, set the following and run 'make python/nplm.so'.
 PYTHON_VERSION=2.7
@@ -58,12 +61,13 @@ TCLAP=../3rdparty/tclap/include
 # Where to find Boost libraries
 BOOST_LIB=$(BOOST)/lib
 # On some systems, a suffix is appended for the multithreaded version.
-#BOOST_LIB_SUFFIX=
-BOOST_LIB_SUFFIX=-mt
+BOOST_LIB_SUFFIX=
+#BOOST_LIB_SUFFIX=-mt
 
 BOOST_CFLAGS=-I$(BOOST_INC)
 BOOST_LDFLAGS=
-BOOST_LDLIBS=-lboost_iostreams$(BOOST_LIB_SUFFIX) -lboost_system$(BOOST_LIB_SUFFIX) -lboost_filesystem$(BOOST_LIB_SUFFIX)
+###BOOST_LDLIBS=-lboost_iostreams$(BOOST_LIB_SUFFIX) -lboost_system$(BOOST_LIB_SUFFIX) -lboost_filesystem$(BOOST_LIB_SUFFIX)
+BOOST_LDLIBS=
 #BOOST_LDLIBS=-lboost_system$(BOOST_LIB_SUFFIX) -lboost_thread$(BOOST_LIB_SUFFIX)
 ifdef USE_CHRONO
   BOOST_CFLAGS+=-DUSE_CHRONO
