@@ -82,6 +82,8 @@ int main(int argc, char** argv)
 
 		ValueArg<double> L1_reg("", "L1_reg", "L1 regularization strength (hidden layer weights only). Default: 0.", false, 0.0, "double", cmd);
 
+		ValueArg<double> L1Inf_reg("", "L1Inf_reg", "L1/LInfinity regularization strength (hidden layer weights only). Default: 0.", false, 0.0, "double", cmd);
+
 		ValueArg<double> learning_rate("", "learning_rate", "Learning rate for stochastic gradient ascent. Default: 1.", false, 1., "double", cmd);
 
 		ValueArg<double> conditioning_constant("", "conditioning_constant", "Constant to condition the RMS of the expected square of the gradient in ADADELTA. Default: 10E-3.", false, 10E-3, "double", cmd);
@@ -176,6 +178,7 @@ Default: 10E-3", false, 10E-3, "double", cmd); //TODO: Do I need L1 here?
 	 myParam.final_momentum = final_momentum.getValue();
 	 myParam.L2_reg = L2_reg.getValue();
 	 myParam.L1_reg = L1_reg.getValue();
+	 myParam.L1Inf_reg = L1Inf_reg.getValue();
 	 myParam.init_normal= init_normal.getValue();
 	 myParam.init_range = init_range.getValue();
 	 myParam.normalization_init = normalization_init.getValue();
@@ -239,6 +242,7 @@ Default: 10E-3", false, 10E-3, "double", cmd); //TODO: Do I need L1 here?
 	 cerr << learning_rate.getDescription() << sep << learning_rate.getValue() << endl;
 	 cerr << L2_reg.getDescription() << sep << L2_reg.getValue() << endl;
 	 cerr << L1_reg.getDescription() << sep << L1_reg.getValue() << endl;
+	 cerr << L1Inf_reg.getDescription() << sep << L1Inf_reg.getValue() << endl;
 
 	 cerr << num_noise_samples.getDescription() << sep << num_noise_samples.getValue() << endl;
 
@@ -662,6 +666,7 @@ Default: 10E-3", false, 10E-3, "double", cmd); //TODO: Do I need L1 here?
 						current_momentum,
 						myParam.L2_reg,
 						myParam.L1_reg,
+						myParam.L1Inf_reg,
 						myParam.parameter_update,
 						myParam.conditioning_constant,
 						myParam.decay);
@@ -696,6 +701,7 @@ Default: 10E-3", false, 10E-3, "double", cmd); //TODO: Do I need L1 here?
 						current_momentum,
 						myParam.L2_reg,
 						myParam.L1_reg,
+						myParam.L1Inf_reg,
 						myParam.parameter_update,
 						myParam.conditioning_constant,
 						myParam.decay);

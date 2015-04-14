@@ -3,7 +3,8 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <vector>
+//#include <stdlib>
+//#include <vector>
 #include <string>
 
 #include <boost/random/mersenne_twister.hpp>
@@ -246,6 +247,9 @@ namespace nplm
 		}
 
 	double logadd(double x, double y);
+
+//std::vector<double> linf(std::vector<double> &v, double delta);
+void linf(std::vector<double> &v, double delta);
 
 #ifdef USE_CHRONO
 	class Timer 

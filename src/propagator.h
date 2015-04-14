@@ -101,6 +101,7 @@ namespace nplm
 					double momentum,
 					double L2_reg,
 					double L1_reg,
+					double L1Inf_reg,
 					std::string &parameter_update,
 					double conditioning_constant,
 					double decay) 
@@ -140,6 +141,7 @@ namespace nplm
 						momentum,
 						L2_reg,
 						L1_reg,
+						L1Inf_reg,
 						parameter_update,
 						conditioning_constant,
 						decay);
@@ -154,6 +156,7 @@ namespace nplm
 					double momentum,
 					double L2_reg,
 					double L1_reg,
+					double L1Inf_reg,
 					std::string &parameter_update,
 					double conditioning_constant,
 					double decay) 
@@ -200,6 +203,7 @@ namespace nplm
 						momentum,
 						L2_reg,
 						L1_reg,
+						L1Inf_reg,
 						parameter_update,
 						conditioning_constant,
 						decay);
@@ -208,7 +212,7 @@ namespace nplm
 		private:
 		template <typename DerivedIn>
 			void bPropRest(const MatrixBase<DerivedIn> &data,
-					double learning_rate, double momentum, double L2_reg, double L1_reg,
+					double learning_rate, double momentum, double L2_reg, double L1_reg, double L1Inf_reg,
 					std::string &parameter_update,
 					double conditioning_constant,
 					double decay) 
@@ -249,7 +253,7 @@ namespace nplm
 							first_hidden_activation_node.fProp_matrix,
 							learning_rate,
 							momentum,
-							L2_reg, L1_reg);
+							L2_reg, L1_reg, L1Inf_reg);
 					stop_timer(10);
 
 					// First hidden layer
@@ -258,7 +262,7 @@ namespace nplm
 					start_timer(12);
 					first_hidden_linear_node.param->computeGradient(first_hidden_activation_node.bProp_matrix,
 							input_layer_node.fProp_matrix,
-							learning_rate, momentum, L2_reg, L1_reg);
+							learning_rate, momentum, L2_reg, L1_reg, L1Inf_reg);
 					stop_timer(12);
 
 					// Input word embeddings
@@ -266,14 +270,14 @@ namespace nplm
 					start_timer(13);
 					input_layer_node.param->computeGradient(first_hidden_linear_node.bProp_matrix,
 							data,
-							learning_rate, momentum, L2_reg, L1_reg);
+							learning_rate, momentum, L2_reg, L1_reg, L1Inf_reg);
 					stop_timer(13);
 				} else if (parameter_update == "ADA") {
 					start_timer(10);
 					second_hidden_linear_node.param->computeGradientAdagrad(second_hidden_activation_node.bProp_matrix,
 							first_hidden_activation_node.fProp_matrix,
 							learning_rate,
-							L2_reg, L1_reg);
+							L2_reg, L1_reg, L1Inf_reg);
 					stop_timer(10);
 
 					// First hidden layer
@@ -283,7 +287,7 @@ namespace nplm
 					first_hidden_linear_node.param->computeGradientAdagrad(first_hidden_activation_node.bProp_matrix,
 							input_layer_node.fProp_matrix,
 							learning_rate,
-							L2_reg, L1_reg);
+							L2_reg, L1_reg, L1Inf_reg);
 					stop_timer(12);
 
 					// Input word embeddings
@@ -292,7 +296,7 @@ namespace nplm
 					input_layer_node.param->computeGradientAdagrad(first_hidden_linear_node.bProp_matrix,
 							data,
 							learning_rate, 
-							L2_reg, L1_reg);
+							L2_reg, L1_reg, L1Inf_reg);
 					stop_timer(13);
 				} else if (parameter_update == "ADAD") {
 					int current_minibatch_size = first_hidden_activation_node.fProp_matrix.cols();
@@ -301,7 +305,7 @@ namespace nplm
 					second_hidden_linear_node.param->computeGradientAdadelta(second_hidden_activation_node.bProp_matrix,
 							first_hidden_activation_node.fProp_matrix,
 							1.0/current_minibatch_size,
-							L2_reg, L1_reg,
+							L2_reg, L1_reg, L1Inf_reg,
 							conditioning_constant,
 							decay);
 					stop_timer(10);
@@ -314,7 +318,7 @@ namespace nplm
 					first_hidden_linear_node.param->computeGradientAdadelta(first_hidden_activation_node.bProp_matrix,
 							input_layer_node.fProp_matrix,
 							1.0/current_minibatch_size,
-							L2_reg, L1_reg,
+							L2_reg, L1_reg, L1Inf_reg,
 							conditioning_constant,
 							decay);
 					stop_timer(12);
@@ -326,7 +330,7 @@ namespace nplm
 					input_layer_node.param->computeGradientAdadelta(first_hidden_linear_node.bProp_matrix,
 							data,
 							1.0/current_minibatch_size, 
-							L2_reg, L1_reg,
+							L2_reg, L1_reg, L1Inf_reg,
 							conditioning_constant,
 							decay);
 					stop_timer(13);
