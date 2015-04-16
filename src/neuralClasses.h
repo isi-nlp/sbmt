@@ -213,13 +213,16 @@ namespace nplm
 						}
 						for (int i = 0; i < b.rows(); i++)
 						{
-							for (int j = 0; j < b.cols(); j++)
-							{
-								double current_cell = std::min(std::abs(b(i,j)),(learning_rate*L1_reg));
-								//current_cell = b(i,j) - current_cell * ((signbit(b(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
-								current_cell = b(i,j) - current_cell * ((signbit(b(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
-								b(i,j) = current_cell;
-							}
+							//for (int j = 0; j < b.cols(); j++)
+							//{
+							//	double current_cell = std::min(std::abs(b(i,j)),(learning_rate*L1_reg));
+							//	//current_cell = b(i,j) - current_cell * ((signbit(b(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
+							//	current_cell = b(i,j) - current_cell * ((signbit(b(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
+							//	b(i,j) = current_cell;
+							//}
+							double current_cell = std::min(std::abs(b(i)),(learning_rate*L1_reg));
+								current_cell = b(i) - current_cell * ((signbit(b(i))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
+								b(i) = current_cell;
 						}
 						//U -= sgn(U) min(|U|, (learning_rate * L1_reg))
 						//U -= ((U.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((U.cwiseAbs() + U).cwiseQuotient((U.cwiseMax(0.000000000000001)))).array()-1).matrix()));
@@ -243,7 +246,7 @@ namespace nplm
 							{
 								v.push_back(U(i,j));
 							}
-							v.push_back(b(i,1));
+							v.push_back(b(i));
 							double linfl;
 							linfl = L1Inf_reg * learning_rate; 
 							//v_new = linf(v, linfl);
@@ -255,7 +258,7 @@ namespace nplm
 								//U(i,j) = v_new[j];
 								U(i,j) = v[j];
 							}
-							b(i,1) = v[U.cols()]; //the one at the end
+							b(i) = v[U.cols()]; //the one at the end
 						}
 						//cout << " " << U(2,3) << endl; //DEBUGGING
 						//
