@@ -23,7 +23,8 @@ OS:=$(shell uname -s)
 # Set this to the root directory of Boost (should have a subdirectory named boost):
 
 #BOOST=/usr/usc/boost/1.51.0
-BOOST=/afs/nd.edu/user26/kmurray4/code/boost_1_56_0
+#BOOST=/afs/nd.edu/user26/kmurray4/code/boost_1_56_0
+BOOST=/afs/crc.nd.edu/group/nlp/software/boost/1.56.0/boost_1_56_0
 #BOOST=/usr
 #BOOST=/opt/local
 # Where to find Boost header files
@@ -31,7 +32,8 @@ BOOST_INC=$(BOOST)/include
 
 # Set this to the root directory of Eigen (should have a subdirectory named Eigen):
 #EIGEN=../3rdparty
-EIGEN=/afs/nd.edu/user26/kmurray4/code/Eigen
+#EIGEN=/afs/nd.edu/user26/kmurray4/code/Eigen
+EIGEN=/afs/crc.nd.edu/group/nlp/software/eigen/eigen-eigen-10219c95fe65
 
 ### Optional libraries.
 
@@ -159,6 +161,7 @@ install: all
 	cp $(BINS) ../bin
 	mkdir -p ../lib
 	cp $(LIBS) ../lib
+	mkdir -p shared
 
 %.o: %.cpp
 	$(CXX) -c $(ALL_CFLAGS) $< -o $@

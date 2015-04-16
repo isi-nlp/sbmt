@@ -384,7 +384,7 @@ namespace nplm
 				void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input, 
 						const MatrixBase<DerivedIn> &fProp_input, 
 						double learning_rate,
-						double L2_reg, double L1_reg, double L1Inf_reg, double L12_reg)
+						double L2_reg, double L1_reg, double L1Inf_reg, double L1Inf_reg_column, double L12_reg)
 				{
 					U_gradient.noalias() = bProp_input*fProp_input.transpose();
 

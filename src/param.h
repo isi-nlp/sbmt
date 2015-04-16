@@ -50,6 +50,8 @@ struct param
     double L2_reg;
     double L1_reg;
     double L1Inf_reg;
+    double L1Inf_reg_column;
+    double L12_reg;
 
     bool normalization;
     double normalization_init;
