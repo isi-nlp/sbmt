@@ -5,7 +5,10 @@
 #include <deque>
 //#include <stdlib>
 #include <time.h>
-//#include <vector>
+#include <vector>
+#include <algorithm>  // for partition
+#include <functional> // for greater_equal
+#include <numeric>    // for accumulate
 
 #include <boost/unordered_map.hpp> 
 #include <boost/algorithm/string.hpp>
@@ -172,124 +175,53 @@ void linf(std::vector<double> &v, double delta)
     ///Duchi et al., 2008. Efficient projections onto the l1-ball for
     ///learning in high dimensions.
 
-    //vector <double> v_new;
     vector <double> mu;
 
-    // lo <= rho <= hi
     int lo = 0;
-    //int hi = mu.size();
     int hi = v.size();
     double s = 0.0; // always equals sum(mu[:lo])
-    double s_new;
-    int rho;
-    int rho_new;
-    double pivot;
-    double value;
-    double temp;
-    int i;
-    int j;
-    int k;
 
-    //cout << "V: " << v[0] << " " << v[1] << " " << v[2] << " "; //DEBUGGING
-
-    for (k = 0; k < v.size(); k++)
-    {
+    for (int k = 0; k < v.size(); k++)
         mu.push_back(abs(v[k]));
-        //mu = [abs(x) for x in v];
-        //cout << v[k] << " ";//DEBUGGING
-    }
-    //cout << endl; //DEBUGGING
     
     while (lo < hi)
     {
-        // pick a random pivot
-        srand(time(NULL));
-        k = rand() % (hi - lo) + lo;
-        //cout << "k: " << k << endl; //DEBUGGING
-        pivot = mu[k];//random.randrange(lo, hi)]
-        //cout << "pivot: " << pivot << endl; //DEBUGGING
+        int k = rand() % (hi - lo) + lo;
+        double pivot = mu[k];
 
-        // partition mu so that everything >= pivot is on the left
-        i = lo;
-        j = hi-1;
-        s_new = s; // always equals sum(mu[:i])
+	// Partition mu[lo:hi] so that
+	//   pivot is in the middle,
+	//   everything >= pivot is to the left,
+	//   everything <  pivot is to the right.
+	// Set rho_new to be the first element < pivot.
+	std::swap(mu[lo], mu[k]);
+	std::vector<double>::iterator rho_new_it = std::partition(mu.begin()+lo+1, mu.begin()+hi, std::bind2nd(std::greater_equal<double>(), pivot));
+	std::swap(mu[lo], *(rho_new_it-1));
 
-        while (1 == 1)
+	int rho_new = rho_new_it-mu.begin();
+	double s_new = s + std::accumulate(mu.begin()+lo, mu.begin()+rho_new, 0.0);
+	double xi_new = (s_new - delta) / rho_new;
+
+        if (xi_new <= pivot)
         {
-            while (i < hi && mu[i] >= pivot)
-            {
-                s_new += mu[i];
-                i += 1;
-            }
-            while (mu[j] < pivot)
-            {
-                j -= 1;
-            }
-            if (i < j)
-            {
-                temp = mu[i];
-                mu[i] = mu[j];
-                mu[j] = temp;
-            }
-            else
-            {
-                rho_new = i;
-                break;
-            }
-        }
-
-        if ((s_new - delta) / rho_new <= pivot)
-        {
-            // yes, look to the right
             s = s_new;
             lo = rho_new;
-            //cout << "do I reach here?" << endl; //DEBUGGING
         }
         else
         {
-            // no, look to the left
             hi = rho_new-1;
-            //cout << "or here?" << endl; //DEBUGGING
         }
     }
 
-    rho = lo;
-    temp = 0.0;
-    //for (j = 0; j <= rho; j++)
-    for (j = 0; j < rho; j++)
+    int rho = lo;
+    double xi = std::max(0.0, (s - delta) / rho);
+    for (int i = 0; i < v.size(); i++)
     {
-      temp += mu[j];
+      if      (v[i] > xi)  v[i] =  xi;
+      else if (v[i] < -xi) v[i] = -xi;
     }
-    value = max(0.0, ((temp - delta)/rho));
-    //cout << "VALUE: " << value << " temp: " << temp << " delta: " << delta << " rho: " << rho << endl; //debugging
-    //v_new = list(v);
-    for (i = 0; i < v.size(); i++)
-    {
-        if (v[i] > 0)
-        {
-            temp = (min(v[i], value));
-            //cout << "subtract? " << temp << endl; //DEBUGGING
-            v[i] = temp;
-            //v_new.push_back(min(v[i], value));
-            //v_new[i] = min(v[i], value);
-        }
-        else
-        {
-            temp = (max(v[i], -1.0*value));
-            v[i] = temp;
-            //cout << "subtract? " << temp << endl; //DEBUGGING
-            //v_new.push_back(max(v[i], -1.0*value));
-            //v_new[i] = max(v[i], -value);
-        }
-        //cout << v[i] << " "; //DEBUGGING
-    }
-    //cout << "After" << endl << endl; //DEBUGGING
 
-    //cout << "After V: " << v[0] << " " << v[1] << " " << v[2] << endl; //DEBUGGING
-
-    //return v_new;
     return;
-
 }
 
 #ifdef USE_CHRONO
