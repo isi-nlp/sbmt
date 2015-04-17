@@ -326,19 +326,26 @@ namespace nplm
           //cout << U(2,3); //DEBUGGING
           for (int i = 0; i < U.rows(); i++)
           {
-              std::vector<double> v;
-              double l12 = 0.0;
-              for (int j = 0; j < U.cols(); j++)
-              {
-                  l12 += U(i,j) * U(i,j);
-              }
-              l12 = learning_rate * L12_reg / sqrt(l12);
-              l12 = max(1.0, l12);
-              for (int j = 0; j < U.cols(); j++)
-              {
-                  //U(i,j) = U(i,j) * l12;
-                  U(i,j) = U(i,j) * (1-l12);
-              }
+              double norm = sqrt(U.row(i).squaredNorm() + b(i)*b(i));
+              double l12 = learning_rate * L12_reg / norm;
+              l12 = 1.0 - min(1.0, l12);
+              U.row(i) *= l12;
+              b(i) *= l12;
+
+
+              //std::vector<double> v;
+              //double l12 = 0.0;
+              //for (int j = 0; j < U.cols(); j++)
+              //{
+              //    l12 += U(i,j) * U(i,j);
+              //}
+              //l12 = learning_rate * L12_reg / sqrt(l12);
+              //l12 = max(1.0, l12);
+              //for (int j = 0; j < U.cols(); j++)
+              //{
+              //    //U(i,j) = U(i,j) * l12;
+              //    U(i,j) = U(i,j) * (1-l12);
+              //}
           }
       }
 
