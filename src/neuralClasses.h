@@ -336,7 +336,8 @@ namespace nplm
               l12 = max(1.0, l12);
               for (int j = 0; j < U.cols(); j++)
               {
-                  U(i,j) = U(i,j) * l12;
+                  //U(i,j) = U(i,j) * l12;
+                  U(i,j) = U(i,j) * (1-l12);
               }
           }
       }
