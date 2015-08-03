@@ -148,7 +148,7 @@ namespace nplm
 			template <typename DerivedGOut, typename DerivedIn>
 				void computeGradient( const MatrixBase<DerivedGOut> &bProp_input, 
 						const MatrixBase<DerivedIn> &fProp_input, 
-						double learning_rate, double momentum, double L2_reg, double L1_reg, double L1Inf_reg, double L1Inf_reg_column, double L12_reg)
+						double learning_rate, double momentum, double L2_reg, double L1_reg, double LInf1_reg, double LInf1_reg_column, double L21_reg)
 				{
 					U_gradient.noalias() = bProp_input*fProp_input.transpose();
 
@@ -235,7 +235,7 @@ namespace nplm
 						*    which yields 2 or 0 .... or NaN ... hence the max with a small number => 0/0.00000000000001							*    we then subtract 1 */
 					}
 
-					if (L1Inf_reg > 0.0)
+					if (LInf1_reg > 0.0)
 					{
 						//double squash = 0.0;
 						//cout << U(2,3); //DEBUGGING
@@ -248,11 +248,11 @@ namespace nplm
 							}
 							v.push_back(b(i));
 							double linfl;
-							linfl = L1Inf_reg * learning_rate; 
+							linfl = LInf1_reg * learning_rate; 
 							//v_new = linf(v, linfl);
 							linf(v, linfl);
-							//vector<double> v_new = linf(v,L1Inf_reg * learning_rate);
-							//vector v_new = linf(v,L1Inf_reg * learning_rate);
+							//vector<double> v_new = linf(v,LInf1_reg * learning_rate);
+							//vector v_new = linf(v,LInf1_reg * learning_rate);
 							for (int j = 0; j < U.cols(); j++)
 							{
 								//U(i,j) = v_new[j];
@@ -271,7 +271,7 @@ namespace nplm
 								v.push_back(b(i,j));
 							}
 							double linfl;
-							linfl = L1Inf_reg * learning_rate; 
+							linfl = LInf1_reg * learning_rate; 
 							linf(v, linfl);
 							for (int j = 0; j < b.cols(); j++)
 							{
@@ -281,7 +281,7 @@ namespace nplm
 						}*/
 					}
       // DEBUGGING
-      if (L1Inf_reg < 0.0)
+      if (LInf1_reg < 0.0)
       {
           //double squash = 0.0;
           //cout << U(2,3); //DEBUGGING
@@ -294,7 +294,7 @@ namespace nplm
           cout << "Did it work? " << v[4] << endl; //DEBUGGING
           //cout << " " << U(2,3) << endl; //DEBUGGING
       }
-      if (L1Inf_reg_column > 0.0)
+      if (LInf1_reg_column > 0.0)
       {
           //double squash = 0.0;
           //cout << U(2,3); //DEBUGGING
@@ -307,11 +307,11 @@ namespace nplm
               }
               //v.push_back(b(i,1));//NO BIAS
               double linfl;
-              linfl = L1Inf_reg * learning_rate; 
+              linfl = LInf1_reg * learning_rate; 
               //v_new = linf(v, linfl);
               linf(v, linfl);
-              //vector<double> v_new = linf(v,L1Inf_reg * learning_rate);
-              //vector v_new = linf(v,L1Inf_reg * learning_rate);
+              //vector<double> v_new = linf(v,LInf1_reg * learning_rate);
+              //vector v_new = linf(v,LInf1_reg * learning_rate);
               for (int i = 0; i < U.rows(); i++)
               {
                   //U(i,j) = v_new[j];
@@ -320,14 +320,14 @@ namespace nplm
               //b(i,1) = v[U.cols()]; //the one at the end //NO BIAS
           }
       }
-      if (L12_reg > 0.0)
+      if (L21_reg > 0.0)
       {
           //double squash = 0.0;
           //cout << U(2,3); //DEBUGGING
           for (int i = 0; i < U.rows(); i++)
           {
               double norm = sqrt(U.row(i).squaredNorm() + b(i)*b(i));
-              double l12 = learning_rate * L12_reg / norm;
+              double l12 = learning_rate * L21_reg / norm;
               l12 = 1.0 - min(1.0, l12);
               U.row(i) *= l12;
               b(i) *= l12;
@@ -339,7 +339,7 @@ namespace nplm
               //{
               //    l12 += U(i,j) * U(i,j);
               //}
-              //l12 = learning_rate * L12_reg / sqrt(l12);
+              //l12 = learning_rate * L21_reg / sqrt(l12);
               //l12 = max(1.0, l12);
               //for (int j = 0; j < U.cols(); j++)
               //{
@@ -376,9 +376,9 @@ namespace nplm
                   }
               }
               // Actually update the highest value in that row
-              //double current_cell2 = std::min(std::abs(U(index_max,j)),(learning_rate*L1Inf_reg));
+              //double current_cell2 = std::min(std::abs(U(index_max,j)),(learning_rate*LInf1_reg));
               //double current_cell2 = std::abs(U(index_max,j)); //Is this one better?
-              double current_cell2 = std::min(std::abs(U(i,index_max)),(learning_rate*L1Inf_reg*squash)); //Or this one?
+              double current_cell2 = std::min(std::abs(U(i,index_max)),(learning_rate*LInf1_reg*squash)); //Or this one?
               double sign_bit = (signbit(U(i,index_max))*-2) + 1; //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
               current_cell2 = U(i,index_max) - current_cell2 * ((signbit(U(i,index_max))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
               U(i,index_max) = current_cell2;
@@ -395,7 +395,7 @@ namespace nplm
 				void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input, 
 						const MatrixBase<DerivedIn> &fProp_input, 
 						double learning_rate,
-						double L2_reg, double L1_reg, double L1Inf_reg, double L1Inf_reg_column, double L12_reg)
+						double L2_reg, double L1_reg, double LInf1_reg, double LInf1_reg_column, double L21_reg)
 				{
 					U_gradient.noalias() = bProp_input*fProp_input.transpose();
 
@@ -445,9 +445,9 @@ namespace nplm
 						double learning_rate,
 						double L2_reg,
 						double L1_reg,
-						double L1Inf_reg,
-						double L1Inf_reg_column,
-						double L12_reg,
+						double LInf1_reg,
+						double LInf1_reg_column,
+						double L21_reg,
 						double conditioning_constant,
 						double decay)
 				{
@@ -1046,7 +1046,7 @@ namespace nplm
 			template <typename DerivedGOut, typename DerivedIn>
 				void computeGradient(const MatrixBase<DerivedGOut> &bProp_input,
 						const MatrixBase<DerivedIn> &input_words,
-						double learning_rate, double momentum, double L2_reg, double L1_reg, double L1Inf_reg, double L1Inf_reg_column, double L12_reg)
+						double learning_rate, double momentum, double L2_reg, double L1_reg, double LInf1_reg, double LInf1_reg_column, double L21_reg)
 				{
 					int embedding_dimension = W->cols();
 
@@ -1116,7 +1116,7 @@ int update_item = update_items[item_id];
 void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input,
 		const MatrixBase<DerivedIn> &input_words,
 		double learning_rate,
-		double L2_reg, double L1_reg, double L1Inf_reg, double L1Inf_reg_column, double L12_reg)
+		double L2_reg, double L1_reg, double LInf1_reg, double LInf1_reg_column, double L21_reg)
 {
 	int embedding_dimension = W->cols();
 	//W_gradient.setZero(W->rows(), W->cols());
@@ -1171,9 +1171,9 @@ void computeGradientAdadelta(const MatrixBase<DerivedGOut> &bProp_input,
 		double learning_rate,
 		double L2_reg,
 		double L1_reg,
-		double L1Inf_reg,
-		double L1Inf_reg_column,
-		double L12_reg,
+		double LInf1_reg,
+		double LInf1_reg_column,
+		double L21_reg,
 		double conditioning_constant,
 		double decay)
 {
