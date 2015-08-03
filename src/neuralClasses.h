@@ -183,10 +183,6 @@ namespace nplm
 						//b += learning_rate*(b_gradient.array().unaryExpr(Clipper())).matrix();
 						*/
 					}
-
-					//Debugging
-					//cout << "Before L1: 0,0 " << U(0,0) << "\t 5,5 " << U(5,5) << endl;
-
 					if (L1_reg > 0.0)
 					{
 						//U -= learning_rate * U_gradient; //Ascent done in else statement above
@@ -237,8 +233,6 @@ namespace nplm
 
 					if (LInf1_reg > 0.0)
 					{
-						//double squash = 0.0;
-						//cout << U(2,3); //DEBUGGING
 						for (int i = 0; i < U.rows(); i++)
 						{
 							std::vector<double> v;
@@ -249,55 +243,16 @@ namespace nplm
 							v.push_back(b(i));
 							double linfl;
 							linfl = LInf1_reg * learning_rate; 
-							//v_new = linf(v, linfl);
 							linf(v, linfl);
-							//vector<double> v_new = linf(v,LInf1_reg * learning_rate);
-							//vector v_new = linf(v,LInf1_reg * learning_rate);
 							for (int j = 0; j < U.cols(); j++)
 							{
-								//U(i,j) = v_new[j];
 								U(i,j) = v[j];
 							}
 							b(i) = v[U.cols()]; //the one at the end
 						}
-						//cout << " " << U(2,3) << endl; //DEBUGGING
-						//
-						/*// Bias
-						for (int i = 0; i < b.rows(); i++)
-						{
-							std::vector<double> v;
-							for (int j = 0; j < b.cols(); j++)
-							{
-								v.push_back(b(i,j));
-							}
-							double linfl;
-							linfl = LInf1_reg * learning_rate; 
-							linf(v, linfl);
-							for (int j = 0; j < b.cols(); j++)
-							{
-								//U(i,j) = v_new[j];
-								b(i,j) = v[j];
-							}
-						}*/
 					}
-      // DEBUGGING
-      if (LInf1_reg < 0.0)
-      {
-          //double squash = 0.0;
-          //cout << U(2,3); //DEBUGGING
-          std::vector<double> v;
-          for (int i = 0; i < 5; i++)
-          {
-              v.push_back(i+0.2);
-          }
-          linf(v, 0.3);
-          cout << "Did it work? " << v[4] << endl; //DEBUGGING
-          //cout << " " << U(2,3) << endl; //DEBUGGING
-      }
       if (LInf1_reg_column > 0.0)
       {
-          //double squash = 0.0;
-          //cout << U(2,3); //DEBUGGING
           for (int j = 0; j < U.cols(); j++)
           {
               std::vector<double> v;
@@ -305,25 +260,17 @@ namespace nplm
               {
                   v.push_back(U(i,j));
               }
-              //v.push_back(b(i,1));//NO BIAS
               double linfl;
               linfl = LInf1_reg * learning_rate; 
-              //v_new = linf(v, linfl);
               linf(v, linfl);
-              //vector<double> v_new = linf(v,LInf1_reg * learning_rate);
-              //vector v_new = linf(v,LInf1_reg * learning_rate);
               for (int i = 0; i < U.rows(); i++)
               {
-                  //U(i,j) = v_new[j];
                   U(i,j) = v[i];
               }
-              //b(i,1) = v[U.cols()]; //the one at the end //NO BIAS
           }
       }
       if (L21_reg > 0.0)
       {
-          //double squash = 0.0;
-          //cout << U(2,3); //DEBUGGING
           for (int i = 0; i < U.rows(); i++)
           {
               double norm = sqrt(U.row(i).squaredNorm() + b(i)*b(i));
@@ -331,63 +278,8 @@ namespace nplm
               l12 = 1.0 - min(1.0, l12);
               U.row(i) *= l12;
               b(i) *= l12;
-
-
-              //std::vector<double> v;
-              //double l12 = 0.0;
-              //for (int j = 0; j < U.cols(); j++)
-              //{
-              //    l12 += U(i,j) * U(i,j);
-              //}
-              //l12 = learning_rate * L21_reg / sqrt(l12);
-              //l12 = max(1.0, l12);
-              //for (int j = 0; j < U.cols(); j++)
-              //{
-              //    //U(i,j) = U(i,j) * l12;
-              //    U(i,j) = U(i,j) * (1-l12);
-              //}
           }
       }
-
-
-/*              double row_max = 0.0;
-              for (int j = 0; j < U.cols(); j++)
-              {
-                  double current_cell = std::abs(U(i,j));
-                  if (current_cell > row_max)
-                  {
-                      row_max = current_cell;
-                  }
-              }
-              squash += row_max;
-          }
-          // Iterate again and update the rows
-          for (int i = 0; i < U.rows(); i++)
-          {
-              double row_max = 0.0;
-              double index_max = 0;
-              for (int j = 0; j < U.cols(); j++)
-              {
-                  double current_cell = std::abs(U(i,j));
-                  if (current_cell > row_max)
-                  {
-                      row_max = current_cell;
-                      index_max = j;
-                  }
-              }
-              // Actually update the highest value in that row
-              //double current_cell2 = std::min(std::abs(U(index_max,j)),(learning_rate*LInf1_reg));
-              //double current_cell2 = std::abs(U(index_max,j)); //Is this one better?
-              double current_cell2 = std::min(std::abs(U(i,index_max)),(learning_rate*LInf1_reg*squash)); //Or this one?
-              double sign_bit = (signbit(U(i,index_max))*-2) + 1; //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
-              current_cell2 = U(i,index_max) - current_cell2 * ((signbit(U(i,index_max))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
-              U(i,index_max) = current_cell2;
-          }
-      }*/
-
-      //Debugging
-      //cout << "After L1: 0,0 " << U(0,0) << "\t 5,5 " << U(5,5) << endl;
-      //sleep(5);
 
 	}
 
@@ -409,15 +301,6 @@ namespace nplm
 						U_gradient -=  2*L2_reg*U;
 						b_gradient -= 2*L2_reg*b;
 					}
-					/*if (L1_reg != 0.0)
-					{
-						double w_U = U.rowwise().sum();
-						double w_b = b.sum();
-						//U_gradient -= L1_reg*w_U;
-						//b_gradient -= L1_reg*w_b;
-						U_gradient = U_gradient.array() - L1_reg*w_U;
-						b_gradient = b_gradient.array() - L1_reg*w_b;
-					}*/
 
 					// ignore momentum?
 #pragma omp parallel for
@@ -465,15 +348,6 @@ namespace nplm
 						U_gradient -=  2*L2_reg*U;
 						b_gradient -= 2*L2_reg*b;
 					}
-					/*if (L1_reg != 0.0)
-					{
-						double w_U = U.rowwise().sum();
-						double w_b = b.sum();
-						//U_gradient -= L1_reg*w_U;
-						//b_gradient -= L1_reg*w_b;
-						U_gradient = U_gradient.array() - L1_reg*w_U;
-						b_gradient = b_gradient.array() - L1_reg*w_b;
-					}*/
 
 					// ignore momentum?
 #pragma omp parallel for
