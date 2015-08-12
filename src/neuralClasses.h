@@ -148,7 +148,7 @@ class Linear_layer
   template <typename DerivedGOut, typename DerivedIn>
   void computeGradient( const MatrixBase<DerivedGOut> &bProp_input, 
      const MatrixBase<DerivedIn> &fProp_input, 
-     double learning_rate, double momentum, double L2_reg, double L1_reg, double LInf1_reg, double LInf1_reg_column, double L21_reg)
+     double learning_rate, double momentum, double L2_reg, double L1_reg, double LInf1_row_reg, double LInf1_col_reg, double L21_row_reg)
   {
       U_gradient.noalias() = bProp_input*fProp_input.transpose();
       
@@ -210,7 +210,7 @@ class Linear_layer
       *    we then subtract 1 */
      }
 
-      if (LInf1_reg > 0.0)
+      if (LInf1_row_reg > 0.0)
       {
         for (int i = 0; i < U.rows(); i++)
         {
@@ -221,7 +221,7 @@ class Linear_layer
           }
           v.push_back(b(i));
           double linfl;
-          linfl = LInf1_reg * learning_rate; 
+          linfl = LInf1_row_reg * learning_rate; 
           linf(v, linfl);
           for (int j = 0; j < U.cols(); j++)
           {
@@ -230,7 +230,7 @@ class Linear_layer
           b(i) = v[U.cols()]; //the one at the end
         }
       }
-      if (LInf1_reg_column > 0.0)
+      if (LInf1_col_reg > 0.0)
       {
         for (int j = 0; j < U.cols(); j++)
         {
@@ -240,7 +240,7 @@ class Linear_layer
             v.push_back(U(i,j));
           }
           double linfl;
-          linfl = LInf1_reg * learning_rate; 
+          linfl = LInf1_col_reg * learning_rate; 
           linf(v, linfl);
           for (int i = 0; i < U.rows(); i++)
           {
@@ -248,12 +248,12 @@ class Linear_layer
           }
         }
       }
-      if (L21_reg > 0.0)
+      if (L21_row_reg > 0.0)
       {
         for (int i = 0; i < U.rows(); i++)
         {
           double norm = sqrt(U.row(i).squaredNorm() + b(i)*b(i));
-          double l12 = learning_rate * L21_reg / norm;
+          double l12 = learning_rate * L21_row_reg / norm;
           l12 = 1.0 - min(1.0, l12);
           U.row(i) *= l12;
           b(i) *= l12;
@@ -266,7 +266,7 @@ class Linear_layer
   void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input, 
       const MatrixBase<DerivedIn> &fProp_input, 
       double learning_rate,
-      double L2_reg, double L1_reg, double LInf1_reg, double LInf1_reg_column, double L21_reg)
+      double L2_reg, double L1_reg, double LInf1_row_reg, double LInf1_col_reg, double L21_row_reg)
   {
       U_gradient.noalias() = bProp_input*fProp_input.transpose();
 
@@ -307,9 +307,9 @@ class Linear_layer
       double learning_rate,
       double L2_reg,
       double L1_reg,
-      double LInf1_reg,
-      double LInf1_reg_column,
-      double L21_reg,
+      double LInf1_row_reg,
+      double LInf1_col_reg,
+      double L21_row_reg,
       double conditioning_constant,
       double decay)
   {
@@ -899,7 +899,7 @@ class Input_word_embeddings
   template <typename DerivedGOut, typename DerivedIn>
   void computeGradient(const MatrixBase<DerivedGOut> &bProp_input,
      const MatrixBase<DerivedIn> &input_words,
-     double learning_rate, double momentum, double L2_reg, double L1_reg, double LInf1_reg, double LInf1_reg_column, double L21_reg)
+     double learning_rate, double momentum, double L2_reg, double L1_reg, double LInf1_row_reg, double LInf1_col_reg, double L21_row_reg)
   {
       int embedding_dimension = W->cols();
 
@@ -969,7 +969,7 @@ class Input_word_embeddings
     void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input,
 				    const MatrixBase<DerivedIn> &input_words,
 				    double learning_rate,
-            double L2_reg, double L1_reg, double LInf1_reg, double LInf1_reg_column, double L21_reg)
+            double L2_reg, double L1_reg, double LInf1_row_reg, double LInf1_col_reg, double L21_row_reg)
     {
             int embedding_dimension = W->cols();
 	    //W_gradient.setZero(W->rows(), W->cols());
@@ -1024,9 +1024,9 @@ class Input_word_embeddings
 				    double learning_rate,
             double L2_reg,
             double L1_reg,
-            double LInf1_reg,
-            double LInf1_reg_column,
-            double L21_reg,
+            double LInf1_row_reg,
+            double LInf1_col_reg,
+            double L21_row_reg,
             double conditioning_constant,
             double decay)
     {
