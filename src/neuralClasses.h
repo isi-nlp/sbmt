@@ -191,40 +191,16 @@ class Linear_layer
         for (int j = 0; j < U.cols(); j++)
         {
           double current_cell = std::min(std::abs(U(i,j)),(learning_rate*L1_reg));
-          if (i == 0 && j == 0)
-          {
-            cout << "Previous_cell: " << U(i,j) << endl;
-            cout << "Current_cell: " << current_cell << endl;
-          }
-
-           //current_cell = U(i,j) - current_cell * ((signbit(U(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
-          double sign_bit = (signbit(U(i,j))*-2) + 1; //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
-
           current_cell = U(i,j) - current_cell * ((signbit(U(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
-          if (i == 0 && j == 0)
-          {
-            cout << "Current_cell: " << current_cell << endl;
-            cout << "Sign_bit: " << sign_bit << endl;
-          }
           U(i,j) = current_cell;
         }
       }
       for (int i = 0; i < b.rows(); i++)
       {
-        //for (int j = 0; j < b.cols(); j++)
-        //{
-        //	double current_cell = std::min(std::abs(b(i,j)),(learning_rate*L1_reg));
-        //	//current_cell = b(i,j) - current_cell * ((signbit(b(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
-        //	current_cell = b(i,j) - current_cell * ((signbit(b(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
-        //	b(i,j) = current_cell;
-        //}
         double current_cell = std::min(std::abs(b(i)),(learning_rate*L1_reg));
         current_cell = b(i) - current_cell * ((signbit(b(i))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
         b(i) = current_cell;
       }
-      //U -= sgn(U) min(|U|, (learning_rate * L1_reg))
-      //U -= ((U.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((U.cwiseAbs() + U).cwiseQuotient((U.cwiseMax(0.000000000000001)))).array()-1).matrix()));
-      //b -= ((b.cwiseAbs()).cwiseMin(L1_reg * learning_rate)).cwiseProduct(((((b.cwiseAbs() + b).cwiseQuotient((b.cwiseMax(0.000000000000001)))).array()-1).matrix()));
       /* This code is quite concise to prevent creating additional matrices ... it is hard to read.
       *  Here is what is going on:
       *  Min(Abs(U),L1_reg*learning_rate)
