@@ -2,7 +2,6 @@
 #define SOFTMAXLOSS_H
 
 #include <Eigen/Dense>
-#include <Eigen/Sparse>
 #include "multinomial.h"
 #include "util.h"
 

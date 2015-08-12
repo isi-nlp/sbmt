@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include "neuralClasses.h"
 #include <Eigen/Dense>
-#include <Eigen/Sparse>
 
 namespace nplm
 {

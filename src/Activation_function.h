@@ -4,7 +4,6 @@
 #include <cmath>
 #include <string>
 #include <Eigen/Dense>
-#include <Eigen/Sparse>
 
 #include "util.h"
 
