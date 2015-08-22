@@ -100,6 +100,10 @@ public:
 	       double learning_rate,
          double momentum,
          double L2_reg,
+         double L1_reg,
+         double LInf1_row_reg,
+         double LInf1_col_reg,
+         double L21_row_reg,
          std::string &parameter_update,
          double conditioning_constant,
          double decay) 
@@ -138,6 +142,10 @@ public:
       learning_rate,
       momentum,
       L2_reg,
+      L1_reg,
+      LInf1_row_reg,
+      LInf1_col_reg,
+      L21_row_reg,
       parameter_update,
       conditioning_constant,
       decay);
@@ -151,6 +159,10 @@ public:
 	       double learning_rate,
          double momentum,
          double L2_reg,
+         double L1_reg,
+         double LInf1_row_reg,
+         double LInf1_col_reg,
+         double L21_row_reg,
          std::string &parameter_update,
          double conditioning_constant,
          double decay) 
@@ -196,6 +208,10 @@ public:
       learning_rate,
       momentum,
       L2_reg,
+      L1_reg,
+      LInf1_row_reg,
+      LInf1_col_reg,
+      L21_row_reg,
       parameter_update,
       conditioning_constant,
       decay);
@@ -204,7 +220,7 @@ public:
 private:
     template <typename DerivedIn>
     void bPropRest(const MatrixBase<DerivedIn> &data,
-		   double learning_rate, double momentum, double L2_reg,
+		   double learning_rate, double momentum, double L2_reg, double L1_reg, double LInf1_row_reg, double LInf1_col_reg, double L21_row_reg,
        std::string &parameter_update,
        double conditioning_constant,
        double decay) 
@@ -245,7 +261,7 @@ private:
                  first_hidden_activation_node.fProp_matrix,
                  learning_rate,
                  momentum,
-                 L2_reg);
+                 L2_reg, L1_reg, LInf1_row_reg, LInf1_col_reg, L21_row_reg);
     stop_timer(10);
 
     // First hidden layer
@@ -254,7 +270,7 @@ private:
     start_timer(12);
     first_hidden_linear_node.param->computeGradient(first_hidden_activation_node.bProp_matrix,
                 input_layer_node.fProp_matrix,
-                learning_rate, momentum, L2_reg);
+                learning_rate, momentum, L2_reg, L1_reg, LInf1_row_reg, LInf1_col_reg, L21_row_reg);
     stop_timer(12);
 
     // Input word embeddings
@@ -262,14 +278,14 @@ private:
     start_timer(13);
     input_layer_node.param->computeGradient(first_hidden_linear_node.bProp_matrix,
               data,
-              learning_rate, momentum, L2_reg);
+              learning_rate, momentum, L2_reg, L1_reg, LInf1_row_reg, LInf1_col_reg, L21_row_reg);
     stop_timer(13);
   } else if (parameter_update == "ADA") {
     start_timer(10);
     second_hidden_linear_node.param->computeGradientAdagrad(second_hidden_activation_node.bProp_matrix,
                  first_hidden_activation_node.fProp_matrix,
                  learning_rate,
-                 L2_reg);
+                 L2_reg, L1_reg, LInf1_row_reg, LInf1_col_reg, L21_row_reg);
     stop_timer(10);
 
     // First hidden layer
@@ -279,7 +295,7 @@ private:
     first_hidden_linear_node.param->computeGradientAdagrad(first_hidden_activation_node.bProp_matrix,
                 input_layer_node.fProp_matrix,
                 learning_rate,
-                L2_reg);
+                L2_reg, L1_reg, LInf1_row_reg, LInf1_col_reg, L21_row_reg);
     stop_timer(12);
 
     // Input word embeddings
@@ -288,7 +304,7 @@ private:
     input_layer_node.param->computeGradientAdagrad(first_hidden_linear_node.bProp_matrix,
               data,
               learning_rate, 
-              L2_reg);
+              L2_reg, L1_reg, LInf1_row_reg, LInf1_col_reg, L21_row_reg);
     stop_timer(13);
   } else if (parameter_update == "ADAD") {
     int current_minibatch_size = first_hidden_activation_node.fProp_matrix.cols();
@@ -297,7 +313,7 @@ private:
     second_hidden_linear_node.param->computeGradientAdadelta(second_hidden_activation_node.bProp_matrix,
                  first_hidden_activation_node.fProp_matrix,
                  1.0/current_minibatch_size,
-                 L2_reg,
+                 L2_reg, L1_reg, LInf1_row_reg, LInf1_col_reg, L21_row_reg,
                  conditioning_constant,
                  decay);
     stop_timer(10);
@@ -310,7 +326,7 @@ private:
     first_hidden_linear_node.param->computeGradientAdadelta(first_hidden_activation_node.bProp_matrix,
                 input_layer_node.fProp_matrix,
                 1.0/current_minibatch_size,
-                L2_reg,
+                L2_reg, L1_reg, LInf1_row_reg, LInf1_col_reg, L21_row_reg,
                 conditioning_constant,
                 decay);
     stop_timer(12);
@@ -322,7 +338,7 @@ private:
     input_layer_node.param->computeGradientAdadelta(first_hidden_linear_node.bProp_matrix,
               data,
               1.0/current_minibatch_size, 
-              L2_reg,
+              L2_reg, L1_reg, LInf1_row_reg, LInf1_col_reg, L21_row_reg,
               conditioning_constant,
               decay);
     stop_timer(13);

@@ -8,6 +8,7 @@
 
 #include <boost/unordered_map.hpp> 
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 #include "maybe_omp.h"
 
 #include "util.h"
@@ -147,7 +148,7 @@ class Linear_layer
   template <typename DerivedGOut, typename DerivedIn>
   void computeGradient( const MatrixBase<DerivedGOut> &bProp_input, 
      const MatrixBase<DerivedIn> &fProp_input, 
-     double learning_rate, double momentum, double L2_reg)
+     double learning_rate, double momentum, double L2_reg, double L1_reg, double LInf1_row_reg, double LInf1_col_reg, double L21_row_reg)
   {
       U_gradient.noalias() = bProp_input*fProp_input.transpose();
       
@@ -166,6 +167,8 @@ class Linear_layer
           U += learning_rate * U_velocity;
           b_velocity = momentum*b_velocity + b_gradient;
           b += learning_rate * b_velocity;
+
+          //TODO: L1 for momentum
       }
       else
       {
@@ -180,13 +183,90 @@ class Linear_layer
           //b += learning_rate*(b_gradient.array().unaryExpr(Clipper())).matrix();
           */
       }
+      if (L1_reg > 0.0)
+      {
+	//U -= learning_rate * U_gradient; //Ascent done in else statement above
+      for (int i = 0; i < U.rows(); i++)
+      {
+        for (int j = 0; j < U.cols(); j++)
+        {
+          double current_cell = std::min(std::abs(U(i,j)),(learning_rate*L1_reg));
+          current_cell = U(i,j) - current_cell * ((signbit(U(i,j))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
+          U(i,j) = current_cell;
+        }
+      }
+      for (int i = 0; i < b.rows(); i++)
+      {
+        double current_cell = std::min(std::abs(b(i)),(learning_rate*L1_reg));
+        current_cell = b(i) - current_cell * ((signbit(b(i))*-2) + 1); //1 if negative, 0 if not negative (1*-2 + 1 = -1||| 0*-2 + 1 = 1)
+        b(i) = current_cell;
+      }
+      /* This code is quite concise to prevent creating additional matrices ... it is hard to read.
+      *  Here is what is going on:
+      *  Min(Abs(U),L1_reg*learning_rate)
+      *  That is taken and multiplied by 1 or -1
+      *    which is done by (Abs(U) + U)/U
+      *    which yields 2 or 0 .... or NaN ... hence the max with a small number => 0/0.00000000000001
+      *    we then subtract 1 */
+     }
+
+      if (LInf1_row_reg > 0.0)
+      {
+        for (int i = 0; i < U.rows(); i++)
+        {
+          std::vector<double> v;
+          for (int j = 0; j < U.cols(); j++)
+          {
+            v.push_back(U(i,j));
+          }
+          v.push_back(b(i));
+          double linfl;
+          linfl = LInf1_row_reg * learning_rate; 
+          linf(v, linfl);
+          for (int j = 0; j < U.cols(); j++)
+          {
+            U(i,j) = v[j];
+          }
+          b(i) = v[U.cols()]; //the one at the end
+        }
+      }
+      if (LInf1_col_reg > 0.0)
+      {
+        for (int j = 0; j < U.cols(); j++)
+        {
+          std::vector<double> v;
+          for (int i = 0; i < U.rows(); i++)
+          {
+            v.push_back(U(i,j));
+          }
+          double linfl;
+          linfl = LInf1_col_reg * learning_rate; 
+          linf(v, linfl);
+          for (int i = 0; i < U.rows(); i++)
+          {
+            U(i,j) = v[i];
+          }
+        }
+      }
+      if (L21_row_reg > 0.0)
+      {
+        for (int i = 0; i < U.rows(); i++)
+        {
+          double norm = sqrt(U.row(i).squaredNorm() + b(i)*b(i));
+          double l12 = learning_rate * L21_row_reg / norm;
+          l12 = 1.0 - min(1.0, l12);
+          U.row(i) *= l12;
+          b(i) *= l12;
+        }
+      }
+
 	}
 
   template <typename DerivedGOut, typename DerivedIn>
   void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input, 
       const MatrixBase<DerivedIn> &fProp_input, 
       double learning_rate,
-      double L2_reg)
+      double L2_reg, double L1_reg, double LInf1_row_reg, double LInf1_col_reg, double L21_row_reg)
   {
       U_gradient.noalias() = bProp_input*fProp_input.transpose();
 
@@ -226,6 +306,10 @@ class Linear_layer
       const MatrixBase<DerivedIn> &fProp_input, 
       double learning_rate,
       double L2_reg,
+      double L1_reg,
+      double LInf1_row_reg,
+      double LInf1_col_reg,
+      double L21_row_reg,
       double conditioning_constant,
       double decay)
   {
@@ -815,7 +899,7 @@ class Input_word_embeddings
   template <typename DerivedGOut, typename DerivedIn>
   void computeGradient(const MatrixBase<DerivedGOut> &bProp_input,
      const MatrixBase<DerivedIn> &input_words,
-     double learning_rate, double momentum, double L2_reg)
+     double learning_rate, double momentum, double L2_reg, double L1_reg, double LInf1_row_reg, double LInf1_col_reg, double L21_row_reg)
   {
       int embedding_dimension = W->cols();
 
@@ -885,7 +969,7 @@ class Input_word_embeddings
     void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input,
 				    const MatrixBase<DerivedIn> &input_words,
 				    double learning_rate,
-            double L2_reg)
+            double L2_reg, double L1_reg, double LInf1_row_reg, double LInf1_col_reg, double L21_row_reg)
     {
             int embedding_dimension = W->cols();
 	    //W_gradient.setZero(W->rows(), W->cols());
@@ -939,6 +1023,10 @@ class Input_word_embeddings
 				    const MatrixBase<DerivedIn> &input_words,
 				    double learning_rate,
             double L2_reg,
+            double L1_reg,
+            double LInf1_row_reg,
+            double LInf1_col_reg,
+            double L21_row_reg,
             double conditioning_constant,
             double decay)
     {

@@ -3,7 +3,12 @@
 #include <iomanip>
 #include <cmath>
 #include <deque>
+//#include <stdlib>
+#include <time.h>
 #include <vector>
+#include <algorithm>  // for partition
+#include <functional> // for greater_equal
+#include <numeric>    // for accumulate
 
 #include <boost/unordered_map.hpp> 
 #include <boost/algorithm/string.hpp>
@@ -153,6 +158,70 @@ double logadd(double x, double y)
         return x + log1p(std::exp(y-x));
     else
         return y + log1p(std::exp(x-y));
+}
+
+//std::vector<double> linf(std::vector<double> &v, double delta)
+void linf(std::vector<double> &v, double delta)
+{
+    ///mu is a list of floats.
+    ///Repeatedly subtract an infinitesimal amount from the maximum
+    ///element of v until a total of delta has been subtracted.
+    ///Or: sort v in descending order. Then find the unique rho such that
+    ///      v[rho] <= (sum(v[:rho]) - delta) / rho <= v[rho-1],
+    ///which turns out to be equivalent to finding the maximum rho
+    ///satisfying the second inequality, or finding the minimum rho
+    ///satisfying the first inequality.
+    ///Use a variant of quickselect to do this in O(n) time, following:
+    ///Duchi et al., 2008. Efficient projections onto the l1-ball for
+    ///learning in high dimensions.
+
+    vector <double> mu;
+
+    int lo = 0;
+    int hi = v.size();
+    double s = 0.0; // always equals sum(mu[:lo])
+
+    for (int k = 0; k < v.size(); k++)
+        mu.push_back(abs(v[k]));
+    
+    while (lo < hi)
+    {
+        int k = rand() % (hi - lo) + lo;
+        double pivot = mu[k];
+
+	// Partition mu[lo:hi] so that
+	//   pivot is in the middle,
+	//   everything >= pivot is to the left,
+	//   everything <  pivot is to the right.
+	// Set rho_new to be the first element < pivot.
+	std::swap(mu[lo], mu[k]);
+	std::vector<double>::iterator rho_new_it = std::partition(mu.begin()+lo+1, mu.begin()+hi, std::bind2nd(std::greater_equal<double>(), pivot));
+	std::swap(mu[lo], *(rho_new_it-1));
+
+	int rho_new = rho_new_it-mu.begin();
+	double s_new = s + std::accumulate(mu.begin()+lo, mu.begin()+rho_new, 0.0);
+	double xi_new = (s_new - delta) / rho_new;
+
+        if (xi_new <= pivot)
+        {
+            s = s_new;
+            lo = rho_new;
+        }
+        else
+        {
+            hi = rho_new-1;
+        }
+    }
+
+    int rho = lo;
+    double xi = std::max(0.0, (s - delta) / rho);
+    for (int i = 0; i < v.size(); i++)
+    {
+      if      (v[i] > xi)  v[i] =  xi;
+      else if (v[i] < -xi) v[i] = -xi;
+    }
+
+    return;
 }
 
 #ifdef USE_CHRONO
