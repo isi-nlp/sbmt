@@ -35,7 +35,7 @@ typedef boost::unordered_map<int,bool> int_map;
 
 struct Clipper{
   double operator() (double x) const { 
-    return std::min(0.5, std::max(x,-0.5));
+    return std::min(5., std::max(x,-5.));
     //return(x);
   }
 };
@@ -169,16 +169,18 @@ class Linear_layer
       }
       else
       {
+		  /*
           U += learning_rate * U_gradient;
           b += learning_rate * b_gradient;
-          /* 
+		  */
+           
           //UPDATE CLIPPING
           U += (learning_rate*U_gradient).array().unaryExpr(Clipper()).matrix();
           b += (learning_rate*b_gradient).array().unaryExpr(Clipper()).matrix();
           //GRADIENT CLIPPING
           //U += learning_rate*(U_gradient.array().unaryExpr(Clipper())).matrix();
           //b += learning_rate*(b_gradient.array().unaryExpr(Clipper())).matrix();
-          */
+          
       }
 	}
 
@@ -412,14 +414,17 @@ class Output_word_embeddings
         // b is vocab_size x 1
         // predicted_embeddings is output_embedding_dimension x minibatch_size
         // bProp_input is vocab_size x minibatch_size
+		
         W->noalias() += learning_rate * bProp_input * predicted_embeddings.transpose();
         b += learning_rate * bProp_input.rowwise().sum();
-
+		
         /*
         //GRADIENT CLIPPING
         W->noalias() += learning_rate * 
           ((bProp_input * predicted_embeddings.transpose()).array().unaryExpr(Clipper())).matrix();
         b += learning_rate * (bProp_input.rowwise().sum().array().unaryExpr(Clipper())).matrix();
+		*/
+		/*
         //UPDATE CLIPPING
         W->noalias() += (learning_rate * 
         (bProp_input * predicted_embeddings.transpose())).array().unaryExpr(Clipper()).matrix();
@@ -510,6 +515,7 @@ class Output_word_embeddings
 			     double learning_rate, double momentum) //not sure if we want to use momentum here
 	{
       //cerr<<"in gradient"<<endl;
+		/*
 	    USCMatrix<double> gradient_output(W->rows(), samples, weights);
 	    uscgemm(learning_rate,
           gradient_output,
@@ -519,7 +525,8 @@ class Output_word_embeddings
           gradient_output,
 		      Matrix<double,Dynamic,1>::Ones(gradient_output.cols()),
           b);
-      /*
+		*/
+      
       //IN ORDER TO IMPLEMENT CLIPPING, WE HAVE TO COMPUTE THE GRADIENT
       //FIRST
 	    USCMatrix<double> gradient_output(W->rows(), samples, weights);
@@ -557,7 +564,7 @@ class Output_word_embeddings
             W_gradient.row(update_item).setZero();
             b_gradient(update_item) = 0.;
         }
-        */
+        
       //cerr<<"Finished gradient"<<endl;
 	}
 
@@ -828,7 +835,7 @@ class Input_word_embeddings
 	    for (int ngram=0; ngram<context_size; ngram++)
 	        W += learning_rate * input_words.middleRows(ngram*vocab_size, vocab_size) * bProp_input.middleRows(ngram*embedding_dimension, embedding_dimension).transpose()
 	    */
-
+	  /*
 	    for (int ngram=0; ngram<context_size; ngram++)
 	    {
 	        uscgemm(learning_rate, 
@@ -836,8 +843,8 @@ class Input_word_embeddings
 			bProp_input.block(ngram*embedding_dimension,0,embedding_dimension,input_words.cols()).transpose(),
       	  	*W);
 	    }
-
-      /*
+	  */
+      
       //IF WE WANT TO DO GRADIENT CLIPPING, THEN WE FIRST COMPUTE THE GRADIENT AND THEN
       //PERFORM CLIPPING WHILE UPDATING
 
@@ -878,7 +885,7 @@ class Input_word_embeddings
             //SETTING THE GRADIENT TO ZERO
             W_gradient.row(update_item).setZero();
         }
-      */
+		
   }
 
     template <typename DerivedGOut, typename DerivedIn>
