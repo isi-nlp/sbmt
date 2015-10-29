@@ -79,6 +79,10 @@ int main(int argc, char** argv)
       ValueArg<int> num_noise_samples("", "num_noise_samples", "Number of noise samples for noise-contrastive estimation. Default: 100.", false, 100, "int", cmd);
 
       ValueArg<double> L2_reg("", "L2_reg", "L2 regularization strength (hidden layer weights only). Default: 0.", false, 0.0, "double", cmd);
+      ValueArg<double> L1_reg("", "L1_reg", "L1 regularization strength (hidden layer weights only). Default: 0.", false, 0.0, "double", cmd);
+      ValueArg<double> LInf1_row_reg("", "LInf1_row_reg", "LInfinity/L1 regularization strength (rows not columns) (hidden layer weights only). Default: 0.", false, 0.0, "double", cmd);
+      ValueArg<double> LInf1_col_reg("", "LInf1_col_reg", "LInfinity/L1 regularization strength (columns not rows) (hidden layer weights only). Default: 0.", false, 0.0, "double", cmd);
+      ValueArg<double> L21_row_reg("", "L21_row_reg", "L2/L1 regularization strength (rows not columns) (hidden layer weights only). Default: 0.", false, 0.0, "double", cmd);
 
       ValueArg<double> learning_rate("", "learning_rate", "Learning rate for stochastic gradient ascent. Default: 1.", false, 1., "double", cmd);
 
@@ -87,6 +91,8 @@ int main(int argc, char** argv)
       ValueArg<double> decay("", "decay", "Decay for ADADELTA. Default: 0.95", false, 0.95, "double", cmd);
       ValueArg<double> adagrad_epsilon("", "adagrad_epsilon", "Constant to initialize the L2 squared norm of the gradients with.\
           Default: 10E-3", false, 10E-3, "double", cmd);
+      //ValueArg<double> adagrad_epsilon("", "adagrad_epsilon", "Constant to initialize the L2 squared norm of the gradients with.\
+Default: 10E-3", false, 10E-3, "double", cmd); //TODO: Do I need L1 here?
       ValueArg<int> validation_minibatch_size("", "validation_minibatch_size", "Minibatch size for validation. Default: 64.", false, 64, "int", cmd);
       ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 1000.", false, 1000, "int", cmd);
 
@@ -171,6 +177,10 @@ int main(int argc, char** argv)
       myParam.initial_momentum = initial_momentum.getValue();
       myParam.final_momentum = final_momentum.getValue();
       myParam.L2_reg = L2_reg.getValue();
+      myParam.L1_reg = L1_reg.getValue();
+      myParam.LInf1_row_reg = LInf1_row_reg.getValue();
+      myParam.LInf1_col_reg = LInf1_col_reg.getValue();
+      myParam.L21_row_reg = L21_row_reg.getValue();
       myParam.init_normal= init_normal.getValue();
       myParam.init_range = init_range.getValue();
       myParam.normalization_init = normalization_init.getValue();
@@ -233,6 +243,10 @@ int main(int argc, char** argv)
       }
       cerr << learning_rate.getDescription() << sep << learning_rate.getValue() << endl;
       cerr << L2_reg.getDescription() << sep << L2_reg.getValue() << endl;
+      cerr << L1_reg.getDescription() << sep << L1_reg.getValue() << endl;
+      cerr << LInf1_row_reg.getDescription() << sep << LInf1_row_reg.getValue() << endl;
+      cerr << LInf1_col_reg.getDescription() << sep << LInf1_col_reg.getValue() << endl;
+      cerr << L21_row_reg.getDescription() << sep << L21_row_reg.getValue() << endl;
 
       cerr << num_noise_samples.getDescription() << sep << num_noise_samples.getValue() << endl;
 
@@ -655,6 +669,10 @@ int main(int argc, char** argv)
              adjusted_learning_rate, 
              current_momentum,
              myParam.L2_reg,
+             myParam.L1_reg,
+             myParam.LInf1_row_reg,
+             myParam.LInf1_col_reg,
+             myParam.L21_row_reg,
              myParam.parameter_update,
              myParam.conditioning_constant,
              myParam.decay);
@@ -688,6 +706,10 @@ int main(int argc, char** argv)
              adjusted_learning_rate,
              current_momentum,
              myParam.L2_reg,
+             myParam.L1_reg,
+             myParam.LInf1_row_reg,
+             myParam.LInf1_col_reg,
+             myParam.L21_row_reg,
              myParam.parameter_update,
              myParam.conditioning_constant,
              myParam.decay);
