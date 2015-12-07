@@ -1,0 +1,40 @@
+# Edit these locations
+
+BOOST_ROOT = "/home/nlg-01/chiangd/pkg64/boost_1_36_0" ;
+BIGLM_ROOT = "/home/nlg-01/chiangd/biglm" ;
+
+use-project /boost : $(BOOST_ROOT) ;
+import pyrex ;
+
+project hiero
+  : requirements
+    <use>/boost//
+    <include>.
+ ;
+
+python-extension cost : cost.pyx logp.c ;
+
+python-extension lm_biglm : lm_biglm.pyx :
+		 <include>$(BIGLM_ROOT)/pagh 
+		 <include>$(BIGLM_ROOT)/cmph-0.8/src
+		 <include>util
+		 ;
+python-extension biglm : biglm.pyx $(BIGLM_ROOT)/pagh//biglm :
+		 <include>util
+		 ;
+
+python-extension "rule" : rule.pyx strutil.c :
+		 <include>util
+		 ;
+python-extension sym : sym.pyx :
+		 <include>util
+		 ;
+
+python-extension svector : svector.pyx
+        ;
+
+explicit install-modules ;
+install install-modules : lm_biglm biglm rule sym cost
+	: <location>./lib 
+	  <install-dependencies>on <install-type>LIB ;
+

@@ -1,0 +1,20 @@
+import type ;
+import toolset : flags ;
+type.register PYREX : pyx ;
+
+import generators ;
+
+flags pyrex.pyrexc INCLUDES <include> ;
+#generators.register-standard pyrex.pyrexc : PYREX : C ;
+actions pyrexc
+{
+	"pyrexc" $(>) -o $(<) -I"$(INCLUDES)"
+}
+
+flags pyrex.cython INCLUDES <include> ;
+generators.register-standard pyrex.cython : PYREX : CPP ;
+actions cython
+{
+	"cython" $(>) -o $(<) -I"$(INCLUDES)"
+}
+

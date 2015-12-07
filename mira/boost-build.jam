@@ -1,0 +1,5 @@
+BOOST_ROOT = /home/nlg-01/chiangd/pkg64/boost_1_36_0 ;
+boost-build $(BOOST_ROOT)/tools/build/v2 ;
+
+
+

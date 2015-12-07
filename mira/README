@@ -1,0 +1,165 @@
+Hiero-MIRA README
+22 Sep 2008
+
+Building
+--------
+
+Requirements:
+  Python 2.5 or later (http://www.python.org)
+  SRI-LM toolkit (http://www.speech.sri.com/projects/srilm/)
+    Under Linux, the libraries must be built using the -fPIC flag (add
+    to GCC_FLAGS in common/Makefile.machine.<arch>)
+  Boost 1.35.0 or later (http://www.boost.org)
+  Pyrex	0.9.5.1a = 0.9.5.1.1
+    (http://www.cosc.canterbury.ac.nz/greg.ewing/python/Pyrex/) 
+    using a later version may give errors
+  An implementation of MPI
+
+1. Edit pathnames in:
+     boost-build.jam: location of Boost distribution
+     Jamfile: location of Boost, SRI-LM and biglm distribution
+	      biglm is internal to ISI/Language Weaver
+
+2. Get a working bjam (in tools/jam subdirectory of Boost)
+
+3. Edit your site-config.jam or user-config.jam to configure Python
+   and MPI
+
+4. Run bjam install-modules. This should install all Python extension
+   modules and their related libraries in the lib/ subdirectory.
+
+5. Edit setup.sh to point to the lib/ subdirectory.
+
+Running the MIRA trainer (tuning feature weights)
+-------------------------------------------------
+
+1. Assuming you are using a Bourne shell, do
+   . setup.sh
+
+2. trainer.py decoder.ini -w <weights>
+
+-p  run on multiple nodes using MPI
+-w  initial weights or weight file
+    format is: feature=weight feature=weight etc.
+-x  name of corpus to run on
+
+The supplied .ini file expects to find the grammar for sentence <n>
+(starting from 0) in file sentgrammars.<corpus>/grammar.line<n>.
+
+To use the parallelized version, you will need to use mpirun and the
+mpi4py (MPI-enabled Python interpreter). Set the number of processors
+to be the number of physical processors plus one.
+
+For the SBMT decoder, use sbmt_decoder.py instead of decoder.ini. It
+expects an additional argument instead of -x:
+
+-g  directory where gars are to be found
+
+Running the decoder
+-------------------
+
+1. Assuming you are using a Bourne shell, do
+   . setup.sh
+
+2. decoder.py decoder.ini -w <weights>
+
+-p  run on multiple nodes using MPI
+-w  initial weights or weight file
+    format is: feature=weight feature=weight etc.
+-x  name of corpus to run on
+
+The supplied .ini file expects to find the grammar for sentence <n>
+(starting from 0) in file sentgrammars.<corpus>/grammar.line<n>.
+
+To use the parallelized version, you will need to use mpirun and the
+mpi4py (MPI-enabled Python interpreter). Set the number of processors
+to be the number of physical processors plus one.
+
+Running the grammar extractor
+============================-
+
+Before the training proper, you must obtain (1) a word-aligned bitext
+and (2) word-translation probabilities. These can be obtained from the
+Pharaoh trainer or by using refiner.py. To do the latter, you need to
+run GIZA++ on the training bitext to produce Viterbi word alignments
+in both directions. Then run:
+	
+	refiner.py f-e.A3.final e-f.A3.final > refined
+	lexweights.py refined -w lex.n2f lex.f2n
+
+where f-e.A3.final is the Viterbi alignment for P(f|e), i.e., it
+aligns multiple French words to an English word, and e-f.A3.final is
+the same but in the reverse direction. The refiner outputs another
+GIZA++-style word alignment on standard output, and lexweights.py
+outputs two tables of word-translation probabilities: lex.n2f is
+P(f|e) and lex.f2n is P(e|f).
+
+Alternative usage: whenever a GIZA++-style alignment file is expected,
+you can specify the -P option and then supply alignments on stdin in
+the form
+	0-1 1-2 2-3
+meaning French word 0 is aligned with English word 1, etc. In this
+case you must specify the -W <french-file> <english-file> option to
+supply the raw parallel text.
+
+Step 1: extract rules
+
+	extractor.py <option>* [<input-file>] -o <output-dir>
+
+If <input-file> is omitted, standard input is used. The input format
+is a GIZA++-style word alignment (the output of refiner.py). Or, it
+can be word alignments in the sentence-per-line format described
+above, using the same additional options.
+
+
+The extractor will output multiple "pre-grammar" files into
+<output-dir>. Note that if <output-dir> is not already empty, the
+result could be a mess.
+
+Other options (partial list):
+	-L <len>	maximum initial phrase length
+	-l <len>	maximum rule length
+	-t		"tight" phrases: no unaligned words at edges
+	-s <len>	minimum subphrase length
+	-w lex.n2f lex.f2n word-translation probability tables
+	-A		preserve word alignments
+
+Step 2: generate final grammar
+
+	scorer.py <option>* <input>*
+
+The <input>s are either files or directories. If a directory, it will
+read all the files in the directory. The grammar is written to
+standard output.
+
+Options (partial list):
+	-l <len>	maximum rule length
+	-f <file>	specify a test file to filter grammar for
+
+Some notes on the implementation
+================================
+
+Training:
+  alignment.py	manipulation of word alignments
+  refiner.py	alignment refinement (symmetrization)
+  lexweights.py	lexical weights
+  extractor.py	extraction into intermediate grammar
+  scorer.py	filtering and scoring to produce final grammar
+
+Decoding:
+  decoder.py	main decoder module
+  model.py	base class for model components, plus some basic models
+  lm.pyx	language model
+  srilm.pyx	SRI-LM wrapper, plus some intermediate code
+  srilmwrap.cc	C wrapper for C++ code
+
+Common:
+  rule.pyx	grammar rule objects
+  grammar.py	just has some random functions now and should be retired
+  lex.py	word-to-number mapping
+  sym.py	functions for dealing with nonterminal symbols
+
+Utilities:
+  sgml.py	SGML handling
+  log.py	logging
+  monitor.py	CPU/memory monitoring
