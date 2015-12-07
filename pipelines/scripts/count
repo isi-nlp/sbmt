@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+
+# usage: count.py -k <k> -c [c] [-b b] [-f f1 ...fn]
+
+# input:  key \t value \t count1 \t count2...
+# output: key \t sum1 \t sum2 ....
+# if -b specified, b^sum1 b^sum2
+# if f specified, f1=sum1 f2=sum2..., or if c > 1, f1={{{sum1}}} f2={{{sum2}}}...
+
+# each count, sum can itself be a space-separated list of vals
+
+import sys
+import itertools
+import argparse
+from decimal import *
+
+def input(fh):
+    for line in fh:
+        fields = line.rstrip().split("\t")
+        yield fields
+        
+
+parser = argparse.ArgumentParser(description="sum and format partial cond prob (or other) scores")
+parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="input file")
+parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
+parser.add_argument("--features", "-f", nargs='+', help="space separated list of feature names, should match column size of input")
+parser.add_argument("--unit", "-u", action='store_true', default=False, help="always use count of 1")
+parser.add_argument("--numkeys", "-k", default=1, type=int, help="reduce key is first k fields")
+parser.add_argument("--numcount", "-c", default=1, type=int, help="fields to be summed are last c fields")
+parser.add_argument("--base", "-b", default=None, help="base of weights (they are assumed to be log probs w/r/t some base")
+
+try:
+  args = parser.parse_args()
+except IOError, msg:
+  parser.error(str(msg))
+
+
+n_keys = args.numkeys
+n_counts = args.numcount
+
+valtemplate = args.base+"^%f" if args.base is not None else "%f"
+def get_key(record):
+    return record[:n_keys]
+
+def get_count(record):
+    if args.unit: # supply implicit count of 1
+        return [Decimal(1),]
+    else:
+        return [[Decimal(x) for x in y.split()] for y in record[-n_counts:]]
+
+# label=val for first val
+# label.0=val for next, etc.
+def add_label(label, vals):
+    ret = ["%s=%s" % (label, vals[0]),]+["%s.%d=%s" % (label, idx, val) for idx, val in enumerate(vals[1:])]
+    return ' '.join(ret)
+
+for key, records in itertools.groupby(input(args.infile), get_key):
+    sums = None
+    for cv in (get_count(record) for record in records):
+        if sums is None:
+            sums = cv
+        else:
+            sums = [[ vv1 + vv2 for (vv1,vv2) in itertools.izip(*x)] for x in itertools.izip(sums,cv) ]
+    #pks = itertools.izip(*[get_count(record) for record in records])
+    #sums = [sum(pk) for pk in pks]
+    if args.features is None or len(args.features) == 0:
+        featvals = "\t".join([' '.join(valtemplate % s for s in x) for x in sums])
+    else:
+        featvals = "\t".join([add_label(l, [valtemplate % s for s in x]) for l,x in zip(args.features, sums)])
+    args.outfile.write("%s\t%s\n" % ("\t".join(key), featvals))
+

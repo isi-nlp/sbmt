@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+
+import itertools
+import collections
+import cfg
+import argparse
+import sys
+import os.path
+import re
+
+def map_nts(inp):
+    def input(inp):
+        for line in inp:
+            yield line.strip().split('\t')[1]
+    mp = collections.defaultdict(int)
+    for estr in input(inp):
+        for m in re.finditer(r'(?: |^)\(([^() ~]+)(?: |~\d+~\d+ )',estr):
+            mp[m.group(1)] += 1
+    for k,v in mp.iteritems():
+        print '%s\t%s' % (k,v)
+        
+def map_nt_root(inp):
+    def input(inp):
+        for line in inp:
+            yield line.strip().split('\t')[1]
+    mp = collections.defaultdict(int)
+    for estr in input(inp):
+        for m in re.finditer(r'^\(TOP\S* \S* \((.*?)~',estr):
+            mp[m.group(1)] += 1
+    for k,v in mp.iteritems():
+        print '%s\t%s' % (k,v)
+
+def reduce(inp):
+    def input(inp):
+        for line in inp:
+            t,c = line.strip().split('\t')
+            yield t,int(c)
+    for k,lst in itertools.groupby(input(inp), lambda x : x[0]):
+        t = 0
+        for _,n in lst:
+            t += n
+        print '%s %s' % (k,t)
+        
+print >> sys.stderr, 'args:', sys.argv
+parser = argparse.ArgumentParser()
+parser.add_argument('step',choices=['make-nts','make-nt-root','map-nts','map-nt-root','reduce'])
+args = cfg.parse_args(parser)
+
+hp = args.hadoop
+
+def make(step,file,file2):
+    executable = os.path.abspath(sys.argv[0])
+    hp.mapreduce( mapper=executable + ' ' + step
+                , reducer=executable + ' reduce'
+                , input='training'
+                , output=file
+                , compress=False )
+    countstrip = os.path.join(args.scriptdir,'prior-to-glue-nts')
+    hp.mapreduce( mapper=countstrip
+                , input=file
+                , output=file2
+                , compress=False )
+    hp.getmerge(file2,os.path.join(args.outdir,file2))
+
+if args.step == 'map-nts':
+    map_nts(sys.stdin)
+elif args.step == 'map-nt-root':
+    map_nt_root(sys.stdin)
+elif args.step == 'reduce':
+    reduce(sys.stdin)
+elif args.step == 'make-nts':
+    make('map-nts','grammar.nts','grammar.nt.symbols')
+else:
+    make('map-nt-root','grammar.nt-root','grammar.root.symbols')

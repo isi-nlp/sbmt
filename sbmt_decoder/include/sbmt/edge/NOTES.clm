@@ -1,0 +1,64 @@
+===
+
+TODO: fake ids for added words for top-level (only?) lw and big ngram lms, in case english training not included in them.  lw can use own vocab except p(unigram-unk) changes as does lm-unk feature.
+
+===
+TODO: collect events for binarized rule context (separate tunable features for non-english-constituent nodes, composed-internal english-const, rule top english-const?).  tough because we need the ghkm derivation forests (yuck).
+
+===
+TOP items - score any context there, or unnecessary?  if binary top rules, i want to NOT reduce context to just <s> until clm event gets a chance to fire.
+
+===
+context language model feature (predict outside-of-span foreign words given ngram inside left/right e-context).  see also trunk/graehl/clm/NOTES; the following explains the modifications to trunk/sbmt_decoder
+
+is implemented as a runtime-configured part of ngram_info, where the mixed left and right f|e lms have a weight of 0, because:
+
+1) using the same multi lm means that right ngram context shortening logic works properly (left is probably not correct, though, because the left lm is in reverse order).  therefore,
+
+TODO: disable left shortening if using left f context lm.  lm_phrase must take independent shorten left vs right args
+
+
+2) TODO: new options: clm-real=true/false clm-virtual=true/false (recommend false if events only collected from real ghkm rules). new lm feature weights: clm-left clm-right (multi-lms, if used for both, will require a way to have the composite have 0 weight for regular ngram scoring, but the components to have a specified weight). lms named clm-left-lm and clm-right-lm required ot have 0 weight (so as to not require regular ngram to know about clm) (note: different name from weight feature!)
+
+3) TODO: (always, or only if left or right context lms exist) store for each f sentence position the left/right vocab ids for the foreign word there.
+create_info needs to have access to the target span, but only gets the children: boost::iterator_range<ConstituentIterator> rng. itr->span() is for each child, not the result.  do we know itr proceeds l->r f, or do we take pair(min_span(span.first),max_span(span.second))?
+
+also, in case we want to parse w/ rules that sometimes have no lmstring, would rng sometimes have more than 2 things?
+
+finally, is there anything sensible that can be done for "foreign outside word" in case of lattices?  select one most probable left/right for each node in lattice? see Wei's word_context_info, which addresses this issue (builds a boost graph of the lattice, and looks at out-adj of right, and in-adj of left span nodes, and somehow summarizes over all possibilities)
+
+
+========
+alternatives to "clm part of ngram_info":
+
+a) independent ngram_info tracking - essentially duplicate all the ngram_info ngram_constructor into clm_info clm_constructor files, OR template out the scoring part of ngram context (preferred), OR template w/ boolean const flag and have dead/empty data structures in the non-clm mode (almost as efficient, a few wasted members in factory, big deal).
+
+b) most generically, typelist or runtime list of lm_phrase like riders on ngram-context maintenence, with ids as indexed_tokens rather than lm-specific ids.
+
+
+
+====
+things bugging/needing checks:
+
+feat ids for regular ngram component scores seem to be sequential 0,1,... how are names/ids reserved in grammar.feature_names(), then?
+
+verify actual computation of:
+
+* base lm inverse map.
+* clm score_left score_right
+* most probable foreign word (use lattice weights if they exist?)
+
+same word-normalization as english lms required (e.g. digits->@) - handle at lmstring of rule level if norm is uniform across all lms, but this must modify clm training in the same way, as well
+
+ngram using as context other-side foreign words past <N-1 word english span (no gaps)? so far, no.  shen didn't.
+
+check: order 1 clm still does something (unigram p(f) paid 0,1,...n times times depending on derivation bracketing).  probably useless, but make sure it either doesn't crash, or force-disable it.
+
+check: single lw ngram lm
+
+implement: wrapper for biglm vocab addition - just because we can't add string->id mapping, doesn't mean we can't add unique new ids; will those be treated as unk on lookup?  if we normalize them, maybe (remember max real id, any ids over it are unk).
+
+instead of adding to vocab, assert that all e words are known to main lm.  only exception would be rule-based xltns.
+
+test that ngram order reduction is based on max of dyn,clm[0,1] ngram orders.  coded.
+

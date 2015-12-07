@@ -1,0 +1,31 @@
+
+import project ;
+project site-config ;
+project.initialize $(__name__) ;
+
+# describe third-party pre-build libraries
+#
+# if the name/library name does not follow the standard convention on your os
+# use the <name> feature.  as in
+#
+# lib zlib : : <name>z ;
+#
+# zlib is not usually referred to as "z", so this lets us refer to it as
+# "zlib" and let the linker on unix find it as -lz
+#
+# if library is not in a standard search location use the <search> property.
+# if one library is supposed to "know" or "depend on" another library, in
+# such a way as to affect link order, use the <use> property
+#
+# as in
+# lib hoard : : <search>/home/pust/lib <search>/home/pust/lib64 <use>pthread ;
+#
+# hoard overrides the pthread_create function in pthread, so t hey need to appear
+# in an order that indicates to the linker that hoard's pthread_create function
+# is used.
+
+lib zlib : : <name>z ;
+lib pthread ;
+lib hoard : : <use>pthread ;
+lib tbb : : <use>pthread ;
+lib tbbmalloc ;

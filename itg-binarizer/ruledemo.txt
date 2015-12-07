@@ -1,0 +1,47 @@
+## xrs rule ####################################################################
+
+NP-C(NPB(DT("the") x0:JJ x1:CD x2:NNS) x3:PP) -> x3 x0 x1 x2 ### id=1
+
+## current binarization
+
+NP-C:VL: NP-C(NPB(DT("the") x0:JJ x1:CD x2:NNS) x3:PP) -> x3 V[V["the"_JJ___CD_]___NNS_]
+
+V["the"_JJ___CD_]:VL: V["the"_JJ___CD_](x0:JJ x1:CD) -> x0 x1 
+
+V[V["the"_JJ___CD_]___NNS_]:VL: V[V["the"_JJ___CD_]___NNS_](x0:V["the"_JJ___CD_] x1:NNS) -> x0 x1 
+
+## binarization as sort-of-symmetric scfg ######################################
+#
+# let V["the"_JJ___CD_]          = x4@1
+# let V[V["the"_JJ__CD_]___NNS_] = x5@1
+
+NP-C -> x3:PP x5@1 , x5@1 x3:PP
+
+x5@1 -> x4@1 x2:NNS , NPB(x4@1 x2:NNS) 
+
+x4@1 -> x0:JJ x1:CD , DT("the") x0:JJ x1:CD
+
+
+## xrs rule ####################################################################
+
+PP(x0:IN NP-C(NPB(DT("the") NN("trade") NN("surplus")))) -> x0 "TRADE" "SURPLUS" ### id=2
+
+## current binarization
+
+PP:VL: PP(x0:IN NP-C(NPB(DT("the") NN("trade") NN("surplus")))) -> V[IN_"TRADE"] "SURPLUS" 
+
+V[IN_"TRADE"]:VL: V[IN_"TRADE"](x0:IN) -> x0 "TRADE"
+
+## binarization as sort-of-symmetric scfg ######################################
+#
+# let V[IN_"TRADE"] = x1@2
+
+x1@2 -> x0:IN "TRADE" , x0:IN
+
+PP   -> x1@2 "SURPLUS", x1@2 NP-C(NPB(DT("the") NN("trade") NN("surplus")))   
+
+# probably wish it had been ####################################################
+
+x1@2 -> "TRADE" "SURPLUS" , NP-C(NPB(DT("the") NN("trade") NN("surplus")))
+
+PP -> x0:IN x1@2 , x0:IN x1@2

@@ -1,0 +1,114 @@
+<html><head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title> Coroutines and thread safety</title>
+<link rel="stylesheet" href="files/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.70.1">
+<link rel="start" href="index.html" title="Chapter&nbsp;1.&nbsp;Boost.Coroutine">
+<link rel="up" href="advanced.html" title=" Advanced concepts">
+<link rel="prev" href="asio.html" title=" Events: Boost.Asio">
+<link rel="next" href="design.html" title=" Design Rationale">
+</head><body link="#0000ff" alink="#0000ff" bgcolor="white" text="black" vlink="#840084">
+<table width="100%" cellpadding="2">
+<tbody><tr><td valign="top"><img alt="boost.png (6897 bytes)" src="files/boost.png" width="277" height="86"></td>
+<td align="center"><a href="http://www.boost.org/">Home</a></td>
+<td align="center"><a href="http://www.boost.org/doc/libs">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="http://www.boost.org/users/index.html">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="asio.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="advanced.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="design.html"><img src="files/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="coroutine.threads"></a> Coroutines and thread safety</h3></div></div></div>
+<p>
+Boost.Coroutine provides a restricted version of the distinct objects
+thread safety guarantee. The library is thread safe as long as these
+preconditions are valid:</p>
+<div class="orderedlist"><ol type="1">
+<li>
+All member functions of a coroutine can only be called from the owning
+thread (the thread where a coroutine has been created is said to be the
+owning thread; creating a coroutine means invoking any constructor).
+</li>
+<li>
+Distinct coroutine instances can be freely called from different
+threads.
+</li>
+</ol></div>
+<p>
+It follows from 1 that:</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+A coroutine instance cannot be called from any thread other than the one
+where it has been created.
+</li>
+<li>
+A coroutine instance cannot yield to any other coroutine instance
+  unless the latter has been created in the same thread of the former.
+</li>
+</ul></div>
+<a name="threads.what_does_this_means_in_practice"></a><h4>
+<a name="id2628301"></a>What does this means in practice</h4>
+<p>
+In practice a coroutine cannot migrate from one thread to another. For
+its whole lifetime it is bound to one specific thread. Other threads
+cannot safely access any coroutine member functions.</p>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/caution.png"></span> Not even locking can be safely used to protect
+concurrent accesses to a coroutine. That is two treads cannot invoke
+the same coroutine even if the serialize access through a mutex.</td></tr></tbody>
+</table></div>
+<p>
+If coroutines are, for example, used to implement a M on N threading
+models (M coroutines on N threads with <code class="computeroutput"><span class="identifier">N</span><span class="special"> &lt;</span><span class="identifier"> M</span></code>), coroutines cannot be
+dynamically migrated from a more loaded thread to a less loaded
+threads.</p>
+<a name="threads.threads_and_boost_asio"></a><h4>
+<a name="id2628363"></a>Threads and Boost.Asio</h4>
+<p>
+From the threads guarantees of Boost.Coroutine, it follows that, if
+coroutines are ever inserted in an <code class="computeroutput"><span class="identifier">asio</span><span class="special">::</span><span class="identifier">io_service</span></code>, no more than
+one thread can call <code class="computeroutput"><span class="identifier">io_service</span><span class="special">::</span><span class="identifier">run</span><span class="special">()</span></code>. This thread must be the one
+that created all coroutines inserted in the <code class="computeroutput"><span class="identifier">io_service</span></code>.</p>
+<p>
+This means that the "one <code class="computeroutput"><span class="identifier">io_service</span></code> per thread" scheme must be used.</p>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/note.png"></span> This means that on Windows platforms an application
+cannot take advantage of the ability of a <code class="computeroutput"><span class="identifier">Win32</span></code> completion port to
+balance the load across all threads bound to it. This might incur, in
+some applications, in a performance penalty. On the other hand the
+thread affinity of coroutines might result in better CPU affinity
+and thus a better cache utilization and memory usage especially on
+<code class="computeroutput"><span class="identifier">NUMA</span><span class="identifier"> SMP</span></code> systems.</td></tr></tbody>
+</table></div>
+<a name="threads.relaxing_requirements"></a><h4>
+<a name="id2628490"></a>Relaxing requirements</h4>
+<p>
+In the future, as more experience with the library is gained, the
+thread safety restrictions could be slightly relaxed. It is likely
+that the owning thread will become the first one to invoke
+<code class="computeroutput"><span class="keyword">operator</span><span class="special">()</span></code> for that coroutine or <code class="computeroutput"><span class="identifier">yield_to</span></code> that coroutine.</p>
+<p>
+It is unlikely that thread migration will ever be possible (nor it is
+believed to be a necessary feature).</p>
+<p>
+For a rationale for the current requirements see
+<a href="coroutine_thread.html" title=" Interaction between coroutines and threads">"Interaction between coroutines and threads"</a>.</p>
+</div>
+<table width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright © 2006 Giovanni P. Deretta</small></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="asio.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="advanced.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="design.html"><img src="files/next.png" alt="Next"></a>
+</div>
+</body></html>

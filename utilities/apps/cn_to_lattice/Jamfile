@@ -1,0 +1,6 @@
+project cn_to_lattice ;
+
+exe cn_to_lattice
+  : cn_to_lattice.cpp
+    /gusc//gusc
+  ;

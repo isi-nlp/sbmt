@@ -1,0 +1,10 @@
+lib LWLangModel
+  : [ glob impl/*.cpp ]
+    ../../Common//LWCommon
+  : <include>. 
+    <include>..
+    <include>../..
+    <include>impl
+  :
+  : <include>..
+  ;

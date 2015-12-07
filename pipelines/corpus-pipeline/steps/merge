@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+from guppy import lazy
+
+
+def filedata(filename):
+    for line in open(filename):
+        v = line.rstrip('\n').split('\t')
+        yield int(v[0]), '\t'.join(v[1:])
+
+mergelist = lazy.merge_lists(*[filedata(fn) for fn in sys.argv[1:]],cmp=lambda x,y : cmp(x[0],y[0]))
+for x in mergelist:
+    do print '\t'.join(x)
+

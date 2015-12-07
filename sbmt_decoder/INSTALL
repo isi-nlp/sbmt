@@ -1,0 +1,17 @@
+Dependencies:
+Already we depend on boost.  Likely we will depend on DB.  Third party 
+dependencies will need to be built and installed on your own using that tools 
+build process. You can install them to wherever, and specify the location of 
+the libs and headers via 
+    ./configure CPPFLAGS="-I/path/to/includes" LDFLAGS="-I/path/to/libs"
+or just have them installed in an expected system location.
+
+install the 3rdparty lib:
+cd 3rdparty/lw; ./install.sh; cd ../..
+
+other than that, the expected build/install routine is
+
+./configure --prefix=/where/i/want/to/install
+make
+make check # compiles/runs unit tests
+make install

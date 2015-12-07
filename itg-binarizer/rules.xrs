@@ -1,0 +1,1 @@
+VP(DT("a") NP(x0:CC DT("b") DT("c") x1:NN VB("d"))) -> x1 "A" "B" x0 "C" ### id=1 min-top-k=256

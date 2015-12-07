@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+
+import sys, itertools
+
+combiner = len(sys.argv) > 1 and sys.argv[1] == '-c'
+
+def keyval(input):
+    for line in input:
+        m = []
+        k,v = line.split('\t',1)
+        for vv in v.split():
+            m.append([int(vvv) for vvv in vv[1:-1].split(',')])
+        yield k,len(m),m
+        
+def reducer(input):
+    for keylen, records in itertools.groupby(keyval(input), lambda x: (x[0],x[1])):
+        key, sz = keylen
+        moments = []
+        #print >> sys.stderr, "sz=%s" % sz
+        for x in xrange(0,sz):
+            #print >> sys.stderr, "x=%s" % x
+            moments.append([0,0,0])
+        
+        for sameaskey,sameassz,m in records:
+            x = 0
+            for v in m:
+                moments[x][0] += v[0]
+                moments[x][1] += v[1]
+                moments[x][2] += v[2]
+                x += 1
+        yield key, moments[:-1], moments[-1]
+
+if __name__ == "__main__":
+    for key, dists, rldist in reducer(sys.stdin):
+      if combiner:
+        print key + '\t' + ' '.join("(%s,%s,%s)" % tuple(vv) for vv in dists + [rldist])
+      else:
+        if rldist[1] == 0:
+            print key + "\t norldist=0"
+        else:
+            vlstr = 'vldist={{{(' + ') ('.join(','.join(str(p) for p in dist) for dist in dists) + ")}}}"
+            rlstr = 'rldist={{{(' + ','.join(str(p) for p in rldist) + ')}}}'
+            print key  + '\t' +  vlstr + ' ' + rlstr
+

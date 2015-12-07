@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+
+import argparse
+import os.path
+import cfg
+import sys
+import subprocess
+import tempfile
+
+cmdline = []
+mapper = []
+formapper = False
+for tok in sys.argv:
+    if tok == '--':
+        formapper = True
+        continue
+    if formapper and tok != '--':
+        mapper.append(tok)
+    elif tok != '--':
+        cmdline.append(tok)
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('name')
+args = cfg.parse_args(parser,cmdline[1:])
+hp = args.hadoop
+
+def mapinput(cmd):
+        proc = subprocess.Popen( cmd
+                               , stdout=subprocess.PIPE
+                               )
+        lines,_ = proc.communicate()
+        for line in lines.split('\n'):
+            if line:
+                print '%s\t%s' % (-1,line.rstrip('\n'))
+
+mapinput(mapper)

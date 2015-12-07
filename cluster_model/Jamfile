@@ -1,0 +1,9 @@
+import sbmt-util ;
+
+project cluster_model 
+      : 
+      : usage-requirements <include>. ;
+
+lib cluster_model : cluster_info.cpp ;
+
+sbmt-util.install install : : cluster_model ;

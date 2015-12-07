@@ -1,0 +1,26 @@
+import sbmt-util ;
+
+project rule_length 
+  : requirements <include>.
+  : usage-requirements <include>. 
+  ;
+
+exe rule_length_mapper 
+  : rule_length_mapper.cpp 
+    /xrsparse 
+    /boost/program_options 
+    /boost_coro
+  ;
+
+lib rule_length_info
+  : rule_length_info.cpp
+    /sbmt_decoder//sbmt
+  ;
+
+sbmt-util.install install
+  :
+  : rule_length_mapper
+  :
+  :
+  : rule_length_reducer
+  ;

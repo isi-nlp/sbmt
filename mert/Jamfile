@@ -1,0 +1,9 @@
+import sbmt-util ;
+
+exe mert : mert.c data.c point.c score.c vector.c strstrsep.c ;
+LINKLINBS on mert = -lm ;
+
+sbmt-util.install install
+  : 
+  : mert
+  ;

@@ -1,0 +1,25 @@
+#!/usr/bin/perl
+
+# List all ruleIDs used in derivations
+# read from STDIN.
+
+use strict;
+
+my $ONLY_MAX = 1;
+
+my $max = 0;
+while(<STDIN>) {
+  /forest={{{(.*)}}}/;
+  $_ = $1 if $1;
+  #print $_,"\n";
+  s/([()])/ $1 /g;
+  s/\s+/ /g;
+  my %ruleindexes;
+  while(/ \( (\d+)/g) {
+    my $ruleID = $1;
+    next if($ONLY_MAX && $ruleID < $max);
+    $max = $ruleID;
+    print $ruleID,"\n";
+    #$ruleindexes{$1}++;
+  }
+}

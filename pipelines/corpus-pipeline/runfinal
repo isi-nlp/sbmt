@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+
+import cfg
+import hadoop
+import argparse
+import string
+import os
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument( '-n', '--nocleanup' \
+                   , help='do not toss the temporary $tmpdir'
+                   , action='store_false'
+                   , dest='cleanup'
+                   )
+d = cfg.parse_args(parser,config='$outdir/corpus-prep.config')
+hp = d.hadoop
+
+cdirs = os.path.join(d.scriptdir,'create-directories')
+
+cmd = 'pushd $outdir; $cdirs --length-limit 40 -m corpus.map -f bl-corpus corpus; popd'
+cfg.execute(d,cmd,cdirs=cdirs,outdir=d.outdir)
+
+for ins in ['rules.extra', 'input']:
+    if not hp.file_exists(ins):
+        hp.put(os.path.join(d.tmpdir,ins),ins)
+
+mapper = os.path.join(d.rootdir,'corpus-pipeline','steps','insfile')
+mapper += ' -o %s -t %s' % (d.outdir,d.tmpdir)
+
+reducer = os.path.join(d.rootdir,'corpus-pipeline','steps','archive')
+reducer += ' -o ' + d.outdir + ' -t ' + d.tmpdir
+
+
+hp.mapreduce( mapper=mapper
+            , input='input'
+            , output='no_out_insfile' 
+            , options='-jobconf mapred.reduce.tasks.speculative.execution=false' )
+
+hp.mapreduce( reducer=reducer
+            , input=['rules.extra']
+            , output='no_out_rulefiles'
+            , options='-jobconf mapred.reduce.tasks.speculative.execution=false' )
+
+if d.cleanup:
+    cfg.execute( d, 'rm -rf $tmpdir',tmpdir=d.tmpdir)
+

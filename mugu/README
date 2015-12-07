@@ -1,0 +1,3 @@
+root folder for mugu, what i hope to be a tree transduction 
+library and decoder focused on efficient search of online compositions, 
+possibly at the expense of correctness.

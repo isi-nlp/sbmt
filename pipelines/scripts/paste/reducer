@@ -1,0 +1,15 @@
+#!/usr/bin/env perl
+
+# usage: paste_r.pl name(,name)*
+
+# input:  id \t rule (\t (feat=)?val)+
+# output: rule ( feat=val)+
+
+# The feature name from the command-line is used only if it is absent in the input
+
+while (<STDIN>) {
+    chomp;
+    @fields = split(/\t/);
+    shift(@fields);
+    print join(" ", @fields), "\n";
+}

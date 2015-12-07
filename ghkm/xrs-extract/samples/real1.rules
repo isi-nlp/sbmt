@@ -1,0 +1,14 @@
+S(x1:SG-A,x2:VP) -> x1,,,x2
+VP(x1:VBZ,x2:S-A) -> x1,x2
+S-A(x1:NPB,x2:VP) -> x1,x2
+VP(x1:VB,x2:NPB) -> x1,x2
+NPB(PRP$(their),x2:NN,x3:NNS,x4:PUNC.) -> x2,x3,x4
+NPB(x1:JJ,x2:NNS) -> x1,x2
+SG-A(x1:VP) -> x1
+VP(x1:VBG,x2:NP-A) -> x1,x2
+NP-A(x1:NPB,x2:PP,x3:PP) -> x3,x2,µÄ,x1
+PP(IN_at(at),x2:NPB) -> x2
+NPB(VBN(specified),NNS(sites)) -> ¶¨µã
+PP(IN_of(of),x2:NPB) -> x2
+NPB(x1:JJ,x2:NN) -> x1,x2
+NPB(DT_the(the),x2:JJ,x3:NN) -> x2,x3

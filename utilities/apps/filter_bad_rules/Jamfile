@@ -1,0 +1,4 @@
+exe filter_bad_rules
+  : filter_bad_rules.cpp
+    /sbmt_decoder//sbmt
+  ;

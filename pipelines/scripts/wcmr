@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+import cfg, argparse, os, sys
+parser = argparse.ArgumentParser()
+parser.add_argument('infile')
+parser.add_argument('outfile',nargs='?',default='')
+
+d = cfg.parse_args(parser)
+if d.outfile == '': 
+   d.outfile = d.infile + '.wc'
+
+#print >> sys.stderr, 'input:', d.infile, 'output:', d.outfile
+
+hp = d.hadoop
+
+hp.mapreduce( mapper=os.path.join(d.scriptdir,'wc','mapper')
+            , reducer=os.path.join(d.scriptdir,'wc','reducer')
+            , input=d.infile
+            , output=d.outfile
+            , options='-jobconf mapred.output.compress=false'
+            )
+hp.getmerge( d.outfile, '.' )
+

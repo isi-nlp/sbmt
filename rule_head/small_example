@@ -1,0 +1,5 @@
+X(x0:Y x1:Z) -> x1 x0	hwpos={{{0}}}	5	2 hello 0.7 hi 0.3	2 world 0.8 earth 0.2	2 hello 0.7 hi 0.3
+Y("hello") -> "HELLO"	hwpos={{{"hello"}}} 10	1 hello 10
+Z("world") -> "WORLD"	hwpos={{{"world"}}} 15	1 world 15
+Y("hi") -> "HELLO"	hwpos={{{"hi"}}} 2	1 hello 10
+Z("earth") -> "WORLD"	hwpos={{{"earth"}}} 5	1 world 15

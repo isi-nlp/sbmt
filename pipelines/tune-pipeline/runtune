@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+
+import cfg, argparse, os
+
+class FileList(argparse.Action):
+    def __call__(self,parser,namespace,values,option_string=None):
+        setattr(namespace,self.dest,' '.join(os.path.abspath(v) for v in values))
+
+parser = argparse.ArgumentParser()
+parser.add_argument( 'cprep'
+                   , nargs='?'
+                   , help='corpus-prep output directory'
+                   , action=cfg.store_abspath
+                   , default=argparse.SUPPRESS
+                   )
+parser.add_argument( '-a,', '--tuning-algorithm'
+                   , help='tuning algorithm represented in "tuner" section of config file'
+                   , default='mira' 
+                   , dest='tunealgo'
+                   )
+parser.add_argument( '-e', '--lc-tok-refs'
+                   , nargs='+'
+                   , default=argparse.SUPPRESS
+                   , dest='lctokrefs'
+                   , action=FileList
+                   )
+parser.add_argument( '-E', '--cased-detok-refs'
+                   , nargs='+'
+                   , default=argparse.SUPPRESS
+                   , dest='detokrefs' 
+                   , action=FileList
+                   )
+parser.add_argument( '-p', '--progress'
+                   , action='store_true'
+                   , dest='progress'
+                   
+                   )
+parser.add_argument( '-S', '--stop'
+                   , action='store_true'
+                   , dest='stop'
+                   
+                   )
+d = cfg.parse_args( parser
+                  , default='$cprep/corpus-prep.config'
+                  , write='$outdir/tune.config'
+                  , modeldir=True
+                  , overwrite=False )
+
+cmd = d.config['tuner'][d.config['tunealgo']]['exec']
+if d.config['progress']:
+    cmd += ' -p'
+if d.config['stop']:
+    cmd += ' -S'
+cfg.execute(d,cmd)

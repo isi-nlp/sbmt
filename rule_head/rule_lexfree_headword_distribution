@@ -1,0 +1,132 @@
+#!/usr/bin/env python
+
+import rule_head, sys, optparse, itertools, numpy
+
+def map_input(input):
+    for d in (rule_head.hw_table(l) for l in input):
+        if d.hwpos.is_lex:
+            yield "%s\tR\t%s" % (d.lhs_root,d.hwpos.word), d.count
+        else:
+            yield "%s\tU\t%s" % (d.lhs_root,d.hwpos.root), d.count
+
+def mapper(input):
+    for k,v in map_input(input):
+        print '%s\t%s' % (k,v)
+        
+def reduce_input(input):
+    for root,RU,wordroot,count in (l.split('\t') for l in input):
+        yield root,RU,wordroot,int(count)
+        
+def reducer(input,type):
+    for root,sublist in itertools.groupby(reduce_input(input), lambda x : x[0]):
+        total = 0.0
+        results = {}
+        for _,RU,wordroot,count in sublist:
+            total += count
+            if RU == type:
+                results.setdefault(wordroot,0)
+                results[wordroot] += count
+        if type == 'U':
+            sys.stdout.write(root)
+            for croot,count in results.iteritems():
+                sys.stdout.write(' %s %s' % (croot,count/total))
+            sys.stdout.write('\n')
+        elif type == 'R':
+            for word,count in results.iteritems():
+                print '%s\t%s\t%s' % (word,root,count/total)
+                
+def rreducer(input):
+    for word,sublist in itertools.groupby((l.strip().split('\t') for l in input),lambda x : x[0]):
+        sys.stdout.write(word)
+        for _,nt,count in sublist:
+            sys.stdout.write(' %s %s' % (nt,count))
+        sys.stdout.write('\n')
+        
+d = {}
+dinv = {}
+n = -1
+def id(s):
+    global d
+    global n
+    if s in d:
+        return d[s]
+    else:
+        n += 1
+        d[s] = n
+        dinv[n] = s
+        return n
+
+def transform_mapper(input,matfile):
+    m = {}
+    for line in matfile:
+        v = line.strip().split()
+        y = id(v[0])
+        for x,f in ((id(nt),float(fstr)) for nt,fstr in rule_head.unflatten_pairs(v[1:])):
+            m[(x,y)] = f
+
+    ra = []
+    for y in xrange(n+1):
+        row = []
+        for x in xrange(n+1):
+            row.append(m.get((x,y),0.0))
+        ra.append(row)
+
+    mat = numpy.matrix(ra)
+    ident = numpy.matrix(numpy.identity(n+1))
+
+    transform = numpy.linalg.inv(ident - mat)
+
+    numpy.set_printoptions(threshold=n+1,edgeitems=n+1)
+    print >> sys.stderr, transform
+
+    for line in input:
+        rp = [0.0 for x in xrange(n+1)]
+        mp = {}
+        v = line.strip().split()
+        word = v[0]
+        for nt,fstr in rule_head.unflatten_pairs(v[1:]):
+            if nt in d:
+                rp[d[nt]] = float(fstr)
+            else:
+                mp[nt] = float(fstr)
+        vp = numpy.matrix(rp).transpose()
+        p = transform * vp
+        for x in xrange(n+1):
+            if p[x,0] > 0.0:
+                mp[dinv[x]] = p[x,0]
+        for nt,f in mp.iteritems():
+            print '%s\t%s\t%s' % (nt,word,f)
+
+def transform_reducer(input):
+    for nt,sublist in itertools.groupby((l.strip().split('\t') for l in input),lambda x : x[0]):
+        m = []
+        total = 0.0
+        for _,word,f in sublist:
+            total += float(f)
+            m.append((word,float(f)))
+        m.sort(lambda x,y : cmp(y[1],x[1]))
+        sys.stdout.write('%s\t%s' % (nt,len(m))
+        for word,f in m:
+            sys.stdout.write(' %s %s' %(word,f))
+        sys.stdout.write('\n')
+        print >> sys.stderr, '%s mass=%s' % (nt,total)
+
+
+parser = optparse.OptionParser()
+parser.add_option('-r','--reduce', dest='reduce_type')
+parser.add_option('-R', '--reduce-reduce', dest='rreduce', action='store_true')
+parser.add_option('-m', '--transform-map', dest='matrix_file')
+parser.add_option('-M', '--transform-reduce', dest='mreduce', action='store_true')
+
+opts,_ = parser.parse_args()
+
+if opts.reduce_type:
+    reducer(sys.stdin,opts.reduce_type)
+elif opts.rreduce:
+    rreducer(sys.stdin)
+elif opts.matrix_file:
+    transform_mapper(sys.stdin,open(opts.matrix_file))
+elif opts.mreduce:
+    transform_reducer(sys.stdin)
+else:
+    mapper(sys.stdin)

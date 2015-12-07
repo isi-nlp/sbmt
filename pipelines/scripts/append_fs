@@ -1,0 +1,40 @@
+#!/usr/bin/env perl
+#
+use 5.006;
+use strict;
+use File::Basename ();
+use Getopt::Long qw(:config bundling no_ignore_case);
+
+sub usage {
+    my $prg = File::Basename::basename($0);
+    print << "EOF";
+Usage:	$prg [--consumed-to f-byline] < in > out
+	$prg [--consumed-to f-byline] in [in2 [..]] > out
+
+ --consumed-to fn   Create one blank line per non-blank input sentence.
+ --skip-empty       Do not put empty sentences into output(s).
+
+EOF
+    exit(1);
+}
+
+my $cfn;
+my $skipempty = 0;
+GetOptions( 'help|h' => \&usage,
+	    'skip-empty|skipempty' => \$skipempty,
+	    'consumed-to=s' => \$cfn );
+
+if ( defined $cfn ) {
+    open( CONSUMED, ">$cfn" ) || die "ERROR: open $cfn: $!\n";
+}
+
+while ( <> ) {
+    next if ( $skipempty && /^(\s)*$/ );
+    chomp;
+    print '<foreign-sentence> ', $_, ' </foreign-sentence>', "\n";
+    print CONSUMED "\n" if defined $cfn;
+}
+
+close CONSUMED if defined $cfn;
+exit 0;
+

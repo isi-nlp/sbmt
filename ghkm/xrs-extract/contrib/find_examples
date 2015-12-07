@@ -1,0 +1,20 @@
+#!/bin/bash
+
+############################################################################
+# Script for finding examples of rules or LHSs:
+# (must be run from $BASEDIR/scripts)
+# Usage: 
+#   find_examples -L 'LHS'
+#   find_examples -R 'RULE'
+# e.g.
+#   find_examples -L \'CJJ(JJ("salt") JJ(JJ("@") JJ("@-@") JJ("@")) JJ("producing"))\'
+#
+# Michel Galley (galley@cs.columbia.edu)
+############################################################################
+
+SIZE="-l 1000:3"
+DATA="-r /home/hpc-22/dmarcu/nlg/blobs/ver2.1-chinese/training-data/large-chinese-eval04-v2.1"
+ARGS="$SIZE $DATA"
+#ARGS="$SIZE $DATA $START"
+
+../bin/extract $ARGS $1 "$2" -s $3 -e $4

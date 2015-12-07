@@ -1,0 +1,115 @@
+%%% pst-qtree.tex
+%%% Copyright (c) 2002 by David Chiang <dchiang@cis.upenn.edu>
+
+%%%\psset{nodesep=2pt,levelsep=36pt,treesep=24pt}
+%%%\psset{levelsep=20pt,nodesep=2pt,treesep=12pt,treefit=tight}
+\psset{levelsep=36pt,nodesep=2pt,treesep=24pt,treefit=loose}
+\def\psedge{\ncdiag[arm=0,angleA=-90,angleB=90]}
+\def\psnode#1{\TR{#1}}
+
+\edef\TheAtCode{\the\catcode`\@}
+\catcode`\@=11
+
+\newtoks\result
+
+\def\call#1#2{\let\@cont=#2\bgroup\result={}#1}
+\def\return{%
+\global\result=\result
+\egroup\@cont
+}
+
+\def\ifeq#1#2{\edef\testa{#1}\edef\testb{#2}%
+\ifx\testa\testb}
+
+\def\Tree{\call\@subtree\@Tree}
+\def\@Tree{\the\result}
+
+\def\@subtree[{%
+\toks0={\@nil}%
+\@ifnextchar.{\call\@dotlabel\@@subtree}{\@@@subtree}}
+
+\def\@@subtree{%
+\toks0=\result
+\@@@subtree
+}
+
+\def\@@@subtree{%
+\call\@children\@@@@subtree
+}
+
+\def\@@@@subtree]{%
+\toks2=\result
+\@ifnextchar.{\call\@dotlabel\@@@@@subtree}{\@@@@@@subtree}}
+
+\def\@@@@@subtree{%
+%%% Check for mismatch.
+\ifeq{\the\toks0}{\noexpand\@nil}%
+  \toks0=\result
+\fi
+\ifeq{\the\toks0}{\the\result}\else
+  \message{Warning: mismatched labels, \the\toks0{} and \the\result.}%
+\fi
+\@@@@@@subtree
+}
+
+\def\@@@@@@subtree{%
+\ifeq{\the\toks0}{\noexpand\@nil}%
+  \edef\act{\noexpand\result={\noexpand\pstree{\noexpand\psnode{}}{\the\toks2}}}%
+\else
+  \edef\act{\noexpand\result={\noexpand\pstree{\the\toks0}{\the\toks2}}}%
+\fi
+\act
+\return}
+
+\def\@children{%
+\@ifnextchar]{\return}{%
+\@ifnextchar[{\call\@subtree\@@children}{\call\@label\@@children}}}
+
+\def\@@children{%
+\toks0=\result
+\call\@children\@@@children
+}
+
+\def\@@@children{%
+\ifeq{\the\toks0}{}%
+\else
+  \toks2=\result
+  \edef\act{\noexpand\result={\the\toks0 \the\toks2}}%
+  \act
+\fi
+\return
+}
+
+\def\@dotlabel.{%
+\@label
+}
+
+\def\@label{%
+\@ifnextchar!{\@litlabel}{\@@label}}
+
+\def\@@label#1 {%
+\result={\psnode{#1}}%
+\return
+}
+
+\def\@litlabel!#1 {%
+\result={#1}%
+\return
+}
+
+\def\roofedge#1#2{%
+\ncdiag[arm=0pt,angleA=-90,angleB=90]{#1}{#2l}
+\ncdiag[arm=0pt,angleA=-90,angleB=90]{#1}{#2r}
+\ncdiag[arm=0pt,angleA=90,angleB=90]{#2l}{#2r}}
+
+
+\def\Troof#1{%
+\TR[edge=\roofedge]{%
+\Rnode[href=-1]{\pspred-\the\psnodecnt l}
+{\Rnode[href=1]{\pspred-\the\psnodecnt r}{#1}}}%
+}
+
+
+\catcode`\@=\TheAtCode\relax
+\endinput
+

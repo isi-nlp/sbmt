@@ -1,0 +1,84 @@
+import testing ;
+import sbmt-util ;
+import modules ;
+import stage ;
+import project ;
+import path ;
+
+local boost_root = [ modules.peek : BOOST_ROOT ] ;
+require = <include>. <include>$(boost_root) ;
+
+# gusc: generally useful source code
+project gusc
+  : requirements $(require) 
+  : usage-requirements $(require)
+  ;
+
+local proj = [ project.current ] ;
+local pwd = [ path.root [ $(proj).location ] [ path.pwd ] ] ;
+
+local test_dir = \\\"$(pwd)/test\\\" ;
+
+lib gusc
+  : lib/ast.cpp 
+    lib/create_directories.cpp 
+    lib/filesystem_io.cpp 
+    lib/lattice_c.cpp
+    /boost/filesystem//boost_filesystem
+    /boost/thread
+  ;
+
+# python-extension _lattice 
+#  : lib/lattice_py.cpp 
+#    /boost/python//boost_python/
+#    gusc
+#  : <link>shared
+#  :
+#  : /boost/python//boost_python
+#  ;
+
+unit-test check
+  : [ glob test/*.cpp ]
+    /boost/test//boost_unit_test_framework/<link>static
+    /boost/serialization//boost_serialization
+    /boost/filesystem//boost_filesystem
+    gusc
+  : <define>GUSC_TEST_DIR=$(test_dir) 
+  ;
+
+exe fuzzycube
+  : apps/fuzzycube.cpp
+    gusc
+  ;
+  
+exe digits 
+  : apps/digits.cpp 
+    gusc 
+    /boost/program_options//boost_program_options
+  ;
+
+exe makedirs
+  : apps/makedirs.cpp
+    gusc
+    /boost/filesystem//boost_filesystem
+  ;
+  
+local dirs = gusc
+             gusc/* 
+             gusc/*/* 
+             gusc/*/*/* 
+           ;
+           
+local ptrn = *.hpp *.ipp *.h ;
+sbmt-util.install install
+  : <install-source-root>.
+  : digits
+    makedirs
+    fuzzycube
+  : gusc
+  # _lattice
+  : [ glob $(dirs)/$(ptrn) ]
+  : # no script bins
+  : lib/lattice.py
+  ;
+

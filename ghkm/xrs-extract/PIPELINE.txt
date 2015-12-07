@@ -1,0 +1,220 @@
+RULE EXTRACTION PIPELINE
+
+scripts/the_button.pl performs all steps listed below automatically.
+The informations below are only needed if you need more help
+with the script.
+
+----------------------------------------------------------
+Steps needed to generate all the data: 
+* rules
+* derivations
+* counts (normal and 1/k)
+* normalization counts (i.e. counts by LHS and roots)
+* normalization grouns for EM training (rules that share 
+  the same LHS, same root)
+* final rule file that contains all the above (except 
+  derivation) + EM probabilities
+
+Note: this file (the_button.txt) is just a NL version
+of the script "the_button.pl" that does everything below
+automatically.
+
+----------------------------------------------------------
+1) RULE EXTRACTION (can be run in //)
+
+The first step is to extract all rules in the
+training data, given a certain threshold on the number
+of internal nodes in the LHS of composed rules:
+
+on the 1st node:
+$ ./extract -l 1000:3 -r /home/hpc-22/dmarcu/nlg/summer04/resources/rule-extraction/data-radu/all-ignacio-noisy -s 1 -e 10000 -x - | sort -u > RULES.1.raw
+
+The previous command extracts all composed rules (<=3 inodes 
+in LHS) and all necessary rules in etree/cstring/align between
+lines 1 and 10000 from Ignacio's data:
+/home/hpc-22/dmarcu/nlg/summer04/resources/rule-extraction/data-radu/all-ignacio-noisy.{eng,cgb,a}
+Use switches -s and -e to specify ranges in the data to perform
+parallelization. Make sure you process the entire range: 
+1-2562204.
+
+All rules are sent to STDOUT, which is piped through "| sort -u"
+to only get unique rules.
+
+----------------------------------------------------------
+2) DATABASE CREATION
+
+You need to merge sort the outputs (1 rule file per node) of the above step,
+and store all rules into a database (the DB might already exist, in which
+case you should be careful not to erase rule indicies of already existing
+rules, i.e. don't use the force flag '-f'):
+
+$ sort -m RULES.*.raw | uniq | ./create_db -d rules.db 2> /dev/null
+
+This creates rules.db, which isn't yet ready to use, since all new rules
+added to the DB come with index -1. Beware: the .db file can be really huge.
+
+----------------------------------------------------------
+3) RULE INDEXING
+
+The next step is just one pass over the .db file to give a new index 
+to all rules that have their index set to -1.
+
+$ ./index_db -d rules.db
+
+----------------------------------------------------------
+4) GENERATE DERIVATIONS AND COLLECT COUNTS (can be run in //)
+
+(note: derivations and counts are totally unrelated, but
+ it is faster to perform the two steps at once; this limits
+ the number of passes to 2: 1) rule extraction 2) derivation+counts)
+
+$ ./extract -l 1000:3 -r /home/hpc-22/dmarcu/nlg/summer04/resources/rule-extraction/data-radu/all-ignacio-noisy -s 1 -e 10000 -e -d RULES.1.deriv -c RULES.1.count -D rules.db 
+
+Pretty much the same interface as step 1 (important to keep whatever 
+threshold you used; here 1000:3), except that you need to specify the
+location of the DB this time (rules.db). Derivations gets saved in 
+RULES.1.deriv and counts saved in RULES.1.count.
+
+You simply need to merge a RULES.*.deriv files with 
+'cat RULES.*.deriv > RULES.deriv'. Merging counts is done in part 6).
+
+----------------------------------------------------------
+5) GENERATE NORMALIZATION GROUPS
+
+Jonathan needs the IDs of rules that share the same LHS and 
+those that share the same root. 'print_norm_groups' can generate
+two kinds of normalization groups files (lhs+root) from the DB.
+
+$ print_norm_groups -d rules.db -f all.deriv    > all.lhs_norm
+$ print_norm_groups -d rules.db -f all.deriv -r > all.root_norm
+
+The optional parameter '-f all.deriv' forces 'print_norm_groups' to 
+remove all rules that are not used at all in the derivation file
+'all.deriv'. By default, it generates LHS groups, unless you specify
+'-r'.
+
+----------------------------------------------------------
+6) MERGE COUNTS, COLLECT NORMALIZATION COUNTS, AND PRODUCE
+   FINAL RULE FILE
+
+Note: not all these steps are needed. Check scripts/create_rule_file
+
+I created a special file format for handling all numeric 
+rule attributes (.weight format). It is comma-separated
+file format that looks like this:
+
+--- cut here ---
+$$$ filetype=weight order=ruleIDs fields=count,fraccount version=0.1
+1,1
+1,1
+4,4
+1,1
+3939,3939
+--- cut here ---
+
+Field names are specified in the header (e.g. count and fraccount 
+here). The order is either by ruleID (order=ruleIDs), which means
+that the first non-header line corresponds to id=1, or it is in DB 
+(lexicographic) order. The latter is less intuitive, but more
+practical in operations that require accesses to the DB (e.g. 
+collecting normalization counts).
+
+There is a script to run all steps below: 'create_rule_file'.
+(it takes two arguments: 1) $DBDIR: base directory where all 
+.weight files are located; 2) $DBROOT: base name of the DB file, 
+which is assumed to be in the same directory, i.e. $DBDIR/$DBROOT.db
+should be a DB file)
+
+Note: file names used in the explanations below are slightly 
+different from those used in 'create_rule_file', but the behavior
+of these commands are pretty much the same.
+
+  ---------------
+  
+6.1) You need to merge all your count files extracted by N hpc 
+nodes (RULES.*.count).
+
+$ add_weights -f count -d rules.db RULES.*.count > count.weight
+
+on the command-line:
+-f count: extract field 'count' only (ignores the rest, i.e. fraccount)
+-d rules.db: if a DB file is specified as here, merged counts 
+             are printed in DB order.
+RULES.*.count : counts to add
+count.weight: file where all counts are stored.
+
+  ---------------
+
+6.2) Same as 6.1), but for 1/k fractional counts.
+
+$ add_weights -f fraccount -d rules.db RULES.*.count > fraccount.weight
+
+Note: the reason why 6.1) and 6.2) are performed in two different steps
+is that it is becoming difficult with increasing rule files to fit two
+big count arrays in memory.
+
+  ---------------
+
+6.3) Add normalization counts (by LHS and root):
+
+That's the tricky part. We need to collect counts by LHS and root, but
+while it is acceptable to store all root(LHS) in memory, we can't do
+this with LHSs. The following program makes 3 passes over the DB and
+avoids the need of storing any high number of LHSs in memory:
+pass 1) collect counts for each root(LHS)
+pass 2,3) since DB keys are in lexicographic order, we can do this:
+        traverse DB and add counts for LHS1 until we reach rules with a 
+		  different LHS (LHS2 != LHS1); then step back to first rule with
+		  LHS1, and for each rule with that LHS, print count, lhscount, 
+		  and rootcount. Continue like this we reach the last ket of the DB.
+
+$ add_norm_counts -d rules.db -w count.weight -f count \ 
+   > count_norm.weight
+$ add_norm_counts -d rules.db -w fraccount.weight -f fraccount \
+   > fraccount_norm.weight
+
+Note: count.weight and fraccount.weight are the output of step 6.1 and 6.2.
+count_norm.weight and fraccount_norm.weight are the same as their 
+respective counterparts, except that each gets to new fields (lhsX and rootX, 
+where X is the field to collect norm counts for).
+
+  ---------------
+
+6.4) Transform Jon's files into .weight format (output is printed
+     in DB order)
+
+$ create_em_weights -f p_em_lhs -d rules.db -e train.necessary.lhs_norm.out \
+   > p_em_lhs.weight
+$ create_em_weights -f p_em_root -d rules.db -e train.necessary.root_norm.out \
+   > p_em_root.weight
+
+on the command-line:
+-f p_em_lhs: name of the field to create in the output file
+-d rules.db: DB name (to print rules in DB order)
+-e train.necessary.lhs_norm.out: Jon's file
+
+  ---------------
+
+6.5) Merge all .weight files into one. 
+
+The output (all.weight) is my compact representation of a rule file. 
+From that file, it is easy to generate a .rule file in Bryant's format.
+
+$ merge_weights {count_norm,fraccount_norm,p_em_lhs,p_em_root}.weight \
+   > all.weight
+
+Note: you need to make sure none of the input files
+{count_norm,fraccount_norm,p_em_lhs,p_em_root}.weight define the same field.
+
+  ---------------
+
+6.6) Produce a rule file from all.weight.
+
+$ print_rules -d rules.db -w all.weight | gzip > rules.gz
+
+on the command-line:
+-d rules.db: the DB is again needed; here, to get string representation
+             of rules.
+-w all.weight: what you got from 6.5)
+rules.gz: a rule file in Bryant's format that can be used by the decoder
+          group.

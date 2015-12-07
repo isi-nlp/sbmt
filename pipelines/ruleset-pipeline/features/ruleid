@@ -1,0 +1,42 @@
+#!/usr/bin/env python 
+
+import argparse
+import cfg
+import sys
+import os.path
+import subprocess
+
+def mapper(inp,exe):
+    k = int(os.getenv('mapred_task_partition','0'))
+    m = int(os.getenv('mapred_map_tasks','1'))
+    cmd = ('%s -k %s -m %s' % (exe,k+1,m)) + ' -f"%line\tid=%id"'
+    lc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=sys.stdout, shell=True)
+    for line in inp:
+        lc.stdin.write(line)
+    lc.stdin.close()
+    lc.wait()
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-M', dest='map')
+args = cfg.parse_args(parser)
+
+if args.map:
+    mapper(sys.stdin, args.map)
+else:
+    hp = args.hadoop
+    bindir = args.config['variables']['rhbin']
+    lc = os.path.join(bindir,'lc')
+    collapse_mapper = os.path.join(bindir,'collapse_mapper')
+    collapse_reducer = os.path.join(bindir,'collapse_reducer')
+    exe = os.path.abspath(__file__)
+    
+    hp.mapreduce( mapper=collapse_mapper
+                , reducer=collapse_reducer
+                , input='rules'
+                , output='rules.collapsed' )
+    hp.mapreduce( mapper='%s -M %s' % (exe,lc)
+                , reducer='NONE'
+                , input='rules.collapsed' 
+                , output='part.ruleid' )
+    hp.remove('rules.collapsed')
+

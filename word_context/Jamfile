@@ -1,0 +1,7 @@
+project word_context ;
+
+lib word_context
+  : word_context_info.cpp
+    word_context_constructor.cpp
+    /sbmt_decoder//sbmt
+  ;

@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+
+# usage: divide.py -k <k> [-f <denoms>] [-g <countcounts>]
+
+# input:  key \t value \t numerator \t denominator
+# output: value \t quotient
+#   where quotient is expressed in SBMT "e^..." format
+
+# or if -f is specified:
+# input:  key \t value \t numerator
+# denoms: key \t denominator
+
+# -g apply Good Turing discounting
+# countcounts: key \t count \t count-count
+
+import sys
+import math
+import getopt
+import collections
+import goodturing
+
+def records(f):
+    if isinstance(f, str):
+        f = open(f)
+    for line in f:
+        yield line.rstrip().split("\t")
+
+opts, args = getopt.gnu_getopt(sys.argv[1:], "k:f:g:")
+opts = dict(opts)
+n_keys = int(opts.get('-k',1))
+
+if '-f' in opts:
+    denoms = {}
+    for fields in records(opts['-f']):
+        key = fields[:n_keys]
+        denoms[tuple(key)] = int(fields[-1])
+else:
+    denoms = None
+
+if '-g' in opts:
+    countcounts = {}
+    for fields in records(opts['-g']):
+        key = tuple(fields[:n_keys])
+        countcounts.setdefault(key, collections.defaultdict(int))
+        countcounts[key][int(fields[-2])] = int(fields[-1])
+    discounts = {}
+    for key in countcounts:
+        sys.stderr.write("group %s\n" % '\t'.join(key))
+        discounts[key] = goodturing.discounts(countcounts[key])
+else:
+    discounts = None
+
+for fields in records(sys.stdin):
+    key = tuple(fields[:n_keys])
+    if denoms:
+        value = fields[n_keys:-1]
+        num = int(fields[-1])
+        denom = denoms[key]
+    else:
+        value = fields[n_keys:-2]
+        num = int(fields[-2])
+        denom = int(fields[-1])
+
+    if discounts:
+        num *= discounts[key][num]
+
+    try:
+        p = math.log(float(num)/denom)
+        print "%s\te^%f" % ("\t".join(value), p)
+    except OverflowError:
+        sys.stderr.write("warning: couldn't calculate log(%s/%s)\n" % (num, denom))
+        sys.stderr.write("         for record %s\n" % "\t".join(fields))
+        print "%s\t0" % ("\t".join(value))
+    except ValueError:
+        sys.stderr.write("warning: couldn't calculate log(%s/%s)\n" % (num, denom))
+        sys.stderr.write("         for record %s\n" % "\t".join(fields))
+        raise
+                        

@@ -1,0 +1,18 @@
+/*  $Id: overview.dox 1311 2006-10-06 09:58:04Z jturian $
+ *  Copyright (c) 2006, Information Sciences Institute. All rights reserved. */
+/*!
+\mainpage Introduction
+
+\authors Based upon research by Joseph Turian, Kevin Kddnight, and Daniel Marcu
+\authors Implemented by Joseph Turian
+\authors Thank you to Michael Pust and Jonathan Graehl for writing the SBMT decoder library
+
+Agenda-based inference to find the lowest-cost derivation.
+
+Copyright (c) 2006, Information Sciences Institute. All rights reserved.
+
+ - \subpage currentwork
+ - \subpage futurework
+ - \subpage design
+
+ */

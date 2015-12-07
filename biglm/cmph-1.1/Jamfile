@@ -1,0 +1,40 @@
+project cmph ;
+
+# cant glob, because we need to exclude main...
+local sources = 
+    bdz
+    bdz_ph
+    bmz8
+    bmz
+    brz
+    buffer_entry
+    buffer_manager
+    chd
+    chd_ph
+    chm
+    cmph
+    cmph_structs
+    compressed_rank
+    compressed_seq
+    fch_buckets
+    fch
+    graph
+    hash
+    jenkins_hash
+    miller_rabin
+    select
+    vqueue
+    vstack
+  ;
+  
+lib cmph 
+  : src/$(sources).c
+  : <include>src
+  :
+  : <include>src
+  ;
+  
+#unit-test check
+#  : [ glob tests/*.c ]
+#    cmph
+#  ;

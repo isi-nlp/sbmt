@@ -1,0 +1,254 @@
+#!/usr/bin/env python
+
+import argparse
+from argparse import ArgumentParser
+import cfg
+import os.path
+import sys
+import string
+import stat
+import tempfile
+import random
+import yaml
+import pickle
+import os
+import errno
+
+def makemapper(steps,d,configstr,output,subcorpora=False):
+    config = d.config
+    auxmapfile = open(d.tmpdir + "/training.aux.map","w")
+    auxmap = {}
+    root = os.path.abspath(os.path.dirname(__file__))
+    ext = os.path.join(root,'extractor2') 
+    if subcorpora:
+        ext += ' -s '
+    ext += ' -c ' + configstr
+    
+    lc = os.path.join(config['variables']['rhbin'],'lc')
+    nbcat = os.path.join(config['variables']['rhbin'], 'nbcat')
+    ofile = open(output, 'w')
+    paste = os.path.join(root,'ghkm','paste')
+    
+    fifo = '$dtemp/extinput.fifo'
+    mp = {'lc':lc,'nbcat':nbcat,'ext':ext,'fifo':fifo,'paste':paste}
+    teecmd = 'tee %s' % fifo
+    cmd = ''
+    postproc = []
+    postprocfiles = []
+
+    for step in steps:
+        if step.stage == 'ghkm':
+            postproc.append(step.execute)
+            if 'file' in step.__dict__:
+                auxmap[step.name] = len(postprocfiles) + 5
+                postprocfiles.append(step.file)
+    pickle.dump(auxmap,auxmapfile)
+    auxmapfile.close()
+    print >> ofile, '#!/usr/bin/env bash'
+    print >> ofile, 'set -e'
+    print >> ofile, 'set -o pipefail'
+    print >> ofile, 'dtemp=$(mktemp -d /tmp/XXXXXXXXXXXXXXXX)'
+    print >> ofile, 'mkfifo ' + fifo
+    rulepos = len(postprocfiles) + 6
+    if subcorpora:
+        rulepos += 1
+    for i,post in enumerate(postproc):
+        fifoi = '$dtemp/extinput.fifo.' + str(i)
+        datapos = i + 6
+        mmp = {'fifo':fifoi,'post':post,'rp':rulepos,'dp':datapos}
+        print >> ofile, 'mkfifo ' + fifoi
+        teecmd += ' %s' % fifoi
+        scmd = ' | $post | $paste <($nbcat < $fifo)'
+        scmd =  string.Template(scmd).safe_substitute(mmp)
+        cmd += scmd
+    cmd = teecmd + ' | $ext | $paste <($nbcat < $fifo)' + cmd 
+    cmd += ' | cut -f %s' % rulepos
+    cmd = string.Template(cmd).safe_substitute(mp)
+    print >> ofile, cmd
+    print >> ofile, 'rm -rf $dtemp'
+    ofile.close()
+    os.chmod(output,stat.S_IRWXU | stat.S_IRWXG | stat.S_IXUSR)
+
+def linecount(lstr):
+    total = 0
+    for diff in lstr.strip().split(','):
+        beg,end = diff.split('-')
+        total += int(end) - int(beg) + 1
+    return total
+
+def resolve(filename): 
+    try: 
+        target = os.readlink(filename) 
+    except OSError as e: 
+        if e.errno == errno.EINVAL: 
+            return os.path.abspath(filename) 
+        raise 
+    return os.path.normpath(os.path.join(os.path.dirname(filename), target)) 
+
+
+def wrt(wd,relpath):
+    curr = os.path.dirname(os.path.abspath(wd))
+    return os.path.normpath(os.path.join(curr,relpath))
+
+class store_training(argparse.Action):
+    def __call__(self,parser, namespace, values, option_string=None):
+        values = resolve(values)
+        scfg = cfg.load_config(values)
+        if 'target' in scfg:
+            if not hasattr(namespace,'target'):
+                setattr(namespace,'target',wrt(values,scfg['target']))
+        if 'source' in scfg:
+            if not hasattr(namespace,'source'):
+                setattr(namespace,'source',wrt(values,scfg['source']))
+        if 'align' in scfg:
+            if not hasattr(namespace,'align'):
+                setattr(namespace,'align',wrt(values,scfg['align']))
+        if 'subcorpora' in scfg:
+            setattr(namespace,'subcorpora',scfg['subcorpora'])
+
+parser = ArgumentParser()
+parser.add_argument( 'target' 
+                   , help='training target-side trees' 
+                   , nargs='?'
+                   , default=argparse.SUPPRESS
+                   )
+parser.add_argument( 'source' 
+                   , help='training source-side sentences' 
+                   , nargs='?'
+                   , default=argparse.SUPPRESS
+                   )
+parser.add_argument( 'align' 
+                   , help='alignments between target and source words' 
+                   , nargs='?'
+                   , default=argparse.SUPPRESS
+                   )
+parser.add_argument( '-s','--subcorpora'
+                   , help='YAML description of subcorpora lines (space separated file list)'
+                   , default=argparse.SUPPRESS
+                   , action=store_training
+                   )
+if __name__ == '__main__':
+    os.putenv('LANG','C')
+    os.putenv('LC_ALL','C')
+    d = cfg.parse_args(parser,write='$outdir/rules.config',modeldir=True)
+    cfgf = open(os.path.join(d.outdir,'rules.config'),'a')
+    print >> cfgf, '\nrules:', d.outdir
+    cfgf.close()
+    dir = os.path.abspath(os.path.dirname(__file__))
+    finp = os.path.join(dir,'ghkm','filterbadinput')
+    names = []
+    triplefiles = [d.config['target'], d.config['source'], d.config['align']]
+    
+    steps = cfg.steps(d)
+
+    hp = d.hadoop
+
+    training = os.path.join(d.tmpdir,'training')
+    trainingtmp = os.path.join(d.tmpdir,'training.tmp')
+    trainingnew = trainingtmp + '.new'
+    pastefiles = [trainingnew]
+    for step in steps:
+        if step.stage == 'ghkm':
+          try:
+            if 'file' in step.__dict__:
+                pastefiles.append(step.file)
+            names.append(step.name)
+          except:
+            print >> sys.stderr, 'no file in', step
+            raise
+
+    
+    if not os.path.exists(training):
+        lc = os.path.join(d.config['variables']['rhbin'],'lc')
+        hp.syscall('paste %s > %s' % (' '.join(triplefiles), trainingtmp))
+        trainingnew = trainingtmp + '.new'
+        hp.syscall('mv %s %s' % (trainingtmp,trainingnew))
+        hp.syscall('%s -f "%%line\t%%id" < %s > %s' % (lc,trainingnew,trainingtmp))
+        hp.syscall('mv %s %s' % (trainingtmp,trainingnew))
+        hp.syscall('paste %s > %s' % (' '.join(pastefiles), trainingtmp))
+        hp.syscall('rm -rf %s' % trainingnew)
+        
+        if 'subcorpora' in d.config:
+            scfgc = d.config['subcorpora']
+            print >> sys.stderr, scfgc
+            trainingnew = trainingtmp + '.new'
+            trainingint = trainingtmp + '.int'
+            trainingsc = trainingtmp + '.sc'
+            ranges = os.path.join(dir,'ranges') + ' -i ' + trainingtmp + ' -o ' + trainingint + ' -r'
+            for sc in scfgc:
+                name = sc['name']
+                linestr = sc['lines']
+                ln = linecount(linestr)
+                hp.syscall(ranges + linestr)
+                tsc = open(trainingsc,'w')
+                for x in xrange(ln):
+                    print >> tsc, name
+                tsc.close()
+                hp.syscall('paste %s %s >> %s' % (trainingint, trainingsc, trainingnew))
+            hp.syscall('rm -rf %s %s %s' % (trainingint,trainingsc,trainingtmp))
+            hp.syscall('mv %s %s' % (trainingnew,trainingtmp))
+        hp.syscall('%s < %s | %s -k1 > %s' % (finp,trainingtmp,lc,training))
+        hp.syscall('rm -f %s' % trainingtmp)
+
+
+    if not os.path.exists(os.path.join(d.tmpdir,'rules.extracted')):
+        hp.put(training,'training')
+
+        tfiles = [ ]
+        for step in steps:
+            if step.stage == 'training':
+                if not all([os.path.exists(os.path.join(d.outdir, of)) for of in step.output_filename()]):
+                    step.run(hp)
+                    tfiles.extend(step.output_filename())
+        ruleextrun = False
+        def runruleext():
+            #count training
+            tc = 0
+            mx = 4800 * 1000
+            for ignore in open(training):
+                tc += 1
+                if mx <= tc:
+                    break
+            maptasks = max(1,min(4800,int(tc/1000)))
+            extractor = os.path.join(os.path.abspath(d.tmpdir),'extractor')
+            makemapper(steps,d,d.config_files,extractor,'subcorpora' in d.config)
+    
+            print >> sys.stderr, 'using', maptasks, 'maptasks for rule extraction'
+            # it is important to set map tasks to something large with gzipped hadoop output, or all
+            # tasks with rules as input will be limited in their map tasks as well.
+            # the rules are sorted, which will make using a combiner effective in future steps
+            hp.mapreduce( mapper = extractor
+                        , reducer = 'cat'
+                        , input = 'training'
+                        , output = 'rules'
+                        , options = '-jobconf mapred.map.tasks='+str(maptasks) )
+
+        joins = []
+        for s in steps:
+            if s.stage == 'extract':
+                print >> sys.stderr, 'ruleextrun=%s' % str(ruleextrun), '%s exists=%s' % (str(s.output),str(all([os.path.exists(o) for o in s.output])))
+                if (not ruleextrun) and (not all([os.path.exists(o) for o in s.output])):
+                    print >> sys.stderr, 'creating rules'
+                    runruleext()
+                    ruleextrun = True
+                s.run(hp)
+                joins.extend(s.output_filename())
+        
+        rulejoin = os.path.join(d.config['variables']['rhsdir'],'join')
+
+        joinreduce = os.path.join(d.config['variables']['rhbin'],'rule_join_reducer')
+        hp.syscall( rulejoin + ' ' + ' '.join(joins) + ' -E -c ' + d.config_files + ' -o rules.paste' )
+        hp.mapreduce( mapper=joinreduce
+                    , input='rules.paste'
+                    , output='rules.extracted' )
+
+        hp.remove('rules.paste')
+        hp.get('rules.extracted',d.tmpdir)
+        hp.remove('rules')
+        for part in joins:
+            hp.remove(part)
+
+        hp.remove('training')
+        for tf in tfiles:
+            hp.remove(tf)
+

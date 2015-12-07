@@ -1,0 +1,34 @@
+import sbmt-util ;
+
+alias z : /site-config//z ;
+
+project graehl 
+  : usage-requirements 
+       <include>.. 
+       <os>MACOSX:<include>/usr/include/malloc
+       <library>z
+       <library>/boost/iostreams
+       <library>/boost/timer 
+  ;
+
+lib graehl 
+  : shared/gzstream.cpp
+    z 
+    /boost/iostreams
+    /boost/timer
+  : <include>.. ;
+
+#-------------------------------------------------------------------------------
+# installs shared directory to
+# prefix/include/graehl/shared/
+#-------------------------------------------------------------------------------
+local header_pattern = *.h *.hpp *.hh *.cc *.C ;
+sbmt-util.install install    : <install-source-root>..
+                        : # no binaries yet
+                        : graehl
+                        : [ glob shared/$(header_pattern) ] ;
+
+
+explicit install ;
+
+

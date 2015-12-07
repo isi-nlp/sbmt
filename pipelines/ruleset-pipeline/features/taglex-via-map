@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+
+import cfg, argparse, os, sys, pickle, stat
+parser=argparse.ArgumentParser()
+
+parser.add_argument('ext')
+d = cfg.parse_args(parser)
+hp = d.hadoop
+
+ext = d.ext
+
+tdir=os.path.join(d.scriptdir,'taglex')
+taglex='taglex.'+ext
+taglexflat=taglex+'.flat'
+taglexwordpairs=taglex+'.wordpairs'
+taglexjoin=taglex+'.join'
+parttaglex='part.'+taglex
+flag=''
+if ext == 'inv':
+    flag=' -i'
+
+wordpairs = os.path.join(tdir,'wordpairs') + flag
+taglexm = os.path.join(d.config['variables']['rhbin'],'taglex')+' '+os.path.join(d.tmpdir,taglexflat)
+idfirst = os.path.join(tdir,'idfirst')
+score = os.path.join(tdir,'score')+' '+taglex
+
+mapfile = os.path.join(d.tmpdir,taglex + '.mapper')
+mapscript = open(mapfile,'w')
+print >> mapscript, '#!/usr/bin/env bash'
+print >> mapscript, 'set -e'
+print >> mapscript, 'set -o pipefail'
+print >> mapscript, '%s | %s | %s | %s' % (wordpairs,taglexm,idfirst,score)
+mapscript.close()
+os.chmod(mapfile, stat.S_IRWXU | os.stat(mapfile)[stat.ST_MODE])
+auxmap = pickle.load(open(d.tmpdir + "/training.aux.map"))
+
+if not hp.file_exists('training'):
+    hp.put(os.path.join(d.tmpdir,'training'),'training')
+
+hp.mapreduce( input='training'
+            , output='data'
+            , mapper=os.path.join(d.config['variables']['rhbin'],'mkdata') + ' ' + str(auxmap['provenance'])
+            )
+hp.mapreduce( input='data'
+            , mapper=os.path.join(d.config['variables']['rhbin'],'count_align_tagged') + flag
+            , reducer=os.path.join(d.config['variables']['rhbin'],'divide') + " -l"
+            , output=taglex
+            ) 
+hp.remove('data')
+
+hp.mapreduce( input=taglex
+            , output=taglexflat 
+            , mapper=os.path.join(tdir,'rotate')
+            , reducer=os.path.join(tdir,'flatten') + ' -w0'
+            , sortkeys=2
+            , compress=False
+            )
+
+hp.remove(taglex)
+
+hp.getmerge(taglexflat,os.path.join(d.tmpdir,taglexflat))
+
+hp.remove(taglexflat)
+
+if not hp.file_exists('rules.alignments'):
+    hp.mapreduce( input='rules'
+                , output='rules.alignments'
+                , mapper=os.path.join(d.config['variables']['rhbin'],'ifea')
+                )
+hp.start(mappers=6)
+hp.mapreduce( input='rules.alignments'
+            , output=parttaglex
+            , mapper=mapfile
+            )
+hp.start()

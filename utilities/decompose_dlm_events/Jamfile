@@ -1,0 +1,38 @@
+import sbmt-util ;
+import package ;
+
+project decompose_dlm_events ;
+
+alias boost_filesystem : ..//boost_filesystem ;
+alias boost_program_options : ..//boost_program_options ;
+alias boost_regex : ..//boost_regex ;
+alias sbmt : ..//sbmt ;
+alias graehl : ..//graehl ;
+alias RuleReader : ..//RuleReader ;
+alias gusc : ..//gusc ;
+
+
+
+exe decompose_dlm_events
+  : decompose_dlm_events.cpp
+    sbmt
+    boost_program_options
+    boost_regex
+    RuleReader
+    graehl
+  ;
+
+exe mark_head_xrs
+  : mark_head_xrs.cpp
+    boost_filesystem
+    RuleReader
+    graehl
+    boost_filesystem
+    boost_program_options
+  ;
+ 
+sbmt-util.install install
+  : 
+  : decompose_dlm_events
+    mark_head_xrs
+  ;

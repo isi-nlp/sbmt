@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+
+"""
+this was generate-insert-ewords-from-nonlex-rules.pl
+"""
+
+
+import re, sys
+
+rulematch = re.compile(r'^(.*?)\s+->\s+(.*?)\s+###.*\scount=([\.\d]+)')
+varmatch = re.compile(r'^x\d+')
+wordmatch = re.compile(r'\("(\S+?)"\)')
+
+occmap = {}
+
+for line in sys.stdin:
+    match = rulematch.match(line)
+    if match:
+        lhs = match.group(1)
+        rhs = match.group(2)
+        count = float(match.group(3))
+        
+        nonlex = True
+        for tok in rhs.split():
+            m = varmatch.match(tok)
+            if not m:
+                nonlex = False
+                break
+        
+        if nonlex == True:
+            for m in wordmatch.finditer(lhs):
+                word = m.group(1)
+                if word in occmap:
+                    occmap[word] += count
+                else:
+                    occmap[word] = count
+
+for word,count in occmap.iteritems():
+    print "1\t%s\t%g" % (word,count)
+
+
+

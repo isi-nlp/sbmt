@@ -1,0 +1,108 @@
+#!/usr/bin/env python
+
+import sys, os, os.path, signal
+import subprocess
+import optparse
+import itertools
+
+def args_remaining(args):
+	remain = False
+	a = []
+	r = []
+	for f in args:
+		if f == '--':
+			remain = True
+		elif remain:
+			r.append(f)
+		else:
+			a.append(f)
+	return a,r
+
+
+optparser = optparse.OptionParser()
+
+optparser.add_option('-n', '--nbest-file', dest='nbest_output')
+optparser.add_option('-o', '--onebest-file', dest='output')
+optparser.add_option('-f', '--forest-file', dest='forest_output')
+optparser.add_option('-l', '--log-file', dest='log_output')
+optparser.add_option('-i', '--input', dest='input')
+def create_decoder(naa,o):
+	na = naa[:]
+	na.append('--output')
+	na.append('-')
+	if o.nbest_output:
+		na.append('--nbest-output')
+		na.append('>(cat >> %s)' % o.nbest_output)
+	if o.forest_output:
+		na.append('--print-forest-em-file')
+		na.append('>(cat >> %s)' % o.forest_output)
+	if o.log_output:
+		na.append('--log-file')
+		na.append('>(cat >> %s)' % o.log_output)
+	
+	na.append('--instruction')
+	na.append('-')
+	ca = ['/bin/bash','-c', ' '.join(na)]
+	
+	return subprocess.Popen(ca,stdin = subprocess.PIPE,stdout = subprocess.PIPE)
+
+
+def destroy_decoder(proc):
+	try:
+		proc.kill()
+	except:
+		pass
+
+	
+def restart_decoder(proc,a,b):
+	print >> sys.stderr, "*** restarting decoder ***"
+	destroy_decoder(proc)
+	proc = create_decoder(a,b) 
+	return proc
+	
+def instructions(input):
+	for name in input:
+		f = open(name.strip())
+		yield f.read()
+		f.close()
+
+
+if __name__ == "__main__":
+	args,remaining = args_remaining(sys.argv)
+
+	opts,_ = optparser.parse_args(args)
+	dec = create_decoder(remaining,opts)
+	
+	out = None
+	if not opts.output or opts.output == '-':
+		out = sys.stdout
+	else:
+		out = open(opts.output,'a')
+
+	globalrestart = 0
+	for ins in instructions(sys.stdin):	
+		dec.stdin.write(ins)
+		onebest = ''
+		restart = 0
+		while onebest == '' and dec.poll() is None:
+			onebest = dec.stdout.readline().strip()
+		while dec.poll() is not None and restart < 3:
+			restart += 1 
+			dec = restart_decoder(dec,remaining,opts)
+			dec.stdin.write(ins)
+			onebest = dec.stdout.readline().strip()
+		if onebest != "":
+			print >> out, onebest
+		else:
+			dec = restart_decoder(dec,remaining,opts)
+			globalrestart += 1
+			if globalrestart > 3:
+				sys.exit(1)
+
+				
+		
+	
+
+
+	
+	

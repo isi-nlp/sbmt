@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+import sys
+import argparse
+
+def main():
+    parser = argparse.ArgumentParser(description="add feature name to values")
+    parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="input file")
+    parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
+    parser.add_argument("--stringval", "-s", action='store_true', default=False, help="presume string feature with possible white space")
+    parser.add_argument("name", type=str, help="string name value")
+    try:
+        args = parser.parse_args()
+    except IOError, msg:
+        parser.error(str(msg))
+
+    outfile = args.outfile
+    stringval = args.stringval
+    name = args.name
+    # any whitespace splits numeric features. only tab for string features
+    splitfield = '\t' if stringval else None
+    # string features get tilde notation
+    featureformat = "%s={{{%s}}}" if stringval else "%s=%s"
+
+    for line in args.infile:
+        rvs = line.rstrip().split(splitfield)
+        outfile.write("%s\t" % rvs[0])
+        outfile.write(featureformat % (name,rvs[1]))
+        # all features after the first are sub numbered from 0 up
+        for x, val in enumerate(rvs[2:]):
+            subname="%s.%s" % (name, x)
+            outfile.write(" "+featureformat % (subname, val))
+        outfile.write('\n')
+
+if __name__ == '__main__':
+  main()

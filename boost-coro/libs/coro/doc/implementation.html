@@ -1,0 +1,229 @@
+<html><head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title> Implementation</title>
+<link rel="stylesheet" href="files/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.70.1">
+<link rel="start" href="index.html" title="Chapter&nbsp;1.&nbsp;Boost.Coroutine">
+<link rel="up" href="details.html" title=" Details">
+<link rel="prev" href="performance.html" title=" Performance">
+<link rel="next" href="fibers.html" title=" Case study 1: Win32 Fibers">
+</head><body link="#0000ff" alink="#0000ff" bgcolor="white" text="black" vlink="#840084">
+<table width="100%" cellpadding="2">
+<tbody><tr><td valign="top"><img alt="boost.png (6897 bytes)" src="files/boost.png" width="277" height="86"></td>
+<td align="center"><a href="http://www.boost.org/">Home</a></td>
+<td align="center"><a href="http://www.boost.org/doc/libs">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="http://www.boost.org/users/index.html">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="performance.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="details.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="fibers.html"><img src="files/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="coroutine.implementation"></a> Implementation</h3></div></div></div>
+<a name="duff_device"></a><p></p>
+<a name="implementation.a_simple_trick__the_duff_device"></a><h4>
+<a name="id2629556"></a>A simple trick, the Duff device</h4>
+<p>
+It is possible to implement a very restricted set of coroutine
+functionality entirely within the language rules, using a variation of
+the duff device. See for example<a href="http://www.chiark.greenend.org.uk/%7Esgtatham/coroutines.html" target="_top">Coroutines in C</a>. While this
+is a cunning hack, it has some severe limitations that makes it
+unsuitable for a general purpose library like Boost.Coroutine:</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+Does only support <span class="emphasis"><em>semi</em></span>-coroutines: cannot yield form inside nested
+functions. 
+</li>
+<li>
+There can only be one instance of a coroutine for each coroutine body. 
+</li>
+<li>
+Local variables are static. This means that they are not destroyed
+when exceptions are thrown. In general the use of statics as locals is
+questionable.
+</li>
+</ul></div>
+<a name="task_switching_model"></a><p></p>
+<a name="implementation.the_stack_switching_model"></a><h4>
+<a name="id2629602"></a>The stack switching model</h4>
+<p>
+Boost.Coroutine is implemented around a stack switching model; that
+is, every time a coroutine is entered, the following actions are
+carried:</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+The caller instruction pointer and callee clobbered registers are
+saved on the caller stack (this is done automatically as part of the
+call to the context switching routine respectively by the compiler and
+by the CPU).
+</li>
+<li>
+the set of callee save registers are saved by the context switching
+routine on the caller stack.
+</li>
+<li>
+The caller stack pointer is saved inside the caller context
+structure. This structure is stored on the coroutine context if a
+yield_to or yield is being performed, else it is also on the caller stack.
+</li>
+<li>
+The callee stack pointer is retrieved from the callee context
+structure and set as current stack pointer.
+</li>
+<li>
+Callee save registers are popped from the callee stack.
+</li>
+<li>
+The context switching routine returns, restoring automatically from
+the new stack the called coroutine instruction pointer and clobbered
+registers.
+</li>
+</ul></div>
+<p>
+This process is inherently non portable, requires intimate knowledge
+of the target CPU and environment, and some assembly code. Also it
+assumes the existence of both a stack and a real CPU, neither of witch are
+required by the standard.</p>
+<p>
+In practice the library should be portable to most platforms that have
+a <code class="computeroutput"><span class="identifier">C</span><span class="special">++</span></code> implementation, with only minimal changes. CPUs with registers
+windows shouldn't be a problem, nor should be systems with multiple
+stack. For example HP provides assembler
+source for coroutine stack switching for the Itanium architecture,
+that has both registers windows and multiple stacks <a href="bibliography.html#itanium-coroutines">[Saboff03]</a>.</p>
+<p>
+Implementing Boost.Coroutine on an <code class="computeroutput"><span class="identifier">C</span><span class="special">++</span></code> interpreter would require
+support form the interpreter.</p>
+<p>
+If all else fail, there is still the possibility of implementing
+Boost.Coroutine in top of threads, albeit at a very high performance
+penalty.</p>
+<a name="implementation.the_myth_of_a_portable_coroutine_library"></a><h4>
+<a name="id2629701"></a>The myth of a portable coroutine library</h4>
+<p>
+Writing a portable coroutine library has been the subject of numerous
+studies. A part from the limited <a href="implementation.html#duff_device">Duff device-based
+trick</a>, the most promising has been the stack copying model. The
+lower and highest addresses of the current stack are calculated by
+taking the address of appropriately placed local objects. Then, when
+the stack switching is required, the current stack is copied to some
+backup location and from another location a target stack is copied in
+place of the old stack. The actual context switch is performed using
+<code class="computeroutput"><span class="identifier">setjmp</span></code> and <code class="computeroutput"><span class="identifier">longjmp</span></code>. As an optimization, the address of
+the stack pointer is found, in a non portable manner, in the <code class="computeroutput"><span class="identifier">jmp_buf</span></code>
+and the stack is switched by modifying this pointer instead of
+performing an expensive copy.</p>
+<p>
+This trick has meet a moderate success in the <code class="computeroutput"><span class="identifier">C</span></code> world, even if in
+practice libraries using this trick need to take special per-platform
+actions (like working around standard libraries bugs, eager
+optimizers or simply identifying the position of the stack pointer in
+<code class="computeroutput"><span class="identifier">jmp_buf</span></code>). Notice that nowhere the <code class="computeroutput"><span class="identifier">C</span></code> standard guarantees that the
+stack can be switched with impunity. In fact, it doesn't even
+guarantees that a stack exists at all (so does the <code class="computeroutput"><span class="identifier">C</span><span class="special">++</span></code> standard).</p>
+<p>
+In the <code class="computeroutput"><span class="identifier">C</span><span class="special">++</span></code> world things are complicated by the fact that the
+standard permits an implementation of <code class="computeroutput"><span class="identifier">longjmp</span></code> to unwind the stack
+and call destructors. Usually the compiler determines how much to
+unwind the stack by comparing stack pointers. Modifying this pointer
+will wreak havoc. While most implementations do not take advantage of
+this possibilities, at least the <a href="http://www.codesourcery.com/cxx-abi/abi.html" target="_top">OpenMP</a> (that by no mean is
+restricted to this platform: for example is supported by the GCC
+compiler on most platforms it runs on) requires that. Also
+the <a href="http://www.crystalclearsoftware.com/www.llvm.org" target="_top"><span class="underline">_LLVM</span>_</a> compiler provides a <code class="computeroutput"><span class="identifier">__builtin_longjmp</span></code> builtin that is
+documented to unwind the stack (even if a standard library is not
+required to implement <code class="computeroutput"><span class="identifier">longjmp</span></code> in term of this builtin, it is likely
+to do so).</p>
+<p>
+Also some compilers and some operating systems requires some work to
+switch exceptions context. This is true at least on <code class="computeroutput"><span class="identifier">Win32</span></code> and on GCC
+<code class="computeroutput"><span class="identifier">setjmp</span><span class="special">/</span><span class="identifier">longjmp</span></code> based exception handling. This is very system
+specific and a library that doesn't take this into account is likely
+to be defective.</p>
+<p>
+Finally the interaction between coroutines and threads must be taken
+into account and any incompatibilities must be documented or fixed.</p>
+<p>
+In conclusion, the backend of a <code class="computeroutput"><span class="identifier">C</span><span class="special">++</span></code> coroutine library cannot be
+oblivious of the system it runs on, thus it might as well be system
+specific. Similar platforms common code may still be shared.</p>
+<p>
+Currently the library uses <code class="computeroutput"><span class="identifier">fibers</span></code> on <code class="computeroutput"><span class="identifier">Win32</span></code> systems, custom
+assembler code on the very specific "GCC-linux-x86 using
+frame-unwind-tables based exception handling and a generic 
+<code class="computeroutput"><span class="identifier">makecontext</span><span class="special">/</span><span class="identifier">setcontext</span></code> based implementation on <code class="computeroutput"><span class="identifier">POSIX</span><span class="number"> 2001</span></code>
+compliant systems. Note that, as the <code class="computeroutput"><span class="identifier">POSIX</span></code> standard
+knows nothing about <code class="computeroutput"><span class="identifier">C</span><span class="special">++</span></code>, this is not guaranteed
+to work on all platforms. Also the interaction between threads and
+user contexts is not specified by the standard.</p>
+<a name="implementation.extensibility"></a><h4>
+<a name="id2630026"></a>Extensibility</h4>
+<p>
+The library has been designed to be very easily ported to other
+environments. All classes that need access to the non portable context
+switching code have a (currently undocumented) extra template
+parameter that permit the selection of the context switching
+implementation at compile time. Thus is technically possible to mix
+different context implementations in the same library.</p>
+<p>
+The context switching support is very simple and tightly contained. It
+only requires a context structure and two function for context setup
+and context swap (the interface is modeled around the <code class="computeroutput"><span class="identifier">POSIX</span><span class="identifier">
+ makecontext</span><span class="identifier"> API</span></code>). At this time the actual extension interface is not
+documented and a private detail, because it is likely to be further
+simplified (the current requirements of the <code class="computeroutput"><span class="identifier">Context</span></code> concept have
+been complicated to explore potential performance optimizations).</p>
+<a name="implementation.a_wild_dream__compiler_support_for_coroutines"></a><h4>
+<a name="id2630085"></a>A wild dream: Compiler support for coroutines</h4>
+<p>
+The stack switching model, while good enough for generalized cooperative
+multitasking, prevents some useful compiler optimizations. For example
+a compiler cannot optimize across a coroutine call, nor can inline the
+coroutine in the caller. This is expected in when the target is not
+statically known, for example in an event dispatching loop, but in
+usages where the control flow can be statically determined is a
+loss. For example generators function objects can usually be inlined
+while coroutine based function objects cannot.</p>
+<p>
+A compiler that knows about coroutines could apply the same
+optimizations to coroutine based code, as long as a context switch
+target is known. This should not require much more power than the
+ability to inline function pointers and convert a coroutine body to
+callback based code. Even dynamic coroutine code could
+be rewritten it to callback based code, but in this case
+an indirect jump is required anyways and is not necessarily a win.</p>
+<p>
+Compilers capable of inlining coroutines already exist.
+For example, compilers for languages with support for continuations
+often transform the code to be complied in the so called continuation
+passing style. Coroutines in these languages can be trivially
+implemented as continuations. These compilers can then optimize
+the code in <span class="bold"><strong>CPS</strong></span> form, potentially inlining some continuation
+calls. Thus potentially coroutines are optimized too.</p>
+<p>
+Unfortunately the <span class="bold"><strong>CPS</strong></span> form is not suitable for <code class="computeroutput"><span class="identifier">C</span></code> and <code class="computeroutput"><span class="identifier">C</span><span class="special">++</span></code> because
+it does not match well the execution model of these languages and even if possible it could
+impose some overhead.</p>
+<p>
+The <code class="computeroutput"><span class="identifier">C</span>#<span class="number"> 2.0</span></code> language requires compilers to be capable of transforming
+<span class="emphasis"><em>semi</em></span>-coroutine based code to callback based code. 
+These compilers are not much different from <code class="computeroutput"><span class="identifier">C</span><span class="special">++</span></code> compilers. While the
+limitation to optimize <span class="emphasis"><em>semi</em></span>-coroutine can seem major, in practice a
+coroutine can be converted to a <span class="emphasis"><em>semi</em></span>-coroutine if all nested
+functions that call <code class="computeroutput"><span class="identifier">yield</span></code> can be inlined in the coroutine itself. A
+compiler could fall back on stack switching if it cannot inline a
+<code class="computeroutput"><span class="identifier">yield</span></code> (or it doesn't know at all if a function can yield).</p>
+</div>
+<table width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright © 2006 Giovanni P. Deretta</small></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="performance.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="details.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="fibers.html"><img src="files/next.png" alt="Next"></a>
+</div>
+</body></html>

@@ -1,0 +1,8 @@
+subproject cmph/src ;
+
+lib cmph : bitbool.c bmz8.c bmz.c brz.c buffer_entry.c buffer_manager.c chm.c cmph.c cmph_structs.c djb2_hash.c fch_buckets.c fch.c fnv_hash.c graph.c hash.c jenkins_hash.c sdbm_hash.c vqueue.c vstack.c
+	:
+	<cflags>-fPIC
+	;
+
+stage stage : <lib>cmph ;

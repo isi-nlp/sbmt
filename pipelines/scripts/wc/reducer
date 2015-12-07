@@ -1,0 +1,20 @@
+#!/usr/bin/env python
+
+import sys
+
+
+nline = 0
+nword = 0
+nchar = 0
+for line  in sys.stdin:
+    key,nl,nw,nc = line.split()
+    nline += int(nl)
+    nword += int(nw)
+    nchar += int(nc)
+
+print "%s    %s    %s" % (nline,nword,nchar)
+
+
+
+
+

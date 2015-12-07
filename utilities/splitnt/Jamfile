@@ -1,0 +1,9 @@
+import sbmt-util ;
+import package ;
+
+
+project splitnt ;
+
+exe splitnt : splitnt.cpp  ../../xrsparse ;
+
+sbmt-util.install install : : splitnt ;

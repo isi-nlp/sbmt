@@ -1,0 +1,19 @@
+# This file was automatically generated. DO NOT EDIT!
+
+all: $(TOP_DIR)/Horse/build-linux/bin/LangModel
+	@ echo ++ Horse__Horse_App_LangModel is done.
+
+.obj/linux/Horse_App_LangModel/LangModelMain.o: LangModelMain.cpp
+	@ echo '+ [Horse_App_LangModel] compiling LangModelMain.cpp...'
+	@ mkdir -p .obj/linux/Horse_App_LangModel 
+	@ c++ -MM -MT .obj/linux/Horse_App_LangModel/LangModelMain.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT LangModelMain.cpp > .obj/linux/Horse_App_LangModel/LangModelMain.d
+	@ c++ -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Horse_App_LangModel/LangModelMain.o -c LangModelMain.cpp
+-include .obj/linux/Horse_App_LangModel/LangModelMain.d
+
+$(TOP_DIR)/Horse/build-linux/bin/LangModel:  .obj/linux/Horse_App_LangModel/LangModelMain.o  $(TOP_DIR)/Horse/build-linux/bin/libShared_Core_LangModel.a $(TOP_DIR)/Horse/build-linux/bin/libShared_Common.a
+	@ echo '+ [Horse_App_LangModel] Linking application $(TOP_DIR)/Horse/build-linux/bin/LangModel...'
+	@ mkdir -p $(TOP_DIR)/Horse/build-linux/bin
+	@ c++ -o $@ $^  -L$(TOP_DIR)/3rdParty/linux/db-4.3.29 
+
+clean:
+	@ rm -f  .obj/linux/Horse_App_LangModel/LangModelMain.o .obj/linux/Horse_App_LangModel/LangModelMain.d $(TOP_DIR)/Horse/build-linux/bin/LangModel

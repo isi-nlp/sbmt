@@ -1,0 +1,57 @@
+Thu Jan  4 11:01:23 PST 2007 wwang@languageweaver.com
+
+    -- added memoization into TreeNode::assign_alignment_spans
+	                          TreeNode::assign_complement_alignment_spans
+							  TreeNode::assign_frontier_node
+							  PackedForest::cutLeaves
+       such that, in the case of a input shared forest (not parse), the same
+	   OR node will not be processed twice.
+
+   -- -m now also affects the forest-based rule extraction.
+
+   -- tree projection can now also project rule size.
+
+Sat Dec  2 14:03:13 PST 2006  wwang@languageweaver.com
+   
+
+  -- added -m <max_rules_per_node>
+
+     the max number of  non-necessary rules that can be extracted from a node.
+	 this flag doesnt affect minimal rules.
+	 the motivation of introducing this option: when a rule to be expanded has
+	   many (i.e., >10) admissible children, and there are many unaligned
+	   words, there will be a large number of rules generated from that node.
+	   sometimes, the extractor can consume more than 10G mem. Lower -U can
+	   help, but this affects all nodes.
+
+	   This problem is especially severe when operating on projected trees
+	   since projected trees tend to have larger rank of a tree node.
+      
+
+
+Thu Nov 16 19:28:22 PST 2006
+
+   -- added support for forest-based rule extraction.
+   -- added tree_proj
+   -- addd query_db.
+
+2006-8-25  Wei Wang  <wwang@languageweaver.com>	
+
+	* Added -i option: 
+	when the '-i' option is set, an internal node labeled as *-BAR (i.e.,
+	NPB-BAR) will not be counted when computing the big N , unless it
+	is the root of the rule.
+
+	* Added _nb_ignored_expansions into class State: 
+		it is used to count the number of auxiliary non-terminals in a rule.
+		After modification, State::_nb_expansions refers only to the
+		non-ignored number of node expansions.
+
+	* Changed the is_smaller function in State.h: 
+	such that, when -T is set, the function now first compares the number of
+	non-ignored expansions, then the number of lexical items, then the number
+	of ignored expansions.
+
+	* Codes before the above modifications are marked by tag:
+		BEFORE_IGNORE_AUX_EXPAN
+

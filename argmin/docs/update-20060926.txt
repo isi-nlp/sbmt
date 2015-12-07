@@ -1,0 +1,171 @@
+
+CURRENT SETUP
+
+I was working with a best-first decoding. As predicted, it spent way too much
+time on small spans.
+
+Pruning by disallowing more than N edges in the chart with the same span
+was ineffective, because the virtual edges (which have optimisitically
+high probs) fill the cell and don't allow many not virtual edges in.
+To resolve this, I do as mini_decoder: No more than 600 virtual edges and 100
+not virtual edges per cell.
+
+I haven't added any ``no edge in a cell can be prob factor P worse than
+best edge in the cell'' pruning, since I haven't found this necessary (yet).
+
+***
+
+RESULTS OF TESTING (SANITY CHECKING)
+
+I done manual testing, no systematic testing yet.
+argmin [our new agenda-based decoder] output matches mini_decoder output,
+except as follows:
+	* We have a chart optimization that reduces the amount of k-best
+	output in argmin.
+	* Memory issues that Michael Pust is resolving.
+	* There is a small discrepancy in the output printer's info_wt.
+	Michael Pust has proposed a refactoring that will put some ad-hoc main
+	code in the decoder library.
+
+***
+
+PROBLEMS I'M SEEING AND PREDICTIONS
+
+Virtual rules are problematic, because they create search sub-problems
+within the search problem.
+Currently, the score of a virtual edge is the maximum score possible
+completing this virtual, which is an A* admissable heuristic. Even
+with a length-invariant FOM (like geometric mean) in which we no longer
+``thrash'' by working on short edges rather than long edges, we may find
+the decoder thrashes by nonetheless working on virtual edges rather than
+not virtual edges. One potential solution is to use an inadmissable
+FOM to prioritize virtual edges (e.g. the priority of an edge with a
+virtual label is 10^-2 worse than if it were not virtual), but there
+may be problems with this anyway. [See below.]
+
+Current complexity is O(# cells * work per cell) = O(n^3). We have a bias
+towards short spans, and a bias towards virtuals. Unless we break this
+bias, decoding will typically fill all cells and be O(n^3) complexity,
+probably with a larger constant term than a polished CKY implementation.
+Potential solutions:
+	A* heuristics: Will still have a bias towards short edges. Problematic
+	with longer sentences.
+	Inadmissable heuristic over a coarser problem (more abstract
+	search space): May require retraining, which is tricky and makes it
+	difficult to run controlled experiments. We also have the following
+	problem.
+	Inadmissable, direct FOM: Under many corner cases, may not achieve
+	the desired effect of breaking all biases. (cf. geometric mean
+	with virtuals; gets locked into search over virtual edges, which ends
+	up turning into an A* search).
+Uh-oh. We need something more drastic to break these biases if we want to
+be significantly faster than CKY.
+
+***
+
+PROPOSED FUTURE DIRECTION
+
+Our goal is similar to that of using local-search methods for decoding
+(Germann et al, 2001): We want to find a complete solution AS SOON
+AS POSSIBLE and then iteratively try to improve it.  Using FOMs and
+inadmissable heuristics, then overparsing, has the same idea, but is
+less aggressive about pursuing the termination condition that we have
+a complete soultion (which may not be optimal).
+
+We can try to do greedy hypothesis completion. The idea is similar to
+the parsing strategy to Turian and Melamed (2006), except that in that
+setting we could build the hypothesis incrementally and here we can't.
+The idea is that we have a current incomplete hypothesis, which is a set of
+non-overlapping edges on the frontier. Until we have completed our current
+hypothesis, we can only pop items from the agenda that are not inconsistent
+with the current hypothesis. (Nonetheless, we derive *all* items from the
+chart, even those inconsistent with the hypothesis.)
+Working out the details is a little tricky, so I'll propose something waay
+simpler:
+
+Try cycling between different agendas:
+	one agenda per edge length (max length = n)
+	for k = 1 ...
+		pop length (k%n) derivation from (k%n)th agenda
+
+This will allow us to try to work with long derivations ASAP.  We might
+also cycle between virtual and non-virtual.  This approach explicitly
+breaks the bias towards working with short sentences and virtuals,
+a guarantee not available with typical FOMs.
+
+As with local search, we want to inject *randomness* into the search
+order. (Maybe can tune using invariants? McAllester, Selman, and Kautz
+(1997)).  e.g. instead of cycling deterministically, sample (completely
+uniformly? uniformly over length?) between different agendas. [Probably not
+going to try this idea, but I'll note it.]
+
+***
+
+OTHER IDEAS:
+
+Open question to explore, for better understanding of this specific
+problem: Is the syntactic structure relatively easy to satisfy? i.e. is
+it typically either under-constrained or over-constrained, but rarely
+a truly difficult ``phase-transition'' sort of difficult to satisfy?
+If so, then maybe the focus should be on optimizing the LM score,
+which---I think---varies more wildly than the TM score. We may want to
+use techniques and insights from left-to-right decoding: beam decoding,
+---I think---multi-stack decoding (Magerman thesis, Wang + Weibel 1997),
+and techniques for speech recognition that go left-to-right.
+
+We might want to try left-to-right decoding with multistack / beam. This
+might be a good idea if the real difficult part of the search problem
+is finding a good LM score, if the TM scores are relatively similar.
+Actually, not sure we can go left-to-right because we can't just
+``extend'' a hypothesis, there might be complex structure to the
+right. (In the incremental problems, there is a total ordering [??] on
+non-contradictory hypotheses. In our problem, we can't beam [1,2] and
+[5,7]. [describe better])
+
+
+Also can try applying ideas from the literature on solving random
+satisfiability problems.
+For example, IIRC GSAT typically finds a complete solution (set of
+contraints i.e. set of statements about variable assignments), relaxes
+a constraint (the variable participating in the most violated clauses),
+finds a new solution under the remaining constraints, and iterates.
+We can do something similar: Given a hypothesis (structure) over the
+input, we can treat it as a set of constraints. We can remove some of
+these constraints (rather than using "most violations", we can remove
+highest cost ones) and then try constrained decoding to complete the
+hypothesis under these constraints (i.e. keep portions of the structure, e.g.
+[1,3]+[3,5] -> [1,5] without specifying the labels of these spans).
+
+Last idea: Progressively relax chart constraint (purning). We have
+everything in the chart (and we put it in *immediately* after scoring
+it, even before it's on the agenda), but only use ``active'' or ``live''
+edges (those higher than the agenda priority). i.e. we only compose an
+edge with edges of higher priority.
+i.e. pruning determines which edges are above the current agenda priority
+(are alive) but nonetheless do not participate in derivation.
+[need to refine the terminology here, which is being overloaded] 
+Pseudo-code for saving work:
+while 1:
+	relax pruning threshold.
+
+	initialize chart to contain as alive all edges that weren't
+	pruned according to the *old* pruning threshold. (to save work,
+	chart keeps track of all previously derived dead edges too, they just
+	don't participate in derivations.)
+
+	initialize agenda to contain all edges that were pruned by the
+	old threshold but aren't yet pruned by the new threshold.
+
+	decode as usual.
+
+***
+
+TODO:
+
+* Larger-scale testing.
+* Precise diagnostic statistics.
+* Cycling through different agendas.
+
+***
+
+$Id: update-20060926.txt 1308 2006-10-06 04:37:37Z jturian $

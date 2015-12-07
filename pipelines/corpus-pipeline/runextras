@@ -1,0 +1,87 @@
+#!/usr/bin/env python
+
+import cfg
+import hadoop
+import argparse
+import string
+import os
+import stat
+import subprocess
+import sys
+import yaml
+import postprocscript
+
+parser = argparse.ArgumentParser()
+parser.add_argument( '-n'
+                   , '--no-local-rulefile'
+                   , action='store_false'
+                   , dest='local_rulefile' )
+d = cfg.parse_args(parser,config='$outdir/corpus-prep.config')
+hp = d.hadoop
+
+steps = cfg.steps(d)
+rules = d.config['rules']
+hp.start()
+hp.put(os.path.join(d.tmpdir,'input'),'input')
+'''
+repairs = []
+for step in steps:
+    #print >> sys.stderr,'#######\n##',step,'\n#######'
+    if step.stage == 'post-process-extras':
+        #print >> sys.stderr, 'postproc:', step
+        repairs.append(step.executable())
+
+postprocmap = os.path.join(d.tmpdir,'postprocmap')
+ppm = open(postprocmap,'w')
+print >> ppm, '#!/usr/bin/env bash'
+print >> ppm, 'set -e'
+print >> ppm, 'set -o pipefail'
+print >> ppm, 'cd', os.getcwd()
+print >> ppm, '|'.join(repairs)
+ppm.close()
+os.chmod(postprocmap,stat.S_IRWXU | stat.S_IRWXG | stat.S_IXUSR)
+'''
+pwrap = os.path.join(os.path.abspath(os.path.dirname(__file__)),'steps','postprocwrap')
+reducer = pwrap + ' -c %s -- ' % d.config_files + postprocscript.write_script(d)
+
+#if not os.path.exists(os.path.join(d.tmpdir,'global-rules.extra.pre')):
+#    gextras = []
+#    cfg.execute(d,'rm -f $tmpdir/global-rules.extra.pre.tmp',tmpdir=d.tmpdir)
+#    for step in steps:
+#        if step.stage == 'global-extras':
+#            exe = step.executable()
+#            cfg.execute( d, '$exe >> $tmpdir/global-rules.extra.pre.tmp'
+#                       , tmpdir=d.tmpdir
+#                       , exe=exe )
+#    cfg.execute(d, 'mv $tmpdir/global-rules.extra.pre.tmp $tmpdir/global-rules.extra.pre',tmpdir=d.tmpdir)
+#hp.put(os.path.join(d.tmpdir,'global-rules.extra.pre'),'global-rules.extra.pre')
+
+if not os.path.exists(os.path.join(d.tmpdir,'rules.extra.pre')):
+    extras = []
+    for step in steps:
+        if step.stage == 'extras':
+            step.run(hp)
+            extras.extend(step.output_filename())
+    if len(extras) > 0:
+        hp.mapreduce( input=extras
+                    , output='rules.extra.pre' )
+    else:
+        cfg.execute(d, 'touch $tmpdir/rules.extra.pre', tmpdir=d.tmpdir)
+        hp.put(os.path.join(d.tmpdir,'rules.extra.pre'),'rules.extra.pre')
+else:
+    hp.put(os.path.join(d.tmpdir,'rules.extra.pre'),'rules.extra.pre')
+
+#if not os.path.exists(os.path.join(d.tmpdir,'global-rules.extra')):
+#    cfg.execute( d
+#               , '$reducer < $tmpdir/global-rules.extra.pre > $tmpdir/global-rules.extra.reduced'
+#               , reducer=reducer
+#               , tmpdir=d.tmpdir )
+#    cfg.execute(d,'rm $tmpdir/global-rules.extra.pre',tmpdir=d.tmpdir)
+#    cfg.execute(d,'mv $tmpdir/global-rules.extra.reduced $tmpdir/global-rules.extra', tmpdir=d.tmpdir)
+
+if not os.path.exists(os.path.join(d.tmpdir,'rules.extra')):
+    hp.mapreduce( input='rules.extra.pre'
+                , output='rules.extra'
+                , reducer=reducer )
+    if d.local_rulefile:
+        hp.get('rules.extra',os.path.join(d.tmpdir,'rules.extra'))

@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+
+import sys, os, re, itertools, time
+from itertools import izip, groupby
+
+linere = re.compile(r'lineNumber=(\d+)')
+
+def lineno(line):
+    try:
+        return int(linere.search(line).group(1))
+    except AttributeError:
+        raise StandardError('No lineNumber in' + line)
+
+filename = sys.argv[1]
+#print >> sys.stderr, filename
+consistent_lines = True
+try:
+    inps =  ((int(d[0]),d[1:]) for d in (line.rstrip('\n').split('\t') for line in open(filename)))
+    rulegrps = groupby(iter(sys.stdin),lineno)
+    inp = inps.next()
+    #print >> sys.stderr, inp
+    rulegrp = rulegrps.next()
+    #print >> sys.stderr, rulegrp
+    
+    consistent_lines = True
+    while True:
+        inpline,inpdata = inp
+        ruleline,rules = rulegrp
+        assert inpline <= ruleline, '%s > %s' % (inpline,ruleline)
+        while inpline < ruleline:
+            #print >> sys.stderr, 'mismatch line'
+            consistent_lines = False
+            inpline,inpdata = inps.next()
+        assert(inpline == ruleline)
+        consistent_lines = True
+        for rule in rules:
+            print str(inpline) + '\t' + '\t'.join(inpdata) + '\t' + rule.rstrip()
+        inp = inps.next()
+        #print >> sys.stderr, inp
+        rulegrp = rulegrps.next()
+except StopIteration:
+    #print >> sys.stderr, "no more"
+    pass
+assert(consistent_lines)

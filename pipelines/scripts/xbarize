@@ -1,0 +1,114 @@
+#!/usr/bin/env perl
+#
+# For each rule with root X, generate one more rule rooted at X-BAR.
+# Recogizes only negative ids! Uses nt-prior (grammar.nts) file to
+# determine eligible NTs to x-bar-ize.
+#
+use 5.006;
+use strict;
+use File::Spec;
+use File::Temp qw(tempfile);
+use File::Basename qw(basename);
+use Fcntl qw(:seek);		# for SEEK_SET
+use Getopt::Long qw(:config bundling no_ignore_case);
+
+$main::verbose = 0;
+
+sub usage {
+    my $prg = basename($0,'.pl');
+    print << "EOF";
+
+Usage: $prg [options] rule [..] > out
+
+Optional arguments: 
+ -h|--help       print this help and exit
+ -v|--verbose    more debug output while running
+ --tmp dir       alternative temp dir.
+
+Mandatory arguments:
+ --nt-prior fn   pointer to the grammar.nts file from rule extraction.
+ rule [..]       1+ rule file as input, default stdin.
+
+Note: xbarization will only apply to rules with a negative id!
+
+EOF
+    exit 1;
+}
+
+#
+# --- main -------------------------------------------------
+#
+usage unless @ARGV;
+warn "# $0 @ARGV\n";
+
+my $tmp = $ENV{'MY_TMP'} ||     # Wei likes MY_TMP, so try that first
+    $ENV{TMP} ||                # standard
+    $ENV{TEMP} ||               # windows standard
+    $ENV{TMPDIR} ||             # also somewhat used
+    File::Spec->tmpdir() ||     # OK, this gets used if all above fail
+    ( -d '/scratch' ? '/scratch' : '/tmp' ); # last resort
+my $start = time();
+
+my ($ntprior);
+GetOptions( 'help|h' => \&usage
+          , 'verbose|v+' => \$main::verbose
+          , 'tmp=s' => \$tmp
+          , 'nt-prior|ntprior|prior|nts=s' => \$ntprior
+          )
+    || die( "FATAL: Option processing failed due to an illegal option\n",
+            join(' ',$0,@ARGV), "\n" );
+
+push( @ARGV, '-' ) unless @ARGV; # make stdin default
+
+die "FATAL: You must specify an --nt-prior file\n" unless defined $ntprior;
+open( NT, "<$ntprior" ) || die "FATAL: open $ntprior: $!\n";
+my (%seen,@x);
+while ( <NT> ) {
+    chomp ;
+    @x = split ;
+    $seen{$x[0]} = $x[1];
+}
+close NT;
+
+my %nts;
+foreach my $ntbar ( grep { /-BAR$/ } keys %seen ) {
+    my $nt = substr( $ntbar, 0, -4 );
+    $nts{$nt} = 1 if exists $seen{$nt}; 
+}
+
+my ($fh,$fn) = tempfile( 'xbarize.XXXXXX', DIR => $tmp );
+die "ERROR: Unable to create temporary file in $tmp\n" unless defined $fh;
+
+my $min_id = 1000000000;
+while ( <> ) { 			# permit more than one input file
+    if ( /^\s*[^\( ]+\(.*?\) -> .* \#\#\#.* id=([-0-9]+)/ ) { 
+        chomp $_;
+	print $fh $_ . "\n"; 
+	$min_id = $1 if ( $1 < $min_id );
+    } else {
+	print STDERR "Ignored line $.: $_\n";
+    }
+}
+
+# base of new rules
+--$min_id;
+
+# reset file pointer to beginning without incurring dirnode-I/O
+seek( $fh, 0, SEEK_SET ) || die "ERROR: reset $fn: $!\n";
+
+# write contents with X-BAR while reading from tempfile
+while ( <$fh> ) {
+    print $_ ;
+    s/[\015\012]*$//;		# at-end anchor does not need (g)lobal
+    s/ id=([-0-9]+)/ id=$min_id/g;
+    if ( /^\s*([^\( ]+)(\(.*?\) -> .* \#\#\# .*)$/ && exists $nts{$1} ) {
+	print "$1-BAR" . $2 . "\n";
+	--$min_id;
+    }
+}
+
+# close may unlink at exit
+close $fh;
+
+# but I don't trust it. Failing to unlink is not fatal, is it?
+unlink $fn || warn "Warning: rm $fn: $!\n";

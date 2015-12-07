@@ -1,0 +1,2 @@
+PP:VL: PP(x0:IN NP-C(NPB(DT("the") NN("trade") NN("surplus")))) -> V[IN_"CTRADE"] "CSURPLUS" ### id=2 virtual_label=no complete_subtree=yes lm_string={{{0 "the" "trade" "surplus"}}} sblm_string={{{0 }}} lm=yes sblm=yes rule_file_line_number=1
+V[IN_"CTRADE"]:VL: V[IN_"CTRADE"](x0:IN) -> x0 "CTRADE" ### complete_subtree=no sblm=no lm=yes lm_string={{{0}}} sblm_string={{{}}} virtual_label=yes rule_file_line_number={{{1}}}

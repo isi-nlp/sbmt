@@ -1,0 +1,29 @@
+project builtin_infos ;
+
+require = 
+  <library>/RuleReader//RuleReader
+  <library>/graehl//graehl
+  <library>/boost/regex//boost_regex
+  <library>/boost/serialization//boost_serialization
+  <library>/boost/signals//boost_signals
+  <library>/boost/thread//boost_thread
+  <library>/boost/program_options//boost_program_options
+  <library>/boost/filesystem//boost_filesystem
+  <library>/boost/iostreams//boost_iostreams
+  <library>/world//z
+  <library>/LW/Common//LWCommon
+  <library>/LW/LangModel//LWLangModel
+  <library>/pagh//biglm
+  <library>/gusc//gusc
+  <library>/xrsparse//xrsparse
+  <library>/site-config//tbb
+  <include>../include
+  <define>LM_NO_COMMON_LIB=1
+  <define>LM_NO_QT=1
+  <variant>debug:<define>SBMT_DEBUG=1
+;
+
+lib builtin-infos
+  : [ glob *.cpp ]
+    ..//sbmt
+  ;

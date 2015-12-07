@@ -1,0 +1,367 @@
+/*  $Id: presentation.dox 1313 2006-10-06 23:32:45Z jturian $
+ *  Copyright (c) 2006, Information Sciences Institute. All rights reserved. */
+/*!
+\page currentwork Current work
+
+\section introduction Introduction
+
+Our problem is finding the argmin, the minimum cost global structure over
+the input. Inference is based upon a grammar of unary and binary rules,
+and binary rules can only combine two edges if they are adjacent.
+We focus on finding the \em 1-best output.
+
+\image html minidecoder.png "CKY decoding times (measured using mini-decoder)"
+\image latex minidecoder.eps "CKY decoding times (measured using mini-decoder)" width=5in
+
+[definitions:
+	- Statement, Derivation, Edge
+	[others?]
+
+  - Item:
+    - An <em>edge equivalence</em> or \em statement is an item type, and it only has enough information to
+determine whether an antecedent of a rule is satisfied
+    - A \em derivation or \em edge is an item token, and it includes pointers to its antecedent (children) derivations
+    - We may gloss over the distinction between types and tokens and just say \em item
+  - The <em>inside cost</em>, \em cost, or \em weight of a derivation is a real value, a negative log-prob [score]
+  - A \em chart is a set of lightest (minimum-cost) derivations
+
+
+
+\section agenda_search Agenda-based search
+
+Each derivation has an associated priority.
+The priority determines the order in which we do work and, consequently, how we explore the search space.
+
+\code
+argmin(input, grammar):
+	chart = empty
+	1best = empty
+	initialize agenda to contain derivations obtained by rules with no antecedents (i.e. load the terminal items)
+	while not stopping condition:
+		d = agenda.pop()	// Pop the highest priority derivation
+		derived = grammar.derive(d, chart)
+		chart.add(d)
+		for dnew in derived:
+			if dnew is a goal derivation:
+				if dnew.score() > 1best.score():
+					1best = dnew
+			else:
+				agenda.add(dnew)
+	return 1best
+
+grammar::derive(d, chart):
+	derived = []
+
+	// Unary derivations
+	for r in unary rules with d.label() on the RHS:
+		derived.append(r.apply(d))
+
+	// Binary derivations
+	// Iterate over all RHS in which d participates with some other edge in the chart
+	for rhs in grammar::get_rhs(d, chart):
+		for r in binary rules with rhs as the RHS:
+			derived.append(r.apply(rhs))
+
+grammar::get_rhs(d, chart):
+	all_rhs = []
+
+	// Find all RHS in which d is the first item
+	for dr in edges in chart that are right-adjacent to d:
+		all_rhs.append((d, dr))
+
+	// Find all RHS in which d is the first item
+	for dl in edges in chart that are left-adjacent to d:
+		all_rhs.append((dl, d))
+\endcode
+
+
+By changing the agenda priority, we can implement several common parsing
+techniques using agenda-based search:
+	- CKY: priority of a derivation is the length of span, tiebreaking
+	to enforce left-to-right.
+	- Knuth's lightest derivation (best-first): priority of a
+	derivation is the (inside) cost of the derivation.
+	- More generally, we can have priority to be the cost plus some
+	<em>heuristic outside cost estimate</em> AKA \em heuristic. If
+	the heuristic does not overestimate the outside cost, it is
+	an A* \em admissible estimate. Inadmissible estimates lead to
+	approximate solutions.
+
+
+\subsection preliminary Preliminary results from best-first decoding
+
+As expected, best-first decoding spent way too much time on small spans.
+Pruning by disallowing more than N edges in the chart with the same span
+was ineffective, because the virtual edges (which have optimistically
+high scores) fill the cell and don't allow many not virtual edges in.
+To resolve this, I did as mini_decoder: No more than 600 virtual edges
+and 100 not virtual edges per cell.
+
+This result leads me to be pessimistic about the use of A* heuristics.
+As noted by Klein and Manning (2003), A* parsing has difficulty with
+long structures, and I don't exact translation will be any different.
+
+Virtual rules are also problematic, because they create search sub-problems
+within the search problem.
+Currently, the score of a virtual edge is the maximum score possible
+completing this virtual, which is an A* admissible heuristic. Even
+with a length-invariant FOM (like geometric mean) in which we no longer
+``thrash'' by working on short edges rather than long edges, we may find
+the decoder thrashes by nonetheless working on virtual edges rather than
+not virtual edges.
+
+Current complexity is O(# cells * work per cell) = \f$O(n^3)\f$. We have a bias
+towards short spans, and a bias towards virtuals. Unless we break this
+bias, decoding will typically fill all cells and be \f$O(n^3)\f$ complexity,
+probably with a larger constant term than a polished CKY implementation.
+
+
+\subsection multi_agenda Multi-agenda decoding
+
+Our goal is similar to that of using local-search methods for decoding
+(Germann et al, 2001): We want to find a complete solution <em>as soon
+as possible</em> and then try to improve on it.  That way, unlike CKY
+we get a continuous stream of hypotheses, which get progressively better
+and better as we allow more decoding time.
+
+Try cycling between different agendas:
+\code
+        one agenda per edge length (max length = n)
+        for k = 1 ...
+                pop length (k%n) derivation from (k%n)th agenda
+\endcode
+
+This will allow us to try to work with long derivations ASAP.  We can
+also cycle between virtual and non-virtual. This approach explicitly
+breaks the bias towards working with short sentences and virtuals,
+a guarantee not available with typical FOMs. We are guaranteed that we
+devote a uniform amount of time each span length and virtual/non-virtual
+type (assuming the agenda are not empty).
+
+What we tried was using one agenda per (length, is_virtual). Each agenda
+is processed best-first (priority = score). Work is allocated uniformly
+between each agenda, which we cycle through.
+
+Sometimes we got a solution very quickly. Sometimes we don't, because
+there's not enough diversity in the elements in the chart.
+Performance was unstable, not robust like the mini-decoder.
+
+We also encountered memory difficulties with longer sentences.  The
+problem is that our agenda size is unlimited.  An edge takes roughly 100
+bytes (200 bytes in our current implementation, which keeps duplicates
+of everything). This means we can't store more than 10 million edges or
+so on the agenda. However, we easily exceed this limit on longer sentences.
+
+The challenges described above gave us some insights into a re-design
+moving forward.
+
+[show example outputs from this decoder]
+
+
+
+
+
+
+\page futurework Future work
+
+\section refined_algorithm Refined algorithm
+
+[show diagram:
+]
+
+Types of edges:
+  - \em scored: Any edge we have scored and are keeping in memory is a
+  'scored' edge.  The scored edges are analogous to the Agenda.
+  We want to allow this set to be <em>as large as possible</em>, i.e. filling
+  memory capacity. (We should optimize down the memory usage of the edge
+  class, since we'll have so darn many of these.)
+
+  - \em alive: The live edges are a subset of the scored edges. They are
+  analogous to the Chart. This set increases monotonically. We never
+  prune it (although its conceivable we may want to, it's not clear
+  relaxing this restriction gives us any power).
+
+  - \em dead: Edges that were previously scored but pruned before they
+  reached the alive set.  The set of dead edges increased monotonically.
+
+Algorithm:
+\code
+while not stopping condition:
+	e = choose some non-alive scored edge
+	e.set_alive()
+	derive and score new edges using the alive set and e	// scored set grows
+	if scored.size() > memory capacity:
+		prune scored set
+\endcode
+
+\section major_concerns Major concerns
+
+- Agenda priority: In what order should we add edges to alive?
+- Pruning: If we can only store M scored edges, which do we want?
+- Stopping criteria: How do we know when to stop decoding, and return the current 1-best? 
+
+Using the above approach, we will try to address the choice of these
+design decisions from a more principled perspective.
+
+\subsection agenda_priority Agenda priority
+
+Insight: Agenda need not be deterministic!
+In what order should we add edges to alive? (Antecedent order) In an order
+representing the probability the edge is part of the 1-best solution.
+
+Gold standard edge = edge in 1-best solution. We can find these edges
+using the minidecoder 1-best for right now, but ideally may want to find
+gold edges using constrained decoding of the gold-standard estring.
+We should be particularly wary of iteratively tuning on its own 1-best output.
+
+Probability we want to add an edge to alive is the probability that some
+gold-standard edge is this edge. We tiebreak towards higher score.
+Which is to say, we partition the edges into different types (equivalence
+classes). It may be that edge classes are based upon not just the length
+but the actual span, and maybe also the (non-virtual) label. We then have
+a prior distribution over the set of classes, choose one class randomly,
+and from within that class choose the best (highest scoring) edge therein.
+We can get our prior either through estimation or through modeling.
+Our search will be as good as our choice of classes and their prior. The
+choice of classes should be done to ensure diversity among
+the live edges.
+
+Note that this approach mitigates the need for explicit pruning of the
+'alive' edges (i.e. chart pruning is no longer necessary).
+Recall that we used to say that no more than 100 non-virtual and 600
+virtual edges with the same span could be in the chart.
+The only reason we did that was to maintain balance between diverse
+edges in the chart, but we can ensure diversity directly.
+Since the size of the alive set will grow monotonically, derivation complexity (complexity of deriving using the set of alive edges) grows as decoding progresses. Since choosing alive edges based upon sampling ensures that the set of live edges is diverse, increasing derivation complexity <em>is a feature, not a bug.</em>
+It's like making the outer loop be:
+\code
+make pruning very tight
+while 1:
+	relax chart pruning constraints
+	decode
+\endcode
+
+We can choose the classes and the prior to minimize expected size of
+'alive' set required to solve each training problem. We can do this
+without repeated decoding, and just use the output from one mini-decoder run.
+
+\subsection pruning Pruning
+
+If we can only store M derivations, which do we want?
+As with the alive set, we want the scored edges to be diverse.
+And as with choosing which edge to add to the alive set, we want the
+probability of an edge being a gold-standard edge to govern its likelihood
+of being stored.
+
+We can use the edge classes and prior as before.
+We'll keep the scored set under the maximum size and trim the different
+classes to match the prior distribution.
+In this way, the choice of edge classes and prior distribution
+over the classes suffice to determine both the agenda priority and
+the pruning criterion.
+
+Above ideas are based upon the idea of exploiting statistical properties
+of the problem in our design of heuristics. We're solving structured
+instances and can use trends and patterns to craft biases that guide the
+search. Example: If the likelihood a gold-standard edge is a virtual
+equals 1/3rd, then shouldn't virtuals take only 1/3rd of available effort
+(memory + computation)? Even if nearly every virtual has higher scores than
+non-virtual edges, it doesn't mean those higher-scoring virtual edges
+are more likely to be in the solution.
+
+Main motivation is that the score is misleading. It is not necessarily such
+a good indicator about whether the edge will be part of a good solution
+or not. Indeed, an edge cost can increase (!) after derivation, i.e. the
+score of a derived edge (either from unary or binary derivation) can \em
+increase over that of one of its antecedents. So the cost scale may be
+distorted and cost differences between incomplete edges may a red herring.
+For this reason, we should explicitly ensure diversity by picking the
+edge classes appropriately.
+
+
+
+\subsection stopping_criteria Stopping criteria
+
+We may get good solutions quickly, but how do we know when to stop? If
+we wait too long, we might as well use CKY.
+
+Stopping criteria that come to mind:
+	- Exhaustive (stop when agenda is empty)
+	- Stop when some complete (toplevel) edge is scored
+	- Stop after some number of time steps
+	- Stop after we fall below some rate of change in the objective
+
+Some uniform time step:
+        - user time (except this is architecture dependent)
+        - # edges scored
+	- # edges alive
+What is the most expensive operation? What is the most uniform quantity
+of measurement (with respect to user time)?
+
+We could return the first hypothesis found, except it's not very good.
+With exhaustive parsing, we hope for early stopping: We are done when
+no Derivation on the agenda has a score exceeding that of the current
+best hypothesis.
+
+The longer we wait for better solutions, the more we are overparsing.
+We can control overparsing using some hyper-parameter.
+However, we'd like this hyper-parameter to be relatively easy to pick,
+and not be very sensitive or require some black magic.
+
+If we make the assumption that relationship between the total cost and
+the BLEU score is log-linear, we can imagine plotting the total cost
+vs. some uniform time step. We can then stop when the <em>rate of decrease</em>
+of the exponent falls below some threshold.
+
+Maybe we don't want to make strong assumptions about our cost function
+(e.g. it having a log-linear relationship with the true objective
+function).
+Let's make just the simpler assumption that a decrease in total cost will
+not correspond to a decrease in translation quality. i.e. just assume
+rank correlation between cost and translation quality.
+
+A lot of the time, we are finding 'better hypotheses' (lower cost),
+but the estring remains the same! But what we really care about in
+translation is the estring.
+We can then stop if the 1-best estring has not changed in the past T
+time units. There are several reasonable ways to pick T.
+I propose to plot a curve relating T and the percent of sentences for
+which the 1-best estring using T is equivalent to the exhaustive parsing
+estring.
+
+
+
+
+
+
+
+\section experiments Experiments and Exploratory Data Analysis
+
+Open questions to explore, for better understanding of this specific
+problem:
+	- Is the syntactic structure relatively easy to satisfy? i.e. is
+	it typically either under-constrained or over-constrained, but
+	rarely a truly difficult ``phase-transition'' sort of difficult
+	to satisfy? If so, then maybe the focus should be on optimizing
+	the LM score, which---I think---varies more wildly than the
+	TM score. We may then want to use techniques and insights from
+	left-to-right decoding.
+
+	- What is the likelihood that a gold-standard edge is the 1-best
+	in its cell? What place is it typically?
+
+	- What is the best choice of edge classes? By length, by cell
+	(span), by span \em and label?	Determine \em empirically which
+	choice of classes is better, don't speculate.
+
+	- Statistics for multi-pass: What percent of the time is the
+	1-best output captured by stricter pruning criteria / search over
+	tm-only problem? i.e. can we do tm-only decoding with strict
+	beams then LM integrated decoding using the tm-only forest for
+	outside estimates?
+
+	- How do our priors vary between language pairs?  Maybe has
+	separate arabic + chinese priors, and then try combined in
+	an experiment.
+
+ */

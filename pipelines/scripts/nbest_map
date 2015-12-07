@@ -1,0 +1,26 @@
+#!/usr/bin/env python
+import re
+import sys
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--max','-M',type=int,default=10000)
+parser.add_argument('--min','-m',type=int,default=1)
+
+args = parser.parse_args()
+
+nbest=re.compile(r'^(NBEST sent=(\d+) nbest=(\d+).*foreign-length=(\d+).*)$')
+fail=re.compile(r'fail-msg=')
+printit=True
+for line in sys.stdin:
+    if fail.search(line) is None:    
+        line = line.rstrip('\n')
+        m = nbest.match(line)
+        try:
+            nb = int(m.group(3))
+            ln = int(m.group(4))
+            if ln <= args.max and ln >= args.min:
+                line = nbest.sub("\\2\t\\3\t\\1",line)
+                print line
+        except:
+            print >> sys.stderr, line
+            raise

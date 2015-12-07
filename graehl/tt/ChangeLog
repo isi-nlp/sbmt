@@ -1,0 +1,94 @@
+2007-11-20  Jonathan Graehl  <graehl@isi.edu>
+
+	* forest-em-params.hpp: 
+	            ("zero-zerocounts,z",defaulted_value(&zero_zerocounts),
+             "when a normgroup has all 0 counts for its parameters, give the 0 (not uniform) prob")
+
+
+2006-11-17  Jonathan Graehl  <graehl@isi.edu>
+
+	* forest-em-params.hpp: fixed bug: Jon May found an untested
+	option combination for printing viterbi derivation forests only at
+	the end (not periodically) which divided by zero.
+	
+2005-09-16  Jonathan Graehl  <graehl@isi.edu>
+
+	* forest.hpp: bugfix: only record counts for a node *after* all
+	outside top-down propogation is done (previously was repeated # of
+	children times!).  so, no longer need to record bogus
+	parent->NULL relation for leaves.
+
+2005-09-12  Jonathan Graehl  <graehl@isi.edu>
+
+	* forest.hpp: bugfix: inverse() not invert() of inside[0] - thanks
+	Wei.  changed "outside" to "norm_outside" denoting that the value
+	is actually outside/inside[0]
+
+2005-04-13  Jonathan Graehl  <graehl@isi.edu>
+
+	* count-id-freq.cpp (MAIN_BEGIN): added freq of freq and histogram
+	bins by freq (binsize determined by total count mass)
+
+2005-04-12  Jonathan Graehl  <graehl@isi.edu>
+
+	* forest-em.cpp: overflow support works.
+
+	* forest-em-params.hpp: teebuf now member so it doesn't get
+	destroyed during validate_parameters
+
+2005-04-11  Jonathan Graehl  <graehl@isi.edu>
+
+	* forest.hpp: overflow hash table (accumulate_counts)
+
+2005-04-07  Jonathan Graehl  <graehl@isi.edu>
+
+	* forest-em-params.hpp: implemented --use-double-precision runtime
+	flag
+
+	* forest.hpp: made FForest template on Float (and FForests) - had
+	to comment //DBP(outside_order); because dependent type resolution
+	doesn't work. (have_print etc)
+
+	* forest-em-params.hpp (perform_forest_em): pulled everything out
+	of forest-em.cpp except command line processing and exception
+	handling
+
+2005-03-29  Jonathan Graehl  <graehl@isi.edu>
+
+	* sortpercent.cpp (MAIN_BEGIN): fixed extra "0" in output
+
+	* forest{,-em}.hpp: support normgroups weight_t prob_t and WD
+
+	* sortpercent.cpp (MAIN_BEGIN): single positional arg: infile
+
+	* forest-em.cpp (MAIN_BEGIN): write exception messages to
+	log_stream and not cerr
+
+2005-03-21  Jonathan Graehl  <graehl@isi.edu>
+
+	* sortpercent.cpp (MAIN): is spurious 0 bug still there?
+
+2005-03-17  Jonathan Graehl  <graehl@isi.edu>
+
+	* forest-em.cpp (MAIN): VERSION to v6 and double-precision Weight
+	default
+
+	* forest-em.hpp: added --out-per-forest-counts-file and support.
+	also --checkpoint-per-forest-counts (analogous to the --viterbi options)
+
+2005-03-16  Jonathan Graehl  <graehl@isi.edu>
+
+	* forest-em.cpp: removed -DSINGLE_PRECISION default - you may set
+	that still at command line
+
+2005-02-07  Jonathan Graehl  <graehl@isi.edu>
+
+	* forest-em.cpp (MAIN_BEGIN): use teebuf for --log-file (also -> STDERR)
+
+2005-01-27  Jonathan Graehl  <graehl@isi.edu>
+
+	* forest-em.hpp: tempfile-prefix always appends random string even
+	when specified
+
+	* forest-em.cpp: --add-k-smoothing (add to denominator for normgroups)
+

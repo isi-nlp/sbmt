@@ -1,0 +1,90 @@
+import path ;
+import package ;
+import sbmt-util ;
+import testing ;
+import project ;
+
+require = 
+  <library>/RuleReader//RuleReader
+  <library>/graehl//graehl
+  <library>/boost/regex//boost_regex
+  <library>/boost/serialization//boost_serialization
+  <library>/boost/signals//boost_signals
+  <library>/boost/thread//boost_thread
+  <library>/boost/program_options//boost_program_options
+  <library>/boost/filesystem//boost_filesystem
+  <library>/world//z
+  <library>/pagh//biglm
+  <library>/gusc//gusc
+  <library>/boost/iostreams//boost_iostreams
+  <library>/xrsparse//xrsparse
+  <library>/site-config//tbb
+  <include>./include
+  <define>LM_NO_COMMON_LIB=1
+  <define>LM_NO_QT=1
+  <variant>debug:<define>SBMT_DEBUG=1
+;
+
+project sbmt
+  : requirements $(require)
+  : usage-requirements $(require)
+  ;
+  
+local project = [ project.current ] ;
+local pwd = [ path.root [ $(project).location ] [ path.pwd ] ] ;
+use-project /LW/LangModel : $(pwd)/3rdparty/lw/Shared/Core/LangModel ;
+use-project /LW/Common : $(pwd)/3rdparty/lw/Shared/Common ;
+use-project /LW/App : $(pwd)/3rdparty/lw/Horse/App/LangModel ;
+  
+lib sbmt
+  : [ glob src/*.cpp ]
+    /LW/Common//LWCommon
+    /LW/LangModel//LWLangModel
+    /graehl//graehl
+    /site-config//nplm
+  ;
+  
+# obj builtin-infos_obj 
+#  : [ glob builtin_infos/*.cpp ]
+#    sbmt
+#    /boost/program_options//boost_program_options
+#  ;
+
+
+local test_dir = \\\"$(pwd)/test\\\" ;
+
+# unit-test sbmt_tests
+#    : [ glob test/test_*.cpp ]
+#      test/grammar_examples.cpp
+#      sbmt
+#      /boost/test//boost_unit_test_framework/<link>static
+#      /boost/program_options//boost_program_options
+#    : <define>SBMT_TEST_DIR=$(test_dir)
+#    ;      
+
+# unit-test lwlm_leak_test 
+#     : test/lwlm_memleak.cpp
+#       /boost/test//boost_unit_test_framework/<link>static
+#       sbmt
+#     : 
+#     ;
+    
+# alias check : sbmt_tests 
+#              # lwlm_leak_test # doesnt compile against boost-1.34.1 
+#             ;
+
+# golly wouldn't it be nice to just say move the whole damn directory
+local dirs = include/sbmt
+             include/sbmt/* 
+             include/sbmt/*/* 
+             include/sbmt/*/*/* 
+             include/sbmt/*/*/*/* ;
+local ptrn = *.hpp *.ipp ;
+ 
+sbmt-util.install install
+    : <install-source-root>include
+    : /LW/App//LangModel
+    : sbmt
+    : [ glob $(dirs)/$(ptrn) ] ;
+
+explicit install ;

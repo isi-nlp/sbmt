@@ -1,0 +1,294 @@
+<html><head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title> Case study 2: Linux-x86-GCC</title>
+<link rel="stylesheet" href="files/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.70.1">
+<link rel="start" href="index.html" title="Chapter&nbsp;1.&nbsp;Boost.Coroutine">
+<link rel="up" href="details.html" title=" Details">
+<link rel="prev" href="fibers.html" title=" Case study 1: Win32 Fibers">
+<link rel="next" href="coroutine_thread.html" title=" Interaction between coroutines and threads">
+</head><body link="#0000ff" alink="#0000ff" bgcolor="white" text="black" vlink="#840084">
+<table width="100%" cellpadding="2">
+<tbody><tr><td valign="top"><img alt="boost.png (6897 bytes)" src="files/boost.png" width="277" height="86"></td>
+<td align="center"><a href="http://www.boost.org/">Home</a></td>
+<td align="center"><a href="http://www.boost.org/doc/libs">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="http://www.boost.org/users/index.html">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="fibers.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="details.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="coroutine_thread.html"><img src="files/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="coroutine.linuxasm"></a> Case study 2: Linux-x86-GCC</h3></div></div></div>
+<a name="linuxasm.introduction"></a><h4>
+<a name="id2631304"></a>Introduction</h4>
+<p>
+In this section we will show an example of an assembly
+implementation of Boost.Coroutine low level context switching. While
+the example is x86 and Linux specific, it can easily generalized to
+other operating systems and CPUs. It is believed that the same code
+should work unmodified on BSDs derived systems.</p>
+<p>
+Notice that the examples here will use the <code class="literal">AT&amp;T</code> assembler syntax
+instead of the more common <code class="literal">Intel</code> syntax. There aren't many
+differences except that the order of source and destination operands
+are reversed and the opcode name encodes the length of the operands.</p>
+<a name="linuxasm.initial_code___literal_libc_swapcontext__literal__implementation"></a><h4>
+<a name="id2631340"></a>Initial code, <code class="literal">libc swapcontext</code> implementation</h4>
+<p>
+The exploration of a possible stack switching implementation has
+started from an analysis of the <code class="literal">GNU glibc swapcontext</code>
+implementation. We do not include the actual code here because of
+license issues, but will comment it. The actual code can be found in
+the file __swapcontext<span class="underline">S_</span> of the <code class="literal">glibc</code> source archive.</p>
+<div class="orderedlist"><ol type="1">
+<li>
+<code class="computeroutput"><span class="identifier">swapcontext</span></code> first load the address of the buffer where the context
+will be saved from the stack, where it has been pushed as part of the
+call setup. This buffer will be called the <span class="emphasis"><em>destination buffer</em></span>.
+</li>
+<li>
+Then <code class="computeroutput"><span class="identifier">movl</span></code> is used to copy all general purpose register content to
+the destination buffer. For <code class="computeroutput"><span class="identifier">EAX</span></code> a dummy value is saved because it
+will be clobbered by <code class="computeroutput"><span class="identifier">swapcontext</span></code>.
+</li>
+<li>
+The value of the instruction pointer a the time of the call
+to <code class="computeroutput"><span class="identifier">makecontext</span></code> is saved in the destination buffer. The value of this register is
+retrieved from the stack, where it had been pushed by the <code class="computeroutput"><span class="identifier">call</span><span class="identifier">
+makecontext</span></code> instruction.
+</li>
+<li>
+The <code class="computeroutput"><span class="identifier">ESP</span></code> stack pointer is saved in the destination buffer.
+</li>
+<li>
+Then the <code class="computeroutput"><span class="identifier">FS</span></code> segment register is saved in the destination
+buffer. Originally <code class="computeroutput"><span class="identifier">swapcontext</span></code> 
+also saved the <code class="computeroutput"><span class="identifier">GS</span></code> register, but it has been found that this
+conflicted with threading`.
+</li>
+<li>
+The floating point environment is saved with a call to <code class="computeroutput"><span class="identifier">fnstenv</span></code> in
+the destination buffer. This includes the control word, status word,
+tag word, instruction pointer, data pointer and last opcode, but
+excludes the floating point register stack. This is about 28 bytes of data.
+</li>
+<li>
+The address of the structure that will be restore is loaded from the
+stack. This will be called the <span class="emphasis"><em>source buffer</em></span>. All above operations
+are reversed in <code class="computeroutput"><span class="identifier">LIFO</span></code> order.
+</li>
+<li>
+The current signal mask is saved in the destination buffer. The
+signal mask to be restored is loaded from the source buffer.
+</li>
+<li>
+The <code class="computeroutput"><span class="identifier">sigprocmask</span></code> system call is invoked to restore the signal mask.
+</li>
+<li>
+The floating point environment is restored from the source buffer.
+</li>
+<li>
+The <code class="computeroutput"><span class="identifier">GS</span></code> register is restored from the source buffer.
+</li>
+<li>
+The stack pointer is restored from the source buffer. This in
+practice switches stacks.
+</li>
+<li>
+The return address (<code class="computeroutput"><span class="identifier">EIP</span></code>) is restored from the source buffer and
+pushed in the stack.
+</li>
+<li>
+All general purpose registers are restored from the source buffer.
+</li>
+<li>
+<code class="computeroutput"><span class="identifier">ret</span></code> is used to pop the instruction pointer and jump to it.
+</li>
+</ol></div>
+<a name="linuxasm.optimizing__code__phrase_role__identifier__makecontext__phrase___code_"></a><h4>
+<a name="id2631606"></a>Optimizing <code class="computeroutput"><span class="identifier">makecontext</span></code>
+</h4>
+<p>
+The above implementation suffer from various inefficiencies. The most
+glaring one is the call to <code class="computeroutput"><span class="identifier">sigprocmask</span></code> that alone wastes thousands of
+cycles. Unfortunately the <code class="computeroutput"><span class="identifier">POSIX</span></code> standard requires
+it. Boost.Coroutine does not deal with the signal mask and consider it
+as any shared resource. It is the responsibility of the user to guard
+against unsafe access to it. 
+By simply removing the call the function
+can be sped up by three order of magnitude.</p>
+<p>
+We can do
+better. Saving and restoring a segment register is an expensive
+operation, because requires not only the register content to be
+reloaded but also the segment descriptor entry from the segment
+table. The Linux operating system prohibits the user to change the
+<code class="computeroutput"><span class="identifier">FS</span></code> register, thus we should be able to safely omit saving and
+restoring it.</p>
+<p>
+We also do not need save the floating point environment. This should
+be considered shared state. This saves lots of cycles as it is an
+expensive operation too.</p>
+<p>
+finally we do not need to save all general purpose registers. The
+Linux calling conventions state that <code class="literal">EAX, ECX</code> and <code class="literal">ECX</code> are callee
+clobbered and the caller should not expect these to be preserved. This
+is also true of the floating point stack that is required to be empty
+when calling a function (and in fact <code class="computeroutput"><span class="identifier">makecontext</span></code> acknowledges this
+by not saving the floating pointer register stack).</p>
+<a name="linuxasm._code__phrase_role__identifier__swapcontext_stack__phrase___code_"></a><h4>
+<a name="id2631705"></a><code class="computeroutput"><span class="identifier">swapcontext_stack</span></code>
+</h4>
+<p>
+Here we will present the <code class="computeroutput"><span class="identifier">swapcontext</span></code> implementation used by
+Boost.Coroutine on Linux x86 systems. Note that this implementation is
+<span class="bold"><strong>not</strong></span> derived from <code class="computeroutput"><span class="identifier">glibc</span></code> and has been independently developed. Also
+note that this is not a drop-in replacement for <code class="computeroutput"><span class="identifier">swapcontext</span></code>.</p>
+<p>
+The <code class="computeroutput"><span class="identifier">C</span><span class="special">++</span></code> prototype for this function is:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">extern</span><span class="string"> "C"</span><span class="keyword"> void</span><span class="identifier"> swapcontext_stack</span><span class="special"> (</span><span class="keyword">void</span><span class="special">***,</span><span class="keyword"> void</span><span class="special">**)</span><span class="keyword"> throw</span><span class="special">()</span><span class="identifier">
+__attribute</span><span class="special">((</span><span class="identifier">regparm</span><span class="special">(</span><span class="number">2</span><span class="special">)));</span>&nbsp;
+</code></pre>
+<p>
+Where <code class="computeroutput"><span class="identifier">__attribute</span><span class="special">((</span><span class="identifier">regparm</span><span class="special">(</span><span class="number">2</span><span class="special">)))</span></code> is a <code class="computeroutput"><span class="identifier">GCC</span></code> extension to require pass
+by register parameters. The first parameter is a pointer to a pointer
+to the destination stack (here identified as an array of void pointers for
+simplicity), while the second is a pointer to the source stack. In
+practice the first is a pointer to the memory area where the
+destination stack pointer is stored and the second is the stack
+pointer that will be restored.</p>
+<p>
+This is the body of <code class="computeroutput"><span class="identifier">swapcontext_stack</span></code></p>
+<pre class="programlisting"><code class="literal">pushl %ebp      
+        pushl %ebx      
+        pushl %esi      
+        pushl %edi      
+        movl  %esp, (%eax)
+        movl  %edx, %esp
+        popl  %edi      
+        popl  %esi      
+        popl  %ebx              
+        popl  %ebp
+        ret
+</code></pre>
+<p>
+This function requires <code class="computeroutput"><span class="identifier">EAX</span></code> to point to the destination stack
+pointer, while <code class="computeroutput"><span class="identifier">EDX</span></code> is the new stack pointer. <code class="computeroutput"><span class="identifier">swapcontext_stack</span></code>
+first saves all caller save registers on the old stack, then saves the
+stack pointer in the location pointed by <code class="computeroutput"><span class="identifier">EAX</span></code>, then load <code class="computeroutput"><span class="identifier">EDX</span></code> as the
+new stack pointer and restore the caller save registers from the new
+stack. The final <code class="computeroutput"><span class="identifier">ret</span></code> will pop the return address and jump to it.</p>
+<p>
+The amount of instructions in this implementation is close to optimal,
+also there are no register dependencies between them (all <code class="computeroutput"><span class="identifier">popl</span></code>
+instructions depend on the <code class="computeroutput"><span class="identifier">ESP</span></code> load, but substituting them with <code class="computeroutput"><span class="identifier">movl</span><span class="identifier">
+offset</span><span class="special">(%</span><span class="identifier">ecx</span><span class="special">)</span></code> didn't increase performance).</p>
+<p>
+Still this function is not optimal. The last <code class="computeroutput"><span class="identifier">ret</span></code> will be always
+mispredicted by most CPUs. On <code class="computeroutput"><span class="identifier">NetBurst</span></code> architectures (i.e. Pentimu 4
+and derived) this implies an overhead of at least 25 cycles (but very
+often more than 50) to flush the pipeline. 
+Considering an unrealistic worst case of one instruction
+per cycle for the previous function, the misprediction alone is more
+than two times the cycle count of <code class="computeroutput"><span class="identifier">swapcontext_stack</span></code> itself.</p>
+<a name="linuxasm.jump_prediction"></a><h4>
+<a name="id2632088"></a>Jump prediction</h4>
+<p>
+Before showing how <code class="computeroutput"><span class="identifier">swapcontext_stack</span></code> can be further optimized we
+need to understand a little how branch prediction work on modern
+architectures.</p>
+<p>
+Most CPUs have special circuitry to predict complex patterns of
+conditional jumps, but usually can only predict indirect jumps
+(i.e. jumps trough a pointer) to go to the location the same
+instruction jumped the last time (the CPU keeps a table that
+associates the address of a jump instructions with the addresses it
+jumped to the last time). Thus a jump that always go to the same place
+is always predicted, while a jump that alternates between two
+different targets is always mispredicted.</p>
+<p>
+For example <code class="computeroutput"><span class="identifier">swapcontext_stack</span></code> is used both to call a coroutine and
+to return from it. Consider a loop that repeatedly invokes a coroutine
+and return from it (for example a generator invoked by
+<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">generate</span></code>): the indirect call will be always mispredicted.</p>
+<p><code class="computeroutput"><span class="identifier">ret</span></code> instructions are usually treated specially by CPUs, and instead
+of being predicted to jump where they jumped the last time, a return
+stack buffer is used to try to predict where the jump will
+return. When a call is made, the caller address is pushed in the
+return stack buffer and when a <code class="computeroutput"><span class="identifier">ret</span></code> is performed, the address in the
+top of the stack is used to predict where the <code class="computeroutput"><span class="identifier">ret</span></code> will go. This
+means that the <code class="computeroutput"><span class="identifier">ret</span></code> in <code class="computeroutput"><span class="identifier">swapcontext_stack</span></code> will be always
+mispredicted, because it will never jump to the caller of
+<code class="computeroutput"><span class="identifier">swapcontext_stack</span></code>.</p>
+<p>
+Finally, it seems that new generations of processors could have more
+advanced indirect branch prediction functionality. At least the
+<code class="computeroutput"><span class="identifier">Pentium</span><span class="identifier"> M</span></code> seems to be able to predict simple patterns of indirect
+jumps.</p>
+<p>
+For reference see  <a href="bibliography.html#intel-optimization-guide">[Intel06]</a> and <a href="bibliography.html#agner-fog-documentation">[Fog06]</a>.</p>
+<a name="linuxasm.optimizing_the__code__phrase_role__identifier__ret__phrase___code_"></a><h4>
+<a name="id2632257"></a>Optimizing the <code class="computeroutput"><span class="identifier">ret</span></code>
+</h4>
+<p>
+We have seen that the first step to optimize <code class="computeroutput"><span class="identifier">swapcontext_stack</span></code> is to
+substitute <code class="computeroutput"><span class="identifier">ret</span></code> with a <code class="computeroutput"><span class="identifier">popl</span><span class="special"> %</span><span class="identifier">ecx</span><span class="special">;</span><span class="identifier"> jmp</span><span class="special"> *%</span><span class="identifier">ecx</span></code> pair. This gives the
+CPU a chance to predict the jump but is not enough. As a CPU will
+predict the jump to go where it did the last time, we need to have
+different jumps for each target. This is not obviously possible for
+dynamic code where at any point any coroutine could be invoked or a
+coroutine could yield to any other. But when the same coroutine is
+always called in a loop, the pattern is static and could be
+optimized. If we used two different jumps to invoke and yield from the
+coroutine, it will always be predicted. The simplest way to do that is
+to duplicate the code for <code class="computeroutput"><span class="identifier">swapcontest_stack</span></code> in <code class="computeroutput"><span class="identifier">swapcontext_swap_up</span></code>
+and swapcontext_swap_down`. The first is used for the invocation, the
+second for the yield. Other than that, the code is exactly the
+same. Measurements show a performance increase of at least 50% in the
+previous scenario.</p>
+<p>
+In a dispatcher based scenario, the jump in <code class="computeroutput"><span class="identifier">swapcontext_stack_up</span></code> will
+always be mispredicted, while the one in <code class="computeroutput"><span class="identifier">swapcontext_stack_down</span></code> will
+always be predicted correctly to return to the dispatcher; thus, while
+the win is smaller, is sill better than mispredicting every time. This
+is why an "invoke + yield + invoke + yield" is not necessarily slower
+than "invoke + yield_to + yield".</p>
+<a name="linuxasm.inlining__code__phrase_role__identifier__swapcontext__phrase___code_"></a><h4>
+<a name="id2632402"></a>Inlining <code class="computeroutput"><span class="identifier">swapcontext</span></code>
+</h4>
+<p>
+If the compiler could inline <code class="computeroutput"><span class="identifier">swapcontext</span></code>, we would have many more
+jumps and a much bigger chance of being predicted. Boost.Coroutine
+contains experimental code to do that, but is currently disabled
+because the inline assembler code used is not yet believed to be
+completely safe.</p>
+<a name="linuxasm.handling_exceptions"></a><h4>
+<a name="id2632440"></a>Handling exceptions</h4>
+<p>
+The code is believed to work correctly with exceptions on systems that
+use the zero overhead exception handling model (as do most GCC targets
+today). In this model there are no pointers to exception chains to be manipulated
+and restored on context switch.</p>
+<a name="linuxasm.conclusions"></a><h4>
+<a name="id2632457"></a>Conclusions</h4>
+<p>
+We have seen one possible assembler implementation of
+<code class="computeroutput"><span class="identifier">swapcontext</span></code>. While the code is very system specific, it could easily
+be ported on many more systems following a similar model. Also the
+analysis of the branch prediction functionality is by no mean limited
+to <code class="computeroutput"><span class="identifier">IA32</span></code> CPUs.</p>
+</div>
+<table width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright © 2006 Giovanni P. Deretta</small></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="fibers.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="details.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="coroutine_thread.html"><img src="files/next.png" alt="Next"></a>
+</div>
+</body></html>

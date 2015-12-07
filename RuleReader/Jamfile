@@ -1,0 +1,19 @@
+import sbmt-util ;
+
+lib RuleReader : src/Rule.cc 
+                 src/RuleNode.cc 
+                 /graehl//graehl
+               : <include>include 
+               : 
+               : <include>include
+                 <library>/graehl//graehl ;
+
+sbmt-util.install install
+  : <install-source-root>include 
+  :
+  : RuleReader
+  : [ glob include/RuleReader/*.h ] ;
+  
+explicit install ;
+  
+

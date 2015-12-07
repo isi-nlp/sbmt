@@ -1,0 +1,50 @@
+/*  $Id: design.dox 1313 2006-10-06 23:32:45Z jturian $
+ *  Copyright (c) 2006, Information Sciences Institute. All rights reserved. */
+/*!
+
+\page design Design overview
+
+[include some doxygen images, link to some relevant docs]
+
+https://nlg0.isi.edu/svn/sbmt/trunk/argmin/
+although I may tag the current revision and modify the trunk to reflect the ideas in \ref futurework.
+These new concepts may require some refactoring.
+
+Typically, we are working in namespace argmin.
+
+Relationship with SBMT decoder library types:
+\code
+// Extra-information stored in a Statement, in addition to the
+//  information used by the translation-model rules (i.e. besides
+//  the root constituent label)
+#ifdef NO_LM
+        typedef sbmt::null_info                         ExtraInformation;
+#else /* !NO_LM */
+        typedef sbmt::ngram_info<USING_NGRAM_ORDER>     ExtraInformation;
+#endif /* NO_LM */
+
+typedef sbmt::edge<ExtraInformation>    Statement;
+typedef sbmt::fat_sentence              Input;
+typedef sbmt::grammar_in_mem            GrammarTemplate;
+typedef sbmt::indexed_binary_rule       Rule;
+typedef sbmt::span_t                    Span;
+typedef sbmt::score_combiner            ScoreCombiner;
+typedef sbmt::logmath::basic_lognumber<sbmt::logmath::exp_n<1>, float>  Double;
+\endcode
+
+Main classes in argmin:
+ - argmin::Agenda
+ \copydoc argmin::Agenda
+ - argmin::Chart
+ \copydoc argmin::Chart
+ - argmin::Minimizer
+ \copydoc argmin::Minimizer
+ - argmin::Derivation
+ \copydoc argmin::Derivation
+ - argmin::Grammar
+ \copydoc argmin::Grammar
+
+
+
+
+ */

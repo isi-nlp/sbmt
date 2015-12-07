@@ -1,0 +1,15 @@
+project Common ;
+
+local pattern = *.cpp ;
+local dirs = impl Serializer Vocab/impl ; 
+local src = [ glob $(dirs)/$(pattern) ] ;
+
+lib LWCommon
+  : $(src)
+    /world//pthread
+  : <include>.
+  :
+  : <include>.
+  ;
+  
+explicit LWCommon ;

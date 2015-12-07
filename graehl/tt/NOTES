@@ -1,0 +1,1544 @@
+% -*- mode: Outline -*-
+
+---+ gibbs / em from carmel
+
+hyperparam inference (per arc or normgroup or cascade?) - MH accept/reject gaussian from current hyperparam?  (or fixed hyperparam?)
+nonparametric
+
+forest-em --alpha=x (done)
+per-normgroup alpha (done)
+per-param alpha (done)
+per-param priorcount (=N*p*alpha already combined) - no, but per-param alpha can give same result
+
+gibbs no-normgroup = locked, not p=1 (done)
+
+forest-em nongibbs: locked probs? (done; things w/ no normgroup are locked)
+
+---+ Lazy k-best trees from a forest
+
+Problem: build from a weighted forest (with some cycles) its k best trees.  A node in
+these trees is called an "edge" in our decoder.  We'll allo  w child pointers for
+these trees to refer to common subtrees, rather than copying.
+
+A forest consists of OR and AND nodes (the AND nodes are at most binary in the
+decoder, but in general can be implicitly right-binarized and the resulting
+k-best trees transformed back to the original 3+-ary form).  Each node has a
+viterbi "inside" cost: that of the cheapest tree in it.  Tree cost is just the
+product of (nonnegative!) AND node costs, so to get the rule cost of an AND
+node, you could subtract from its inside the insides of its children.  In the
+decoder, we need to clamp the length bonus against other model costs, to ensure
+that no negative-cost cycles are possible.
+
+The old approach is based on a solution to the acyclic-forest k-best problem.
+Since there are no cycles, we can first build all the k-best-trees-lists of a
+node's children (which depend on the k-best for their children, and so on down
+to the leaves) and then derive from them the node's own k-best.  Top-down
+depth-first traversal starting from the root makes that easy (just before
+finishing a node, you've finished all the nodes it connects to).
+
+Cycles of n nodes are handled by recomputing n different versions of the k-best
+list for each node in the cycle, one version for each path from the root to the
+node.  This allows any k-best path that has no cycles to be found.  The code
+that does this is somewhat tricky/clever.  For nodes not in a cycle, of course,
+the k-best list is memoized so that when it is used by multiple parents, it is
+computed and built but once.
+
+Unfortunately, many entries are produced that are never used by any of the
+actual top-k trees for the root.  You have to keep around up to k entries for
+each node in the forest at all times, because you don't know that something
+that's been used once won't be used again (a length-1 span could be used at the
+TOP level!)  You could find out exactly how much you need to keep in memory
+concurrently by analyzing the dependency structure (treating OR and AND children
+identically) and producing a plan that knows when it can safely delete nodes'
+k-best-lists (and the unused trees in them), because the lists of all those
+nodes' parents has already been computed.
+
+The actual computation of a node's k-best from its children depends on the
+node's type.  For OR-nodes, the k-best lists of its children are lazily merged,
+keeping the top k (we keep the k-best lists in sorted order, so this is easy).
+For AND-nodes, new tree nodes are built on top of its 0,1,or 2 children.  Leaves
+have only a singleton k-best list, of course.  Unary nodes have a k-best list is
+a copy of the child's k-best list, but with each node placed under a new unary
+AND node (we don't actually copy those trees, rather, the child pointer of the
+new trees shares them).  For binary nodes, the lazy cross-product of the left
+and right k-best trees is computed, keeping only the top k (again: the new
+binary AND node refers to the children by pointer).  Once we're done, we have
+for the top OR node a list of the k best trees (AND nodes with left/right
+pointers to other AND nodes all the way down to leaves) and their costs.
+
+A significant improvement to this algorithm is possible by observing that first,
+many of the nodes will only contribute a small number (even 0) of subtrees to
+the root's k-best trees, and second, it's not necessary to compute all k of the
+best trees for a node before computing the top i trees of its parent; in fact,
+only i *or possibly fewer* will be needed.  We want to generate the top k trees
+lazily - when someone asks for the ith tree, we generate only up to the ith tree
+(caching the trees so we don't duplicate work and structure).  It turns out we
+can keep a small amount of information around to implement a restartable
+incremental lazy k-best computation/cache/continuation for each node (that is,
+if we're asked for the 3rd best, we do some computation, and then when we're
+asked for the 4th best, we don't have to redo the computation for the 3rd best;
+we save enough state to pick up where we left off).  In fact, a node always be
+asked for its n-1th best before being asked for its nth best.
+
+So, the new scheme becomes: initialize every node with enough information to
+provide its 1st-best tree, and then query the root for its 1st, 2nd ... up to
+kth best trees and print them.  This forces evaluation of the terms that are
+actually used in the best trees; no extra work is done (except what's necessary
+to provide the "resume-where-you-left-off" state for every node).  In fact, it's
+no longer necessary to fix k in advance.  You can keep getting trees (in order
+of increasing cost) until there are no more, or you are satisfied.  The actual
+overhead per node of producing the k-best one at a time instead of all at once
+(with the lazy merge and cross product of sorted lists) is just a factor of log
+k for each of them - with the advantage that many fewer (node,kth best) items
+will need to be computed.  Another fringe benefit is that cycles are handled
+properly with no extra work; while a cycle of dependencies between k best lists
+as a whole is possible, if we ensure that there are no 0-cost cycles, a cycle of
+dependency for the ith best trees of nodes is impossible (in that case, the
+resulting tree would not be a tree - it would contain a loop*).
+
+---++ Lazy K-Best Tree Algorithm:
+
+Every node has a vector saving all the 1st-nth trees built so far (they are, of
+course, built only on demand).  When a tree is generated, it is stored in the
+per-node memoization vector and returned to the caller.  The algorithm begins by
+asking for the 1st best tree for the root node, and continues to generate the
+2nd, 3rd ... and so on, until stopped.  Naturally, especially for leaf
+AND-nodes, there may only be a finite number (less than the request) of trees
+available.  That means you need to check for NULL responses (and at most one
+NULL needs be stored in the memo; if someone asks for your 4th best but you have
+only (1st-best,NULL) in your vector, you don't need to look in the vector,
+because 4>2+1).
+
+How we find the ith best tree for a node depends on its type:
+
+---+++ OR nodes (of size N):
+
+(In the decoder, these are profiles - things that recombine to have equivalent
+future costs for all models).  We need the state to list off the first X
+elements in increasing-cost order from an N-way merge of the (lazy)
+increasing-cost-sorted k-best lists of the N children.  State is just an N-tuple
+of list-positions used so far.  Incremental computation is made more efficient
+by maintaining a priority queue with elements (list#,cost) indicating which
+element of the tuple to increment (pulling the tree off that list).  You can
+peek at the minimum entry from the heap, increment that counter, and worsen the
+cost to that of the next element on that list (this can be done directly in most
+heaps, rather than popping then pushing).  Note that the size of the priority
+queue is always N, until one of the child lists is exhausted - then you really
+pop off that key.  Perhaps other N-way-merge algorithms can be made incremental
+as well.  For small enough N, you wouldn't need to use a priority queue but
+could just iterate over all N lists and choose the cheapest based on the
+consumed-tuple.
+
+The used-vector is initially 0^N (0,...,0) and the queue contains the N entries
+1,...,N, where of course the priority (lower=better) of an element i is just the
+cost of the used-vector[i]th-best list of the ith child of the OR-node.
+
+Trees are generated by copying the pointer off the appropriate child list.
+
+---+++ Leaf(introductory) AND nodes
+
+By definition, these have a singleton k-best list.  These form the leaves of any extracted tree.
+
+---+++ Unary AND nodes:
+
+These are trivial as in the old approach.  When asked for your ith-best, get the
+ith-best of your child and store/return your AND-rule with a pointer to that
+ith-best child under it (or you return NULL if your child doesn't have an ith-best).
+
+---+++ Binary AND nodes:
+
+Your ith-best will be based on the jth best of your left child and kth best of
+your right child.  A priority queue holds unused (j,k) tuples and their costs.
+To generate the ith-best, you simply take the queue resulting from the i-1 first
+generations, and pop the cheapest off, building your AND-rule with left pointer
+to the jth best of your left node, and right pointer to the kth best of your
+right node.  The successors to (j,k) are generated according to a rule that
+ensures each (j,k) is used exactly once as you generate infinitely many: always
+generate (j,k+1), but in addition generate (j+1,k) iff k=1 - this guarantees
+that there is a single path to generate (j,k) - the first coordinate is
+increased from 1...j, and then the second coordinate is increased from 1...k -
+you can never alternate between increasing the two coordinates.
+
+The queue is initialized with the value (1,1), and of course, an element (j,k)
+is given a priority (lower=better) equal to the sum of the costs of the jth-best
+of the AND node's left child, and the kth-best of the right child.
+
+For example (the queue is shown as a sorted list for simplicity, with the first
+being the cheapest; the state of the queue after the ith-best can be seen in the
+state of the queue before the i+1th-best, and the result is just the first entry
+of the queue, and new elements are <nop>_emphasized_):
+
+| *i* | *sorted-queue-before* | *comment* |
+| 1 | {_(1,1)_} | initial value.  since head k=1, two successors |
+| 2 | {_(2,1),(1,2)_} | since head k=1, two successors |
+| 3 | {(1,2),_(3,1),(2,2)_} | since the head k=2, only generate one successor|
+| 4 | {(3,1),(2,2),_(1,3)_} |  head k=1, so generate two |
+| 5 | {(2,2),(1,3),_(3,2),(4,1)_} | ... |
+
+The size of the queue grows very slowly on average, but equal to i in the worst
+case (the worst case is when you have the first entry in the right child much
+cheaper than the second, but a bunch of nearly-identical entries in the left
+child k-best lists).  That's not a big deal, because you store the i already
+computed entries anyway, so it's just double the space - but there is the
+logarithmic time factor.  Naturally, if the k-best list of a child is exhausted,
+you stop generating successors in that direction.
+
+----------
+
+* but to prove that this can't happen by construction: if there's
+a unary-AND cycle where the ith best of every node uses the ith best of its
+child, then its i-1th best must use the i-1th best of its child as well, leading
+to the conclusion that the 1-best for each is based on the cycle ... but how did
+all of those nodes get their viterbi cost?  at least one of them would have to
+use an actually terminating production - in the decoder, be based on some source
+span).  In fact, we have to ensure that there are no 0-cost cycles or else the 1
+best of A could use the 1 best of B, which uses the 1 best of A ... or detect
+such cycles and ensure that among two same cost possibilities, you rank the
+non-looping one higher.  To do that, you'd have to pass down a set of nodes
+visited on the path from the root for the current computation, so it's probably
+best to just clamp the per-node cost at some epsilon > 0.
+
+-- Main.JonathanGraehl - 13 Jan 2005
+
+
+
+
+* decoder multipass
+
+Mixing factor for known prev outside vs. prior (damping - don't explore new stuff too often).
+
+Smaller new-span beam.
+
+Global thresholding (multiplicative outside factor of a good outside estimate proportional to #uncovered words to keep larger spans).
+
+Dynamic retry - try to almost run out of memory.
+
+record stats: expected vs. actual outside per iteration ... tune mixing factor.  find better conditioning for outside-prior
+
+*agenda:
+
+ - TTT!!!
+ - supercarmel: restructuring english, composing rules: tree homomorphism?
+ - forest sblm rescoring/unpacking = wRTG intersection (interaction with restruct.)
+ - understand why P(NT) or P(NT,category(span)) are good prior to have on top of rewrite costs
+    - learn events for P(rule|chinese before, after span?) or just prior(rule)?  too many params and correlated w/ rulecost ... but outside-oriented would be good
+ - modeling/parsing: condition on nearby chinese words?  we have them.
+ - smoothing - condition on too little = weak model.  too much = great train perplex, bad heldout
+ - chinese monolingual collocations to bias/determine unaligned C word going left/right?
+ - MDL - size of rules balanced vs. model perplex. (or held out perplex?)
+ - modeling - feedback via search error/bleu, or feedback via perplexity?
+ - modeling - value of explicit rule based rule pruning?  just get better probs.  but rule based higher-precision bad-giza-alignment filters might be good
+ - pruning - feed in viterbi decoder counts for barely-pruned ruleset?
+ - named entities
+ - model1 syntax aligner - bottom up or top down?
+ - parsing - multihead rules?  difficult to beam
+ - parsing - principled deletion?
+ - parsing - robustness - global/outside can be a weakness - we just want to chunk, sometimes
+ - parsing - tradeoff of simple parser/binarization = more translation rules/possibilities in memory, but more targeted/integrated/early cost, intel. binar. = possibly more diversity later on (more real alternatives preserved?)
+ - it0 pruning - no threshold is safe for pruning to get >0 model ppx ... because every tree may depend on K different rules covering same node ... but each gets count 1/K - at least iterated EM ensures one strong winner per example.  not so important for held out?
+ - rule acq ... compositing on demand - include certain large contexts based on high counts or perhaps on winners of root-em
+ - root-em: investigate under what conditions larger composed rules 'always' win - idea that you pay for the novel part of each translation no matter what, so combine it with as much ordinary stuff as possible for the same cost, plus the ordinary for free ... gives no generalization for the rare parts
+ - if something is a component of the model's prefered explanation, why should it be pruned away???  isn't a weak probability justifiable for smoothing/backoff? explicit backoff difficult except tree-trie leftmost expansion, which isn't very linguistically motivated ... head first expansion? :)
+ - use more than viterbi parse for rule acq?
+ - decoding/heuristic - multipass - variation in nt/span if in pass 1 you didn't see a nt/span combo, how do you beam/cost it when it is viable in pass 2?  keep all? force some normal ones out?  etc.
+ - model/decode - overlapping contexts?  makes for more states/nonterminals (e.g. parent annotated) which is bad .. but no problem conditioning on chinese :) backoffs?  learned wordclasses, finer set of preterminals ... fine grained NE types
+
+* MT ideas
+
+- reduced lexical-SBLM/TM integrated search space: record OR(head1,head2...) set
+and use most optimistic cost every time, taking unions of sets.  1st pass -
+overgenerous
+
+- partial E-sent alignments - project parse leaving remaining context
+e1 e2_1 -> c1
+e2_2 e2 -> c2
+
+e.g. e2=S(NP-C(DET(the),NN(dog)),VP(VB(died)
+  PP(IN(yesterday))) .(.))
+if e2_1= "the", then train off S(NP-C(DET(the),x0:NN),x1:VP) assuming monotone in chunks.
+
+- simpler: just SFAKE(NP-C(DET(the))) -> c1
+
+- ridiculously large rule/phrase size isn't the best way to use computer memory
+  (because you can't overcome data sparseness, although backoffs are possible)
+  ... alex suggested bigram translation models (backed off to unigram) as more
+  robust w/ less data
+
+- computational wins: taking viterbi parse and word-word alignments as gospel
+  for rule acquisition (rules must exactly explain parse tree and alignment,
+  which are often buggy, on top of the reference xltns, which themselves can be
+  buggy).  but n-best or integrated search would be more robust (and learn more
+  rules, from more contexts).  automatic eval of quality: size of rules required
+  to explain.  fuzzy/opportunistic integrated search: drop alignment or modify
+  parse decision based on what looks like a good result of rule acquisition.
+  or, error analysis and fix the parser/aligner, or, even simpler, try to
+  postprocess/fixup alignement/parse after first pass rule aq.
+
+- restructuring (deflattening) parses: more MT friendly - by postprocessing, or
+by modifying sblm/parser?  go all the way to strict binarization and obviate the
+decoder-required binarizer?
+
+- or extended (non-fixed #children) transducer?
+** unclear - but preliminary: at least flat -> deep a la restructuring
+
+- smoothing: generate per sentence xR rules based on complicated non-xR backoffs?
+- e.g. make some lexical probabilities/translations independent of syntax (as backoff) - clustering?
+
+- trilex sblm vs trigram word lm
+
+- 64 bit machines
+
+- integrated vs. multi-stage (TM->SBLM mainly)
+
+- 1d search for pruning criteria that doesn't cause search error; will adding
+all constraints cause search error? (no, unless complex relative
+beam/pruning/lookahead interactions)
+
+- decoder, forest-em viterbi derivs agree?
+
+- data discarding: why drop everything just because of a few bad or
+cross-sentence-boundary alignments, when you can still learn off good
+constituent->cspan leaf-ward fragments (assuming nothing is wrong with the
+english side and you have a good parse)
+
+- since large data sets mean longer turnaround for experiments, why not use less
+data and come up with good backoffs as an added bonus?
+
+- input to SBLM training: NE tagged?  rule-based-translation/alignment?
+
+- question of integrated or seperate (multistage) components passing pruned
+lattice/forest is independent of whether a generic super-carmel toolkit exists;
+ad-hoc multistage components can cooperate easily (integrated is hard for
+super-carmel and ad-hoc)
+
+- API for forward estimators.
+
+- static analysis of grammar
+
+- multipass heuristic: use strict beam first (to estimate outside/rest cost) or to learn special pts.
+
+
+* super-carmel:
+** implementation questions:
+*** external/disk rule list with per-input/corpus filtering?
+*** special case data structures?
+**** seperate unweighted-forest (well, weight=label weight)
+**** weighted (normal form?) RTG
+**** RTG=weighted xR with unused LHS? (status quo)
+**** static or dynamic typing of Symbol label vs. rule index label?
+** core
+*** TTT: xR
+*** TTT: xRs
+*** fwd tree -> xR(s)
+*** fwd RTG -> xRL(s)
+*** rev xR(N)L <- tree
+*** rev xR(N)L <- RTG
+want deleting?  then add an "anything goes" state (but you will have to generate rules for generating from that state based on domain knowledge i.e. finite tree alphabet)
+*** check before delete?
+*** rev xR(LN)s <- string = parsing/decoding
+ignacio?  just add states.
+**** <- FSA = lattice parsing (pretty straightforward)
+**** <- finite CFG = very complicated but doable
+*** k-best acyclic
+*** stochastic generation
+** later
+*** pruning WRT best path
+*** rev xR(LN)s <- FSA = lattice parsing
+*** optional states/attributes,
+recognize then apply on way up, or pass down?  hints
+* rule acq + TTT
+- multiple states: identify Chinese lexemes that can trigger states; subset of states
+  for particular Etree/Cstring pair?
+* efficient (per-example/corpus lossless-pruned rules) TTT:
+ Apply tree-trie matching to each E subtree
+  vs. all rules to get restricted set?  First prune vs. corpus?
+* whole ruleset in memory vs. single-pass scans of huge disk ruleset
+** given output string (in xRs)
+*** states: bottom-up propagation of reachable state set
+*** lexical (rhs) string rules
+** given output tree: very constrained
+** given input tree: very constrained
+** disk-based indices
+complicated; initial model could be perl script (or whatever) seq. scan through
+rules, while super-carmel assumes/accepts only smaller rulesets that fit into
+memory.
+*** disk access: id -> file pointer, or just id = file pointer
+*** index: output word (for s) or leaves (for t) -> list of ids
+*** index: tree fragment: tree trie - many step(=seek) lookup.
+
+GDB args:
+gdb --args /cache/tt/bin/cygwin/forest-em.debug -f /cache/tt/sample/forests -n /cache/tt/sample/norm -m 100k -R /cache/tt/sample/rule_list -w 3 -W 1 -D 3 -r 0 -e 1e-2 -i 20 -b /cache/tt/sample/byid_rules -B -
+
+* Reader interface change: return value isn't the istream (redundant), but rather 1 if read succeeded, 0 otherwise (e.g. delimiter seen; iostream not necessarily going to be marked fail()) - maybe -1 for explicit (caller) retry?  allow caller to check for terminators itself instead of outsourcing to reader?
+
+* two stage initialization for "main" type object - parse command line options into members directly, then call init() - instead of positional arguments to constructor
+
+* multiple passes through same very large array to do different actions - better coupling/cohesion, but worse cache coherency
+create functor that combines independently defined actions?  have to explicitly
+construct local state into object, but get the one pass you want
+
+
+* daniel wants init from michel fraccount or count, and/or random restart experiments.
+
+* remember: smoothing of large low-count phrases by breaking up into smaller phrases
+remove rules that aren't plausible in terms of components
+
+* remember: run valgrind on latest carmel.
+
+* more forest-em tasks
+
+- k-best forest decoding to give derivtool viterbi model explanations.
+
+- save and restore best by writing to file (optional? memory is much faster if
+  you have it) - or if not writing counts, could just save as final text output
+  and never restore
+
+- since Perl Tie::File is stinky, give new output option: attach weight, count
+  as attributes to rules file with id=N indexed to parameter N
+*done
+
+- 64 bit safety (enescu/sparc, athlon64?  8-16gb physical ram feasible) -
+- pointeroffset => 32 bit integer index, probably little performance diff, up to
+ 4 billion params (min 8 bytes each) ... current with 4 byte float weight, is
+ max 1 billion params.
+- oops: not that simple: forest intorpointer (or
+ positive/negative index) means only 2 billion params
+
+- scalability: normalization by parameter index ranges (e.g. all params normed, or 1-10000, 10001-20000, etc.
+or change to 2-pass swapbatch normgroup sequence
+*when needed.  seems ok for now.
+
+- output em counts!
+*done
+
+* random access swapbatch
+
+- make old batches on same arch reusable! (by including #items at end,
+then in reverse order, item_i, per batch, deleting all other files with prefix?
+or recording #batches in separate info file?
+
+nested iterator; pair of indices (one for batch, other for BatchMember)
+... statically typed/fixed-size BMs allocated from top of memory region for the
+win.  index is subtracted from BM end.  dynamically allocated space grows from
+the bottom (like most people expect/use) until it would meet the stack bottom.
+don't need size headers because BMs are fixed size; do need a size_type at the
+very top of batch to count how many BMs there are.
+
+could cache that and collapse nested indices to single linear index, or leave
+nested to expand addressable space and allow more efficient sequential
+iteration.
+
+aspect/policy: e.g. locking for iterator when threading
+
+* how would on-demand composition of rules work?
+iterative deepening - start with necessary, then collect global statistics for
+frontier ... if more information from extending frontier while still meeting
+pruning criteria, then expand.  repeat with new frontier.
+** can't do dumb lhs normalization any longer - need joint or something based on expansion trie?
+
+
+* concerns with new normgroups = swapbatch change
+pointer to watch group is only valid when swap batch XX is loaded.  concept of
+reusable iterator for swapbatch?  is it important to do processing (e.g. search
+for normgroup) in one pass over memory?  while reading even?  swapbatch random
+access: build table of batch/#items?  then step through pointers?  or better,
+build a random access table of batch,Obj pointer? (uses more space, but eh).
+
+read_enumerate() should locate watch group fine.
+
+norm groups as pointeroffset lists rather than index lists - distinction I
+regret.  but auto cast to index and ignore complexity of add_base etc?  (n/4) *
+4 should be compile time optimized into n.  take this further: choose some
+prefered base (other than 0) and store pointers, then to map to another place
+you compute difference once, so same amount of work (assuming same stride)
+
+is there anything general about: partial sort list of indices by predicate
+(e.g. less) by their values in some table?  everything is almost already there
+(std::partial_sort, simple functors) ... but worth encapsulating.
+
+fancy idea of letting norm groups iteration recognize when the watch group is up
+on bat, after normalizing, you know group is in memory, so immediately give top
+ranking.  that means, either pass visitor callback to "normalize all" iteration,
+or pull norm all iteration back into forests which knows about log levels, rules
+files, etc.  but then you also want to show change for sure after convergence.
+alternative: redundant copy of norm group in forests (independent of swap) - but
+could be fairly large e.g. joint normalization.
+
+we went halfway on normalize groups as swapbatch - suppose there's one HUGE
+normgroup ... then it still needs to fit/stay in memory.  share memmap w/forests
+would help a little.  segmented array abstraction (scatter/gather) could be good
+- granularity of individual indices too much overhead for swapbatch?  fixed-size
+swapbatch iteration abstraction?  need two passes for norm, though.
+
+*COMMENT CHARACTER: now %, instead of # (because of #n in forests) - "final solution" would be ### = comment. (but need to be able to putback 3 chars, ick)
+
+=== forest-em tasks
+* let multiple SwapBatches share same memmap object (or address range?) with different filebase?
+not worth it
+
+* norm groups take up 1G (ish) ... reload them every iteration?  or swap to binary format and iterate through?  each norm: read group, iterate through group twice - should be easy
+did this, haven't debugged - seems good
+
+* michel forests have noncontiguous rule ids ... keep a hash of seen ids and map them to consecutive integers (both for forests and normgroups)?  then output using a sparse array format?  (actually, not that bad, 150M, 200M tops)
+no, but want to output by attaching attribute to an input rules file based on id=index.  done.
+
+* parallelize (or at least give good abstraction where EM vectors of weights/counts are distributable and explicitly collected?)
+punt
+
+* make swap files reloadable (on same machine at least)?
+see random access swapbatch
+
+* allow N different normalizations to be learned in single pass through forest batches?
+needs 2x per-param memory, which is constraining factor in scalability.  not worth it in the limit.
+
+* progress indicator on READING forests (not just on EM through them)?  reading is pretty slow.
+
+* parsing of id=N rules files (instead of assuming line # = N)
+implement as "attribute inserter" stream filter that has a vector of array pointers and fieldnames; after id=N is recognized, output " attrname_i=array_i[N]"
+
+=== some notes on iostream error/eof detection when reading an EOF terminated sequence of items
+
+final answer: you can't use flags to tell EOF from error; so simply permit error
+if eofbit is set to indicate NOTHING READ and NO MORE TO READ
+
+cin.good() and (void*) cin are equivalent ( and !cin.fail() too!)
+if "bad" is set, "fail" must also be set.
+If eof() is indicated by streambuf, then fail() is always set by the istream
+
+It is enough just to test "fail".
+
+The exact time at which eof() becomes true is unspecified.
+
+There are two situations which result in 'badbit' being set:
+- There is no stream buffer at all, ie. 'rdbuf()' yields '0'. This is
+  pretty obvious a fundamental problem...
+- An exception is thrown during a stream operation. Whether this is
+  exception is thrown by the stream buffer or some other entity (eg.
+  some facet; this is not applicable to class iostreams) does not really
+  matter.
+
+ios_base::sentry has implicit bool arg "noskipws=false" - if you want to read whitespace, set it to true.
+
+
+===BIG IDEAS
+
+let language model choose how to realize class (part of speech?) based templates; unaligned tree leaves ...
+
+broader equivalence on syntactic context than down to the exact english lexical items
+
+expect what synct. context for (rule-based xltn of) entities?  create new preterminals for them and train a new grammar?  or identify english leaf-seqs that would be recog. as in their range?  or identify from C/E corpus instances where a rule-entity xltn of some C substring is an E substring, then extract synct context normally? that is, add alignments/instances of rules (oops, these are multihead, 2boss, etc), jan 1 , 1970 -> c1 c2 ... DATE(jan 1 , 1970) looks better but requires new grammar.
+
+held out (or separate) forests for convergence (primitive smoothing?) - don't think that's worth it (until end to end decoding performance measured, why bother)
+file of dirichlet priors (init. counts) (just flat count per example for now)
+other priors? (low freq contexts -> more uniform, or not sum to 1)
+
+integrated search for rules/forests - discard questionable alignments
+-- rule out (a priori) or penalize certain function words
+-- extend frontier of context if EM doesn't give low-entropy p(rule|context)
+  (maybe not even EM, just count comparisons?)
+
+integrated decoding vs. pruned forest reranking?
+
+
+
+=====
+
+=== boost mmap
+----
+
+* Arena allocator: any heap tracking info is kept outside of predeclared-size heap area (you can grow memmaped regions only by unmapping, growing file, remapping. Simple idea:
+** example: data structure parsed from a SEEKABLE (or dynamically buffered/replayable up to checkpoints) input stream, that doesn't point to data part of any other example.
+** when you start an example, checkpoint both the input stream and the size of the used memory (stack style) ... return allocs out of fixed buffer (they'd be contiguous of course) without any bookkeeping ... once alloc fails roll back to previous heap/input state
+** on that failure, unmap heap, truncate mapped file, create new file of fixed-buffersize, map it.  start anew.
+** keep list of examples as nested list of pointer to head in heap (well, handle returned by reading process), one list per heapfile.  when iterating, read in the heapfiles as needed (could be single list with variadic sentinel markers).
+** probably best to somehow keep absolute paths (cd cwd + relative path, same as was used to create file)
+** for-free persistence/reuse at least with same architecture.  just need to persist list of examples->heaps (along with uname -a? ensure run on same machine?  too strict)
+** assumption is that you can always map to the same base address, or else require no absolute pointers (only offsets/indices) be used.
+** ephemera should not be allocated in arena but instead in main heap (that is, no free/delete provided
+** flexible allocation: up to N bytes, do what you will, return amount unused.  i.e. different interface, not really allocator
+* Alternative if unseekable/replayable:
+** Provide an overflow() and recovery interface for parser - must transport partially completed work into own temp buffer, then move it (possibly having to relocate if absolute pointers were used).
+* Can grow arena from two ends (stack style) until they meet but some data structures might not be comfortable with that
+
+===
+=== forest-em tasks
+* # examples (done)
+* avg size of forest (in nodes) per example (done)
+* #unique rules (done, normalization stats)
+* more pie in the sky: from dump of iteration's rule weights, get 1-best derivation tree for some examples.
+is my compact forest rep any good for acyclic best tree extraction?  top-down recurse is no problem ... outside order allows max,* semiring to be computed.
+** even worse: set of examples determined by search on rule LHS in 1-best deriv?
+* both require pathname template, directory creation?  boost::filesystem? (done; part of Forests)
+** periodic parameter dump (by iterations)? (done)
+** memmap thingy
+general idea: sequence iterator for objects allocated into same memory region but different backing mmaped files - as you advance iterator past checkpoints, swap in next backing file.
+*** paralellizeable (order independent) enumeration abstraction?
+*** could use offsets into a huge (increasingly grown) file instead of separate files
+yuck.  complifies distributing loop
+*** specialized allocator?
+**** sequential allocator, never need to free (only free whole pool at once)
+**** or allow independent dynamic heap (can reclaim space and reuse later) inside mmaped space but pointers only valid during iteration of their creator.
+**** hybrid: one growable contiguous block (like a stack), from other end (top, say), dynamic allocation.
+*** relocatable pointers?
+shouldn't have to ... if you don't do any mem alloc between unmap/map calls
+*** create file of fixed size but only mmap portion of it later?
+doesn't seem to matter for efficiency. (pages are load on demand)
+
+* rule index whose norm group you want to watch? (done)
+show sorted by rule weight top N of normgroup
+
+* 64 bit address space (solaris?)
+integer indices instead of pointers? (for next-child pointer)
+positive/negative int indices instead of pointer if even, integer if odd? (for shared #N backref, or rule-label/OR)
+ok: if you're a backpointer, then the next-child is redundant (always current+1).  worst case is: one forest pointer (may want this to be > 32 bit) + one rule index (can always be 31 bit or less)
+
+- would allow up to 16gb of stuff instead of just 4gb.
+- or need to systematically change unsigned into typedef indicating something is a forest-node index (rule indices can still be 32 bit)
+
+===
+===Regression tests
+* framework for recording outputs and performance stats along with date/time or CVS version tags
+/running time/cpu time/memory used/disk/profiler output
+** collection of inputs (different use cases/examples) supplied
+*** can add a use case any time, would be nice to automate running use case on historical versions
+but not required
+* should be pretty easy if input=switches, file < STDIN, STDOUT > file.stdout, performance stats > .log, profiler data > .prof, STDERR > .stderr
+* comparison - detect when output changes at all (allow stderr stuff to vary) or return code is nonzero.  have to manually flag result as ok (commit) to quiet change reports
+* DejaGNU?
+
+
+===
+====FINAL unweighted labelled list-of-forests layout
+
+* sequential packed huge preallocated array
+** good to store on disk;
+NAME
+       mmap, munmap - map or unmap files or devices into memory
+SYNOPSIS
+       #include <unistd.h>
+       #include <sys/mman.h>
+       void * mmap(void *start, size_t length, int prot , int flags, int fd, off_t offset);
+       int munmap(void *start, size_t length);
+*** if you want to reuse preexisting files across architectures, need to marshal/unmarshal - let's just say that these files are good only on your arch.
+could mandate little-endian (intel) or use file extension or just document
+**** could put an endian-indicating prefix in file (or just a flag)
+and either remap endianness, or bomb out (detecting errors=good)
+
+* relative or absolute position of successor node, and label=rule index or node backref
+(backref means to previously defined node.
+** choose absolute, 0-index based (0 = list head, 1 = first forest root)
+relative would be #of nodes under me.  either deriveable from other
+** top level (list) ignores its label field
+(could have a weight here, or just specify irregular variant structure)
+*** why no variant structure for list label?
+better alignment (8 byte) and can dumbly identify succ from data
+** first child is always the node at index one more than parent
+** if no more successors, succ = end (one past the extent of your parent)
+*** note you can still have children even if you're the last.
+distinguish between having child or no: need to know the total size of the whole array (or your parent).  if curr+1 = next(parent) then you have no children
+** capability: can't start at random child and traverse until end.  must start at parent.
+because you don't know the extent of parent unless you start there.
+*** if you want, you could make circular list, but need another pointer for the last child.
+irregularity as far as alignment/variant structure, or else wasted space
+
+* compact node memory layout
+** problem: need both label AND backref-store index
+*** no you don't - just use the array index when you refer back
+even though the text rep may use aritrary #N
+** succesor node offset (size) ... can't limit to 16 bit
+** rule index ... needs at least 24 bits
+** label indices - store them as 2*index+1
+** use pointers (lsb must = 0) because of alignment for node backrefs.
+
+===
+====Space/memory/disk whole-corpus deriv-forests requirements?
+*derivs can be much bigger than etree/cstring.
+*can you fit all etree/cstring into memory at all?  probably
+*if you can't, either parallelize count collection, or use disk
+* disk: contiguous in-memory representation
+have to load each batch into memory collect counts then get next.  double buffer might be nicer.
+** memmapped files?  i.e. explicit paging
+then you want to keep scratch (beta cache) separate from part that's swapped to disk.  fine.
+*disk access (scanning sequentially over 100G say, per training pass) - acceptable?
+only alternative is to drastically prune forests, or to parallelize to 100 1G machines.
+
+* 2-4 floats per rule (about 2-4 million of them?) for per-rule counts, weights, and optionally some more for overrelaxed EM/random restarts.  No problem - maybe 20-100mb.
+
+For the training corpus of 2 million sentence pairs, just the raw text alone would be about 300 bytes per, for 600mb.  But Michel says he creates about 100-1000 nodes of forest per example.  If I'm really stingy, I can squeeze this into about 8 bytes per node (putting everything into a contiguous array).  This is about an order of magnitude worse, and should become even more disgusting if function-word alignments are discarded and/or more unnecessary rules are produced.  We should expect (pruned) TTT forests to be even larger, although, unfortunately, I still don't have that result.
+
+Space used to cache inside/outside values can be reused from one example to the next., so:
+
+* A float per (max #nodes in all examples' forests) to cache inside, and another for outside.  So, not even 1mb.
+
+* But, it takes (8 bytes/node)*(100 to 1000 nodes/forest)*(2 million forests) = 1.6gb to 16gb to hold all Michel's forests in memory.
+
+This is worrying, because we mostly use 32-bit address space CPUs (usually only 2-3 gb addressable by individual programs).  That is, in order to deal with large data sets, I'll have to explicitly page parts of the forest training corpus to disk, or else code some (much faster) data-parallel count accumulation setup using message passing (which doesn't necessarily require one dedicated node per process; but since physical memory per machine tends to be 2-4gb anyway, may as well).
+
+I guess the performance impact of disk paging wouldn't be so horrible (modern local disk is usually 10mb/sec sequentially, which would be my access pattern, so it should only take 1600 seconds to go through my so-far worst case scenario, per iteration). However, we don't yet know how many iterations we'll need (sometimes EM converges slowly).
+
+If we only need a couple times more memory, I could instead get it by implementing same-machine parallelism (several processes using shared memory and semaphores), which is a lot easier to code than distributed parallelism, although this would probably perform worse than explicit sequential disk passes if physical memory wasn't enough.
+
+michel:
+
+when counting all OR-nodes (2+ children) and rule applications as
+derivation nodes, i get the following statistics for necessary rules only:
+
+mean:77.01    stddev:125.78
+(1.95M sentence pairs)
+
+for derivations with unnecessary rules (all those that have <=4
+internal nodes on the LHS), i get an average of ~2500 nodes per
+derivation when counting backreferences as nodes, and ~2100 nodes without
+counting them. i computed this average with the first 10000
+
+
+===
+====Kevin's program options request
+
+==inputs
+one derivation per line?  or allow whitespace - balanced paren input - says allow whitespace ;)
+
+
+==options
+
+* rule filename (one per line) for debugging/prettifying?
+
+==global output (sanity check)
+
+* #words (not applicable, have to decipher rule index -> rule leaves)
+should be provided as contiguous indices with size known before I allocate parameters
+
+==per iteration output
+
+*avg (root n) perplexity like carmel
+
+*Top 10 (or whatever) params in a norm group
+nth_element_copy - partitions random access array into parts less than ...
+partial_sort - more expensive (in order) - probably what he wants
+
+===
+====Staging
+
+* run-time debug-stepper/disassembler/branchless instruction buffer
+** only floating point ops saved?  moves too, though ;(
+
+* profile guided optimization (branch code modified to keep records) might be faster
+(don't have to break every instruction, just at branches) - have basic blocks available as unit
+** still need to remove redundant useless integer/pointer arithmetic
+** collapse non-float operations to constant, e.g. addressing arithmetic
+** optimizers that run on straight-line instructions?
+yes, but only on OS-independent, 3-address assembler code
+
+* C++ code - operations on classes you want saved, override op to emit.
+type float' would have +=(const float' &b) = { emit(PLUS,this,&b); }
+
+* C++ staging annotation preprocessor
+like Meta-OCaml
+
+====
+====tree I/O, packed rep
+#children first:
+"a(b(c,d),e)" (11 chars) =>
+"(a(b(c d)e)" (11 chars) =>
+ 2 a "b(c,d)" "e" =>
+ 2 a 2 b "c" "d" 0 e =>
+ 2 a 2 b 0 c 0 d 0 e (10 chars)
+good: can store children in array without needing to copy/resize on input or waste space (size(label)+size(int))*#nodes)
+bad: hard to visualize; in order to find 2nd child of a, need 2 parse everything in between
+==>>
+#nodes under/including (=1+sum_child{#nodes(child)})
+ 5 a 3 b 1 c 1 d 1 e
+isomorphic with linked-list next pointer?  (just skip #nodes under forward in array) ... if allocation is this way (in single contiguous arena, from next sibling pointer (note left child is always at +1, or if next = 1, then leaf) differences would get #nodes in subtree
+*good:
+ space = (size(label)+size(int))*#nodes), can store in packed array, can jump
+ immediately to next sibling
+*bad:
+ don't know number of children in advance when streaming in (but don't need to
+ store #children anyway? can just iterate them later).  adding #child annotation
+ would add #nodes ints.  if you store data this way, you can't know #children
+ without traversing linked list.  tree-trie likes to know #children before
+ visiting them.  was that really necessary?  could have used end-of-list trie
+ symbol instead of #children?  leads to different normalization but could be
+ good or bad.  necessary because of leftmost expansion?  no.  could be
+ considered to save work (don't waste time matching AB when your tree has kids
+ ABC and there are no rank-3 expansions)
+*ambiguity? #nodes under doesn't tell you bracketing structure?
+(a(b(c d) e)) vs (a(b(c d e))) nope.  #nodes(b) would increase circular list:
+after last (non unary) child, extra pointer back to first child (and -1 gets you
+to parent)
+
+*depth not known until done reading tree
+with any method discussed so far.  could annotate that on input, but why?
+
+*maximum-depth for acyclic shared-trees = automatic topological sort.
+not a win with sharing; storing depth means each type depth is lengthened, you
+must (if that parent was argmax before) increase everything under it
+
+*forests
+do either of those notes (#children, #nodes) still work with sharing (forests)?
+#children still fine.  #nodes under = NOT.  replace with #indices to skip (=1)
+and note that #nodes should be looked up through ref.
+
+(a (b c) (d (b c)) e)
+=>
+(a #1(b c) (d #1) e)
+=>
+7 a 3=#1 1 b 1 c 2 d 1 #1 1 e
+
+*A link to a defined forest node is just like a leaf)
+*any place a number of nodes can appear, a "save this as #" can appear
+... but that's redundant and only for convenience on I/O.  just point to the (absolute) location in array/memory
+
+summary:
+FIRST_NUMBER label|#ref, #nodes label|#ref, ... (x FIRST_NUMBER)
+data structure of node[FIRST_NUMBER] ; node=(next_sibling_pointer (or first sibling if last) (or NULL if share-pointer instead of label/subtree, meaning next_sibling_pointer=this+1),(label or OR or CONS) or share-pointer)
+
+*reading normal format trees
+similar in spirit to skip-list
+** ( = pushlevel (++level)
+** ) = poplevel (--level)
+** maintain currentnode[level], where you can write the next-sibling pointer once that level is popped to.
+** unfortunately you have to preallocate. (or suffer 2x overhead from amortized resize)
+or use integer indices rather than pointers, or rewrite pointers every time you
+expand, or rewrite only once after done expanding (keeping indices until then).
+even though (single process/thread/addr space) you could have one 'open ended
+m(re)alloc' (always uses end of address space, addresses can grow in +
+direction)
+** or don't compactify/linearize allocation; then you do need a separate parent pointer (only for first child though?)
+overhead from malloc (compared to none for compact array) and less cache-friendly (but just use an arena allocator?)
+
+*is saving space in trees important?
+then, perhaps (and this messes with the
+packed array rep since it's 2-pass), maintain global interned
+constant-subtree/forest hashtable and use it for maximal
+subexpression/tree/forest sharing (from the bottom up) - most sharing would be
+of small fragments at the bottom level, though.  write/store trees in postfix
+order would allow interning on read.
+** for forest, order of OR-node doesn't matter.  complifies matching?  (multiset instead of sequence)
+
+*Input order for shared forest gives topological order for bottom up.
+just compute for each tree/forest in the order read, but reverse each tree into
+postfix (do root after children).  can't quite reverse the whole array and scan
+since the #1 definitions would come after use.
+
+*order for top down/outside = duh.  ignore (follow) sharing, just traverse tree DFS preorder.  outside can't be cached between examples; is redone for each root.
+
+*modified alpha/beta/inside/outside from TTT:
+** alpha only defined for OR nodes (same)
+don't need any storage for this since recurse from top down using stack; no sharing of alpha
+** beta = sum of all subderivations rooted in that node
+data storage for bottom up - each node in forest should have a spot for caching
+*** beta of an OR node = sum of betas of children = sum of all subderivations rooted in that node
+*** beta of an AND node = current weight of rule root times product of betas of children = sum of all subderivations rooted in that node
+(the weight of rule was moved from OR node to AND node since TTT)
+** counts formula becomes (for each OR node, for each child) counts(child label rule)+=(1/beta_example) * alpha(OR) * beta(child)
+(because of the beta change)
+** alpha(the node) = sum of all derivations from root including the node, divided by inside of the node.
+
+* oops!  don't want to ignore sharing for outside and do DFS
+- why?  exponential in size on input forest ;)
+** but do want to flush outside-cache for each root/example, since those values shouldn't be reused across examples.
+*** keep a list of modified outside-values and reset accumulator/remain-counter after each root?
+Only need to reset *shared* nodes, worth testing for that?
+No cross-example sharing anyway for the near future, but unless we go to the compiled straight-line version, will need to reset all of them after each iteration.
+*** !!! less memory required if you don't share cross-derivation
+... INSIDE,OUTSIDE arrays only need max_(all derivations) #NODES, not sum over all (with some few savings from sharing)
+** outside formula (only defined for OR nodes), includes sum over all parents of:
+remember, parent is a rule or OR-node
+*** outside(parent=ANDnode)+=outside(parent)*(inside(parent)/inside(self))
+remember outside-graph is a plain weighted tree/graph implied by hypergraph ... arc weight = product (insides of siblings' in hyperarc) * weight(hyperarc)
+??? weight(label(parent)*outside(parent=ORnode(parent=ANDnode))*inside(parent(parent)/inside(parent)) - might be buggy, was needed when outside(parent=OR-node) not defined
+*** outside(parent=ORnode)+=outside(parent)
+because weight of OR-node = 1 and there are never any hyperarcs leaving it, only simple arcs
+??? * weight(label(self)) - no, not supposed to include self.
+*** outside(root)=1
+** (DFS from root but don't visit/expand any node until all its parents are known first; just accumulate)
+but if forest has loops and you want a first approximation, don't do DFS but do BFS (or iterative deepening) and visit nodes anyway once progress stops
+*** expansion logic seems very similar to bottom-up shortest-hypertree, except that the set of prereqs = ancestors (can be multiset also) of simplified outside-graph
+** if you don't force AND/OR interleave, extend outside to apply to all nodes that are children of an ANDnode.
+does that work unmodified?  proof?
+
+* order for computing inside:
+same as best-tree algorithm (all children must have known inside first), specifically, same as n-best tree algorithm ... but no need to use a priority queue.
+** only need to bother counting for #ed nodes (i.e. multiple ancestors)
+and only increment use-counts for refs to them (and not for 1st ref if you do left-right order)
+*** state needed is not one outside float per node, but rather maximum distance (stack depth) plus maximum number of outstanding multiple-parent nodes.
+
+* collapsing contiguous and-only subgraph
+** create single and-node with children = all links out of subgraph (with multiple links preserved)
+** label = multiset of params. or, create new param instead but handle in normalization as parametrized
+*** minimal computation/sharing of products ... shared expression tree for the product
+*** transformation: a(b,c(d,#1),#2) -> .(a(b,c,d),#1,#2)
+. means the left child is just and-nodes, so no outside needs to be computed for
+them.  all get same counts = inside(.)(outside(.))
+** can still have parent(and)=and even after doing this (due to sharing)
+
+* multiple and-links to same subgraph, unlikely, but:
+make single link with exponent (multiplicity).  simplifies bookkeeping? (if you only bookkeep for multiple-ancestor nodes)
+** multiple or-links to same node nonsensical
+
+=====
+=====DRIFTING INTO TRAINING CONCERNS
+
+* parallelizing a shared expression tree
+** maximal (assuming 0 communication overhead) = compute node for each forest node.  levelize by max distance from root and you can even reuse compute nodes
+** realistic: assume all the params fit into memory, but you can't fit all the forest nodes for all examples.
+also, say that communication is expensive (try to fit whole working set into node)
+after every round of inside/outside, have to send counts to central broker, which normalizes and then sends back new parameter values to those who need
+*** assume no sharing between examples (each is independent)
+then only question: how to divvy up examples so that global comm. overhead from
+parameter set is minimized (favor sending all the examples using p1239 to a
+single node over distributing them over all the nodes)
+**** fair partition: don't want anyone with extra work when others are done
+complexity is linear so just split up by total size of forests?  or follow a more robust run-time request work-unit double buffering on-demand?
+** suppose subexpressions are shared across all examples
+then reused nodes' inside can be reused - try to send all portions of forest that depend on shared node to same place
+*** recompute small shared subexpression if necessary
+as size of shared expr grows, you want to communicate the reused value if it resides on another node (there's a cutoff point where it's faster to compute it yourself)
+*** outside computation can't become maximally parallel immediately at top levels
+(except at the level of individual examples, of course, which are separate outside forest weight problems)
+** conclusion: don't try to parallelize more than by example, because realistic training problems will have at least 1000 examples and we don't have millions of compute nodes anyway
+but would sharing between examples in and of itself be a win?  sure ... just assign all cases of shared subproblem to same node until it has its fair share, then start filling the next emptiest node (each node has to do its own fresh *first* computation only)
+
+* identifying global shared subexprs
+** difficult in principle since +, * commutative?
+** by construction (for tree/tree, tree/string constrained given input,output pair)
+*** canonicalize input subtree pointers
+(trivial, bottom up hash)
+*** canonicalize output spans
+(represent as (begin,end) in *global* minimal string table (that just saves on size of strieng table), or just hash/intern by letters and represent by pointer, for same sharing but slightly bigger string table
+
+* tied parameters
+** label = list of parameters "xyz"(...)
+(product combination), although maybe other combinations could be reestimated too
+** equivalent to monadic group x(y(z(...))))
+because the counts will be the same even though the combined tied group has the
+same inside/outside, the counts combine the inside and outside; think "sum of all paths(trees) using y ..."
+** all three of x,y,z (in that context) should get the same counts added
+since the rule is parameterized as x*y*z it should always occur in that grouping, so no need for separate counts at all.
+** conclusion: still just collect counts for each rule.  but, in postprocessing, clone the counts onto each of x,y,z and then normalize all the parameters appropriately
+would work for carmel without having to do that separate-composition-arc thing
+
+====
+====Lazy image-taking, intersection
+
+* list-of-hyperarcs for state
+* list-of-hyperarcs-matching-condition for state (e.g. hashtable)
+* can only intersect up to one infinite lazy-lists with finite lazy-list
+* code level API can also support binary network RPC and lazy-file-DB loading
+* 1-best, k-best forest may be possible (bottom up, though)
+** this means you want also a lazy reverse index?
+ (that is, all rules from all states that have all terminals, or state X, in their leafset)
+
+====
+====Ideas for EM, inside/outside implementation:
+
+* consensus simple (unweighted) forest format is just a LISP printed cons representation (break cycles by defining backreferences, e.g.
+#1(1 2 #1) is a circular infinite linked list (1 2 1 2 ...) and (1 2 #1(2 (3 4) (2 #1))) is the tree 1(2,2(3,4),2(2(3,4))).  when you have alternation, (OR choice1 choice2 ...)  no strict alternation of OR and normal nodes, e.g. (OR (1) (OR (OR (2) (3)) (4 (OR (5) (6)))))
+
+* COMPACT DERIVATION FORESTS:
+** deriv forest: labels of RTG are pointers/indices to rules
+where if you're the nth child of your parent, that means the source state of
+your label's rule = the destination state of the nth variable of your parent's
+rule's rhs.
+*** note: alternates (children) of an OR node can include multiple instances of the same rule
+(but with different span decomposition in xRS or CFG (parsing), not so for xR.
+*** normalized (root = rule ptr, children = deriv forest OR-node (RTG nonterminal, hypergraph vertex)
+**** for ternary or greater rules, ambiguities of span decomposition can share postfix-problems with virtual-nodes.
+**** that is, allow root = rule ptr or else "cons"
+do you want (1 (or 2) (or 3)) or (1 (cons (or 2) (or 3))) or (1 (cons (or 2) (cons (or 3)))) (latter is most consistent/easiest to specify recursively (cases = 0 or 1), mid requires cases (0, 1, or 2), first same but requires the first case handled differently
+***** link to ECFG: instead of shared suffix list (graph with |outedges|=1), you had an FSA with arc = pointer to OR node, or 2nd child of cons = nondeterministic. that is, allow 2nd child of cons to be OR node.
+***** talked to Michel: unlikely to (in rule-aligning word-alignment-constrained tree-string xRs) have enough ambiguity in practice to worry about this yet.
+  for decoding or without word-alignment contraints, during search, yes,
+  virtually binarize
+** we have with TT and TS transducers with degenerate LHS, the ability to represent CFG and RTG.  but at a cost:
+*** mandatory leaf LHS tree (16 bytes?)
+*** rule weight
+*** rule source state
+*** tree with just 1-2 children not optimized
+(even leaf costs (#children,children pointer))
+**** slist would make leafs cheaper but #child>1 costlier)
+**** (could enable TREE_SINGLETON_OPT for 1-child case in tree.hpp I guess)
+** what is it (why is it different/compact)?
+instead of prod. with label=rule children=nonterms, point to forest tree node
+with root=rule, and children of that node=nonterms.  i.e. "or"=EQUIV=state
+points directly to the rhs of rules with that state as lhs
+
+* SINGLE-ARENA AND-OR-TREE
+** traditionally, different static data types for:
+*** state: list of arcs (with head=state)
+*** arc: label(rule) and tails (= pointers to state)
+** new: both cases are just lists with flag to say whether it's an:
+*** OR-node
+ (state, list to alternatives, use the + operator for inside)
+*** AND-node
+ (arc, label + list of pointers to OR-nodes)
+**** could allow pointers to other AND-nodes, equiv. to multiple letters on same FSA arc
+pointer to AND-node is as a pointer to an implicit OR-node with a singleton list
+of pointer to the AND-node
+*** since only AND-nodes have label, can reserve special value of label as flag for OR-node
+***** that's the only advantage (non-strict alternation) I can think of for single-arena
+****** (except maybe *slight* memory/locality savings possible),
+****** but then you have to type-flag-check each one
+ (conditional branches bad, deterministic alternation good?)
+
+* shared expression-trees for inside,outside?
+** put multiple (OR-node root) derivation trees in a single arena
+*** that first level would be treated differently for outside computation
+ (not treated as root or included at all) and for alpha*rule_weight*beta
+** identical subforests would be shared across multiple forests
+ (as they are in a single packed forest)
+*** outside would then not be a function of (forest root,forest node), but of (firstlevel root,forest node)
+
+*compile this expression tree?
+** generate C code for producing inside/outside (one variable per node, then set the optimizer loose) and compile
+*** could also compile EM counts/normalization
+*** use aggressive optimizations (replace locked parameters by constants, allow 1*x => x
+*** explicit operations: find common shared subexpressions not in forest structure (accidentals)?  compiler might not do this
+*** instead use a language that supports (re)compiling and linking code then evaluating?  staged Meta-Ocaml?
+
+* for EM, use flat doubles rather than logspace doubles or floats?
+** underflow very real possibility
+** but addition more accurate/fast
+** 80 bit floats (even when out of registers) portably accessible?
+
+* definitely need both hypergraph and (reverse hypergraph)
+ - one direction for summing, the other for scheduling next phase of inside/outside (or vice versa)
+** don't need to explicitly queue/schedule?  just use DFS (end of procedure = finished with stuff you called already?)
+*** well, no, not true, for beta/inside, same dependency as best-path ... need to have finished all tails before you can cost the head.  but since no best-first, can do this top-down with memoization, everything fine.
+*** to compile into branchless code, would need to explicitly queue
+ - or just emit code during memoization!
+** outedges depends on which root?
+** toposort ordering of computation (on outedges) (detect cycles and break furthest distance-from-root arc in cycle)
+
+=======
+=== xRLN composition thoughts:
+
+The general scheme for composing transducer A with rules a with transducer B
+with rules b is to pick one (I choose the left one) and then for each rule in
+it, ask what outer parts o the other transducer can make out of the middle-part
+(the rhs of a rules, in this case).  Then for each a = lhs(a)->rhs(a), find
+every such o that some number of rules in B can make rhs(a)->*o and add rule
+lhs(a)->o.  Of course, the problem is that only when the variable nodes of an
+lhs(b) exactly line up with the variable nodes of an rhs(a) do you have an xR
+rule.
+
+a zR rule is like an xR rule, except the states can appear anywhere in the rhs
+such that no monadic path passes through more than one state node on the
+interior and one on .  e.g. q, A(x1) -> A(B,q(C(x1,D)).  i.e. instead of writing
+pairs (q,xi) we make q a rank-1 symbol like in much of the lit: q(xi) instead.
+if paths(rhs(a)) \superseteq paths(lhs(b)), for xR rule a, (z|x)R(s?) rule b,
+then (a . b), their composition is a zR rule.
+
+let xR rule a = q, A(x1,A(x2,x3)) -> A(A(q(x1),r(x3)),s(x2))
+let xRs rule b = t, A(x1,x2) -> B,t(x1),C
+(q,r,s,t states)
+
+then a . b is the zR rule z = q,(A(x1,A(x2,x3)) -> B,t(A(q(x1),r(x3)),C
+
+If shape(lhs(b)) < shape(rhs(a)), then no problem, build bigger B b' rules on
+top of b until shape(lhs(b')) >= shape(rhs(a)) ... but there are rule sets such
+that you can never also build up a into a' so that shape(lhs(b'))=shape(rhs(a'))
+
+The general scheme for composing transducer A with rules a with transducer B with rules b is to pick one (I choose the left one) and then for each rule in it, ask what outer parts o the other transducer can make out of the middle-part (the rhs of a rules, in this case).  Then for each a = lhs(a)->rhs(a), find every such o that some number of rules in B can make rhs(a)->*o and add rule lhs(a)->o.  Of course, the problem is that only when the variable nodes of an lhs(b) exactly line up with the variable nodes of an rhs(a) do you have an xR rule.
+
+let me omit states in variable nodes (there is only one state), write variables just "1" instead of "x1".
+
+here is xR transducer A with rules:
+a1: A(1,A(2,3)) -> A(A(1,3),2)
+a2: x1 -> A(1,A)
+a3: A -> A
+
+now transducer B (make it xRs)
+
+b1: A(1,(A(2,3)) -> 2,1,3 (even though the outer rhs doesn't figure directly into composition, here I ensure that this rule can't be broken up into two like it could if I had chosen 1,2,3 or 3,2,1)
+b2: A(1,2) -> 2
+
+you can see that a1 with a2 adjoined onto the 2 can compose cleanly with b1 adjoined to b2 onto the 1.  but if instead we had adjoined a1 with a1 (also onto the 2), we'd have extra A stuff ... yielding the zR rule
+A(A(1,A(A(2,3),4)),5) -> A(2,4),5,3 ... and the A(2,4) part can't be handled with another b2 because of the 3 under their LCA in the lhs
+
+... but even if it could, it doesn't suffice to find *some* adjunction of rules that gives an identical shaped inner (rhs(a),lhs(b)) variable frontier and thus can produce a single xR rule representing their composition; you have to account for all derivations in A and B when you choose to expand rules.  To the extent that the rules in xRLN(s?) transducer B can be deadjoined (I'd say decomposed but that's confusing in this context) into equivalent rules of at most height-1, then of course you can compose just as before. This breaking up rules into equivalent smaller rules (and when the rule-inherent alignments make this impossible) was discussed during the "binarization" section of our last meeting.
+
+============
+
+
+* todo: implement any-symbol matching (and rule spec?) for tree_trie
+... indexing is supported w/ get_symbol
+
+* todo: tree_trie insert with one map, then compress into bsearch array for matching
+(index_graph<Symbol,BSearchS>)
+
+* tree-fragment-indexing:
+** shape = set of paths whose label and/or rank the rule specifies.
+*** proper shape = all ancestors of shape are specified label/rank; only leaves may be unspecified
+**** simple shape = proper shape with leaf ranks unspecified and all children of an interior node specified (basically, a tree where the leaves can match any cardinality)
+encode by sequence of tree-walking operations building a list of label+rank that
+uniquely identifies a rule given the shape?
+** semi-dumb rule matching:
+for each subtree, for all unique shapes, start at root and traverse tree
+building labelstring of label/rank, and then hashing to get list of rules for that shape.
+*** either one hash table, hash against labelstring+shape-as-string or hash per shape and just use labelstring as key
+*** if too many weird deep infrequent shapes:
+ allow returned list to include list of subtrees to be further matched
+ respectively with the leaves left-right.  those returned would be those who
+ don't have their own important shape, and would be owned by the biggest
+ (#nodes) it subsumes.
+**** or, don't return list for leaves
+just return whole labeled shaped and compare trees (with leaf=any subtree with
+same root label) ... rewalks same portion that was just hashed, but oh well
+** really-simple matching:
+only N+2 shapes (where N= max rank): *, S, S(S), S(S,S) ... S(S,S,...,S,S) so,
+given a tree of rank k, only hash/check wildcard (epsilon rule, applies to any
+tree), plus L plus L(L1,...,Lk)
+** smarter rule matching:
+the dumb approach rewalks the tree structure many times.  you could walk each
+node at most once, and build up all the shape strings in parallel.  or at least
+rule out the shapes that are too big for the tree in groups (don't try to walk
+an even bigger path if the ancestor doesn't exist)
+*** natural ordering on shapes?
+shape A >= shape B (A is an extension of B) if the paths in B are contained in
+the paths of A.  if shape B can't apply to a tree then neither can A or any
+other extension
+*** difference of simple shapes?
+if A>=B, then A-B = list of shapes mapped left-right onto the leaves of B
+*** you always build a SUBtree of simple shapes on >=?:
+suppose you only expand leftmost along path from root, i.e. when you choose not to expand, you fix yourself
+S[S(S,S)
+  [S(S(S,S),S)
+   [S(S(S(S,S),S),S)[...] S(S(S,S(S,S)),S)[...] S(S(S,S),S(S,S))[...]]
+    S(S,S(S,S))[S(S,S(S(S,S),S))[...] S(S,S(S,S(S,S)))[...]]]]  the children
+    aren't all the extensions but just the leftmost extensions.  a leaf can only
+    be extended if there is no deeper leaf to the right.
+*** using that simple leftmost tree of simple shapes,
+explore all possible lists of leftmost labels (lablestrings) for hash lookup
+** the ultimate solution: and-or tries of interleaved labelstrings
+by and-or, I mean that you have an alternating nondeterministic branch step,
+where you want to be able to enumerate the alternatives and branch to them each
+in turn, and by the "and" part, of course, the monadic string trie lookup of
+using the next part of the input to select the appropriate trie-subtree,
+requiring some sort of associative map
+*** tree subshapes explored DFS (backtracking), stringified
+ into (where,rank,label_1,...label_rank)*, always maintaining a pointer into the
+ rules-trie ... *where* is a choice point, rank/labels are read from tree as a
+ fn of where.  therefore maintain a mapping from where to input subtree.  static
+ where = path in tree, dynamic where = position in list of expansion
+ posibilities
+*** static where: not too bad, actually - path=list of ints logarithmic in #nodes
+length of longest path can be more for some less balanced shapes though.
+remember last expanded path and do a restricted DFS using only children >= in
+path (lexicographically), until you reach leaves, and then look up against trie
+or-node?  or better, actually use an or-trie of all the leaf paths to the right
+given that shape and last expansion, in other words, add each path component as
+part of the trie-string.  possibly collapse and cache (input node pointer for)
+the longest initial determinstic (or node cardinality=1) path substring.
+*** dynamic where: index into ordered list of the leaves available to be expanded
+label children of just-expanded node 0,...,n-1, then label the yield to the
+right n,...,k such an index indicates where the next expansion will occur (out
+of k+1 choices)... when you choose a where,rank, delete the old 0,...,where,
+replace it by children, renumber from 0
+**** reverse the numbering
+(rightmost=0, leftmost child just expanded = k) and use a dynamic array stack to
+maintain state?  (if you choose j, then 0...j-1.reverse(children of j) is the
+resulting next choice state).
+***** of course, backtracking would be complified ...
+a nondestructive version (shared linked (skip) lists? in the forward direction,
+sharing common suffixes) ... but skipping would take longer (constant with
+destructive array)
+*** per-trie-path static where: while exploring trie, keep stack of all visited
+this way the numbering/list of available things doesn't have to shift and you
+can use a vector to directly index.  the order in which nodes were visted varies
+with each shape-trie-path but is always the same on it.  returning from a branch
+just means undoing the pushes to the stack, like stack allocated locals.
+**** how do you keep track of which node indices are available for expansion?
+only needs to be done at trie-building time ... same as before (absolute path or
+dynamic where, but using these indirect node indices instead)
+*** trie-building: you don't yet have any nice order in which rules are encountered
+have to derive the trie-string (leftmost or-expand choices interleaved with
+expanded labels) reflecting the lhs shape, expanding the trie structure if
+necessary as you go.
+*** per-trie-path static where: depth-first-search left-right on children;
+use entering time to assign indices
+**** e.g. S(S(S,S),S,S,S(S)) => 0(1(5,6),2,3,4(7))
+- note this is almost the left-to-right prefix-printed order, except that
+children are numbered immediately when their parent is expanded (before they are
+visited).  the trie-string would be:
+***** "S, @0 4 S S S S, @1 2 S S, @2 0, @3 0, @4 0, @5 0, @4 1 S, @7 0"
+- the @INDEX #child child_labels format starts with the root label.  if you
+wanted to trie-ize rules that were lists of trees, you'd start with #child and
+then the root child labels (#child is always implicitly 1 for creating the root
+out of nothing).  the entries with #child=0 could be omitted completely, and
+probably should be for variable leaves that are allowed to have more children
+(but won't be matched any further for this lhs-prefix).  it's important to
+distinguish between variable leaves of an lhs and terminal leaves; the latter
+only match if the input tree node is also a leaf.  therefore, leave @INDEX 0
+rules only when the node @INDEX is really a terminal leaf.
+*** wildcard labels (holes in the shape) ...
+a special '?' symbol could indicate any label is acceptable; then the
+and-portion of the tree (matching child label strings) becomes nondeterministic
+as well.  no big deal, lookup '?' and the next label both, branching on them.
+simple regexp lookup.
+*** rank-matching of leaves ...
+already provided for matching rank 0; with wildcard, matching rank 2 (but don't
+care about child labels) could be 2 ? ? ... might be faster to special case this
+to avoid matching overhead, but i doubt it will be used
+*** actual lookup procedure:
+**** VISIT-EPSILON-RULES, FOLLOW-ROOT-LABEL, then repeatedly (until a follow fails):
+**** {VISIT-RULE-IF-FINAL, ENUMERATE-AND-BRANCH-WHERE, FOLLOW-RANK(WHERE), FOLLOW-CHILDREN(WHERE)}
+***** VISIT-RULE-IF-FINAL: can either modify rule rhs to refer to prefix-index,
+or translate pointers to $var index form.  max index from trie-string =
+sum(#child); variable leaves = all indices not mentioned in the wheres: @index -
+ordered by index = left-to-right.  normalize rules so variables are numbered
+that way?
+*** impact of lookahead on variable capture: no longer use unexpanded leaves for capture;
+need explicit mapping between prefix-index and variable.
+
+
+* ordered/indexed tree/graph concept
+** interested in paths of nodes expanded from some start,
+maybe satisfying some goal condition
+** label of node: arbitrary data
+** children/adjacencies of node = pointers to node
+*** access:
+**** enumerate all children (child_iterator) - needed for or-nodes
+**** index a particular child (index: key_type) - needed for and-nodes
+***** may not exist (unlike property map) - check for existence
+****** enumerate all (key,child) that exist
+****** could allow more than one child of particular index
+- not useful for trie or tree, though?
+***** trie: just a tree with indexed access
+index on next symbol in string; label = pointer to whatever you're indexing
+** really talking about a (deterministic at and-nodes) FSA here
+... could be tree, DAG, cyclic ... if it's not a tree, path-properties depend on
+more than just node, but on entire stack = path to node
+** trie implementation
+*** map for and-nodes; list for or-nodes
+**** each node with its own map; key=symbol
+**** vs. single map for all nodes; key=(source node id,symbol)
+can't enumerate those keyed arcs for a node quickly.  that's why you still have
+a per-node list of or-nodes
+*** what kind of map?
+**** hash: one child at a time, or string of all children
+ - latter probably faster, but then again a step by step approach could avoid
+ hashing 2nd child if nothing with 1st child exists
+**** small internal-node label vocabulary? direct array index
+(use if input tree node is not a leaf; rules only make distinction of not-leaf
+after following (could change trie rep though))
+**** search tree (balanced or not)
+- one way to visualize is that the data (next node ptr is actually a middle
+child of a Binary S.T.) ... if unbalanced, make sure that leaf node extensions
+somehow do right if > avg, left if < avg (very tricky for Symbol as pointer tho)
+**** sorted array, binary search - probably ultimately fastest if many lookups
+due to cache locality and memory compactness more than any reduction in
+#lookups or hash probes
+
+* result-set of a tree-trie matching: a particular rule lhs+leaves
+a matching maps a bunch of subtree pointers in the input tree 1:1 onto leaves in
+the lhs.
+** so, you don't just destroy/pop the leaves to the left when you expand
+a trie or/where-node; you save them.  seems with shared lists the leaves can be
+maintained; skipping is nondestructive and just sets a new where-origin.  what
+to do with this list of leaves (mapping to the lhs-sources/var leaves)?
+normalize s.t. non-leaf lhs are always variables (we do this already i think),
+and don't actually store input-tree leaves as expansion possibilities (they
+aren't, really).  then the variables $0,...$N and leaf-lists should line up
+exactly.
+** you don't just get one set, you get as many sets (goal states) as possible.
+may as well visit them in place so you don't have to pass copies of leaf-lists
+** each set could be: a simple list of pointers to rules, or a further indexed (on rhs) collection
+*** we'd want a trie for each state, of course
+or just make state the first letter of the trie-string (same thing)
+
+http://www.csse.monash.edu.au/~lloyd/tildeAlgDS/Tree/PATRICIA/
+* A PATRICIA tree
+is related to a Trie. The problem with Tries is that when the set of keys is
+sparse, i.e. when the actual keys form a small subset of the set of potential
+keys, as is very often the case, many (most) of the internal nodes in the Trie
+have only one descendant. This causes the Trie to have a high space-complexity.
+* A Trie uses every part (bit, character, ...) of the key, in turn, to determine
+which subtree to select. A PATRICIA tree instead nominates (by storing its
+position in the node) which element of the key will next be used to determine
+the branching. This removes the need for any nodes with just one descendant:
+*    PATRICIA's index differs from Fredkin's Binary Trie structure in that the
+    index records only true [i.e. genuine] branches; where a phrase has only one
+    proper right extension, it is not recorded in the index. This fact reduces
+    the number of index rows to only twice the number of starts, amd makes it
+    independent of the length of the stored phrases.
+    - Morrison 1968 pp520.
+* Seems like this won't work for and-or tries
+(except for the N children, which may as well just be hashed) since we need the
+alternating and-or in definite sequence
+
+*rhs index: only useful for training, unless you have some hard prediction heuristics
+but still:
+** for tree rhs, alignments are definite.  nested trie on rhs
+(or you can just consider this as trie continuing but switching context to start
+at the rhs root once a lhs is chosen)
+** for string rhs,
+if rhs contains terminals, then those must occur in that order in the output
+span dominated by the rule (but allowing rhs-variables to skip 0 or more
+symbols).  the rhs can then be considered as a (fairly trivial) regular
+expression or fsa, or a string over symbols and the special wildcard,
+e.g. (a,*,b,c,*) where any number of consecutive variables in the rhs collapse
+to a single *.  the union of all rhs is again an fsa
+*** for a given example, the output can be turned into a NFSA of at
+most |O| states, |O|^2 arcs, accepting strings over * and the alphabet.  doesn't give
+fast matching, though ;(
+*** even better, would be a DFSA
+for each output position, for each symbol occuring after it,
+store the index of the closest following.  in that way, all the occurrences can
+be enumerated in left-right order.  links of distance > 1 would only be followed
+if a preceeding * permitted skipping.  size also bounded
+|O|*min(|O|,|alphabet|)
+**** intersection of that DFSA with all rhs?
+*** prediction heuristics for variable nodes:
+**** length constraints
+**** alignment pruning heuristics
+given leaf set of input subtree bound to var, given output string aligned to var
+(possibly not a definite alignment, but a superspan definitely containing the
+translation of the input, e.g. when consecutive variable nodes haven't been
+assigned a definite partition of the output span)
+*** for definite span alignment, each output symbol o must have come from:
+either a input-leaf or input-internal rule containing o in its rhs
+**** input-leaf rule: lhs contains at least one leaf.
+essentially, an extended t-table
+**** input-internal rule: lhs contains no leaves (all variable nodes).
+essentially, english-NULL-aligned foreign words (of course, they are aligned to
+internal E tree structure)
+***** can reverse and look at input-leaves compared to output-symbols (also works for indefinite, superalignments)
+each input leaf must have either generated a terminal in the output-(super)span,
+or else generated nothing (output-terminal or output-nonterminal).
+***** both these heuristics seem to require O(#terminals/leaves) to check ... is that really a win?  can they be indexed?
+different reorderings of diff. rules seems to make this tough.  i suppose some
+trie of canonical permutation shapes might be possible ... but also some rules
+may explain/generate >1 lhs/rhs terminal all at once, so no sequence makes sense.
+*****
+since these are just heuristics, only check the really informative leaves/symbols
+
+* Symbol encoding of integer i in [0,...MAX_QUICK_INT_SYMBOL]
+** allocate static unused char symints[MAX+1] that will be interned to:
+Symbol(i).str=&symints[i]
+*** or if OS supports reserving virtual mem range without actually taking up any swap/memory, do that
+** hashing and equality same; string based ordering (for sorts) would probably need specialization
+smallints could always come before normal strings, or you could actually convert
+to string and order
+** implicit conversion to char * ... use static buffer and document?  dangerous
+** input/output would be easy special-cases ...
+if str>=symints && str<symints+MAX+1, print str-symints, else print str
+char *fin;long i;i=strtol(str,&fin,10);
+if (fin && *fin=='\0' && i>=0 && i<=MAX_QUICK_INT_SYMBOL) str=&symints[i];
+** why do this at all?
+can still reserve a normal, real str, but keep an index of char *intsyms[] that
+points immediately to the interned atoi.  can pack all those ints into
+contiguous storage, too.  can even share digit suffixes (not too many of those,
+though, really 1/10th).  adding all ints before used would grow hash table and
+waste memory.  still, would be dumb not to cache say 0...100 if say you were
+using Symbol for shape trie-trees
+
+
+* (DONE: just have list terminal_rules, haven't preindexed best-cost-per-state, but could later) what to do about empty-tail rules in TT-as-hypergraph?  ... extend concept of hyperarc to include nullary tail sets ... then backpointer (pi) for best tree for vertex could be set to a hyperarc
+...  TT could (on input) keep a pointer to the cheapest terminal rule for each
+state (or NULL if none).  then initial costs would be set for best-tree
+accordingly, and when regenerating best-tree via backpointers, would need to
+specially handle those preterminal rules as they wouldn't be part of the tree
+returned by besttree alg?  ... looks like can pass in already-inited pi and mu
+maps
+
+* (DONE)fixme: remove reference functor args and use boost::ref(f) everywhere
+
+* (DONE)property map factory (closure with initialization params e.g. offsetmap, #entries)
+property map interface sorta bogus ... really only want to lookup key once (or zero times if you can store void data * inside edge/vertex, not once for every map. sorta solved by requiring a indexmap into 0...N-1 allowing me to create arrays of arbitrary datatype ... abstract (template) factory for creating pmaps with data of my choice
+  ** rebind::type approach similar to allocators ... user provides template factory thingy.
+
+* (DONE) mutable pqueue: heap algo shuffles summary/pointers to vertex, which have a heap-location field (updated by heap algo) and a priority field
+ (updated on insert(vertex,priority) and with adjust-priority(vertex,priority))
+ since vertices themselves won't necessarily have members for location/priority, use a property map to associate them, or a single vertex index priority map that indexes into a temporary ancillary structure array
+in carmel:
+ struct DistToState {
+  int state;
+  static DistToState **stateLocations;
+  static FLOAT_TYPE *weights;
+  static FLOAT_TYPE unreachable;
+  operator FLOAT_TYPE() const { return weights[state]; }
+  void operator = (DistToState rhs) {
+    stateLocations[rhs.state] = this;
+    state = rhs.state;
+  }
+};
+allows a generic priority heap algo to be used (automatic cast to priority type, and assumes = is used to move elements), but isn't thread-safe/reentrant
+*more generally, make heap algo use functor to obtain priority, functor to write/read heap location (algo object?)
+
+* (DONE) RHG = generic on vertex, hyperege, edge descriptor types/accessors (BGLish) ... concrete hypergraph inverse index w/ count of tails needed to trigger
+  expertise about how to build: add tail-edge pointer to adj list, increment count (both while collapsing multiple =state tails into one + summary (multiplicity or for more general cost semirings, list of data)
+
+*rule:
+ source(head) state
+ lhs pattern
+    variable capture
+ rhs output template
+    (var,state) leaves
+ list of (left-right) rhs outputs: (input var,state)*
+    can build from rhs on-demand
+    is all you care about (along with single rhs root label = rule index) for derivation trees
+and-or-tree-visitor (ordered multi-hypergraph visitor)
+
+
+* tree-visitor
+ bool discover(Tree), bool finish(Tree) - enough for a pretty-printer
+
+* derivation iterator - could just extract 1-best tree instead of building whole grammar.  functor(s) interface?
+  is this just a depth first search iterator?
+# vis.initialize_vertex(s, g) is invoked on every vertex of the graph before the start of the graph search.
+
+# vis.start_vertex(s, g) is invoked on the source vertex once before the start of the search.
+
+# vis.discover_vertex(u, g) is invoked when a vertex is encountered for the first time.
+
+# vis.examine_edge(e, g) is invoked on every out-edge of each vertex after it is discovered.
+
+# vis.tree_edge(e, g) is invoked on each edge as it becomes a member of the edges that form the search tree. If you wish to record predecessors, do so at this event point.
+
+# vis.back_edge(e, g) is invoked on the back edges in the graph.
+
+# vis.forward_or_cross_edge(e, g) is invoked on forward or cross edges in the graph. In an undirected graph this method is never called.
+
+# vis.finish_vertex(u, g) is invoked on a vertex after all of its out edges have been added to the search tree and all of the adjacent vertices have been discovered (but before their out-edges have been examined).
+
+  * discover ( = first time/child
+  * bypassing , <-- (seems stupid) in between children
+  * leave ) = done, last child
+
+* sharing derivation wrtg for big training set with some common subtree->phrase translations
+  obviously will be less sharing than just common tree frags in an E treebank because of different F stuff
+   but common things like word-word translation entries, short phrases ...
+  this would be doubly good (saves time too, not just space; don't need to recompute inside (but you do outside where sharing stops)
+   could maybe even make a single derivation wrtg forest with a bunch of epsilon rules branching to each training example; initially START=>T1 START=>T2 ... then you can use one big topo sort to get an inside-computation order
+    or instead of doing one big toposort can cache/memoize inside (this is basically equivalent)
+
+sharing SDERIVs ... SPANTOSPAN - how often will you have an identical input subtree, identical output span, and identical rule-rhs-nonterminal-span-suffixes (nonterminal = state,input-relative-path)?  will the rhs-spans be repeated in many different rules?  PRODUCES is input subtree, output span, state.
+
+sharing trees/strings in general ... if strings are linked lists, you can share common suffixes, just like you can share common subtrees - but if strings are arrays, then you need a separate canonicalization function for substrings (well, you still do for shared linked list strings, even if you don't use null-termination but instead a begin/end or begin/count rep.)  since for trees the bracketing is fixed, subtree sharing is all you ever want.  could in theory keep all equal subtree pointers the same by hashing - a new tree with label and n child pointers: hash to see if it exists, create if it doesn't ... probably refcount, although GC would work
+
+for sharing specifically of best-derivation-tree, store new Trees into container ... every tree is height 1 and could in theory (for copying derivation trees or identical input-subtrees) have sharing.  delete each Tree once only (don't use dealloc_recursive, just iterate over container).  same should work for k-best as well (as long as we only store derivation trees)
+
+lexical scoping: object holding local ("stack") vars, with member functions intended to be invoked as callbacks -   pointer to member fn?  or a template type based interface (fn overloading) with tag type = function name (static resolution as opposed to *memfn=dynamic)?  e.g. will want to memoize both SPANTOSPAN and PRODUCES for SDERIV ... either create a helper functor with pointer to "stack" or allow template on memoize.  another hairball ... SPANTOSPAN calls both PRODUCES and SPANTOSPAN so will need access to both memos.  but since they have different Arg types they have different memo types and can store both in same class/context.
+
+scalable EM:
+ idea is: all the parameters don't fit in memory (float = 4 bytes, 1 billion params = 2^32 bytes)
+ actual rules and overhead for fast lookup/matching would be at least a factor of 20, so you can only fit say, 5 million rules in memory
+ disk random-access search structures are slow, so:
+  only read in the subset of rules that can be used for as large as possible batches of training instances
+    can reorder training instances so those with similar lexical entries are nearby
+    keep adding rules for another batch until a cutoff resident set size is reached
+  store derivation trees in batches, then:
+   instead of vector of counts of all parameters, hashtable or list of nonzero ones
+   compute fractional counts given last parameter set in (sort into new) batches according to params used
+   later merge and sort by parameter then sum/collapse adjacent identical parameter, then normalize (multi-pass serial)
+ assume you CAN hold all params in virtual memory, but not all rules ... then just rearrange deriv grammars to improve locality of (VM) access to param  vals ... LIFO hashtable cache of count accumulators or just suck it up and have space for counts and for previous params
+all that can wait until we see what the typical size of deriv grammars is.
+ cluster! parallelize, hold different chunks in memory, message passing (probably best idea) - still optimize for small WSS (# of parameters needed for inside/outside node-chunks)
+
+store/print deriv grammar: convert pointer->rule to index->rule vector
+ instead of optional parameters to print, you could have a thread-local current-base-pointer (and stack of current-base-pointer, or just provide get/set and caller manages stack)
+  why thread-local?  because multiple threads using library would interfere, classic nonreentrance.  or, lock() (but don't want that)
+   skip thread-local until we actually have threading, of course
+
+feasible string spans for lexical string rhs: have a sequence of letters = observed span.  how do you know which rhs can be aligned to it?
+ nonlexical rhs can always be aligned to any span
+   (but you can prove some theorems about whether a state is nullable, or has prohibited classes of letters in its spans)
+     length theorems - all-terminal rhs can only map to spans of the same length (can hash lookup to find matches). expect most of those would be length 1 (or a handful if say, character-, not word- based output)
+      if some rules result in N nonnullable child states and M terminals, then they can only map to spans of at least N+M length. upper bounds on number of terminals generated might be possible too if no recursive insertions
+ ignore order: (multi)set of letters in span, and in rhs.  rhs must be contained in span.  how on earth can that be indexed? obvious on one letter ...
+  given an rhs, easy: for each (terminal) letter in rhs, letter must be in span - but that's not an index allowing all such rhs to be selected < O(|R|)
+  most primitive index: for each letter, list of rhs containing it.  then for each unique letter in input span, take union of lists (then try to align each one)
+   next most primitive: remove some common letters from first index, create new rhs-bigram index.  but then span length n, have n^2 bigrams to check. bad.
+
+tree-fold-map-apply?  tree,functor returning pointer to tree (caller-owns-recursive)
+  if t->size() // internal
+     result=new Tree;result->allocate(t->size());
+     for i=t->begin...t->end{
+        (*result)[i]=treemap(f,child(i))
+     }
+     return f.combine(t,result) // return pointer to tree.  you own result.  e.g. result->label=t->label (tree copy)
+     // or f(t,result!=NULL)
+   else // leaf
+     return f.leaf(t.label())
+     // or f(t,NULL)
+
+one of the things that was unnecessarily ugly in carmel was the handling of named vs. unnamed states.  the association of a name with a state index could be done with a polymorphic object (virtual fn for actually printing out).  in carmel, everything was shoehorned into char * strings, e.g. for path output and names of composed states.  ideally namer for composed states could be compositionally represented with pointers to lhs namer, rhs namer, requiring storing only the Trio (lhs state, filter state, rhs state)
+
+another thing that could have been virtualized in carmel was the interface for iterating over arcs for a state and for matching input/output symbols for arcs of a state.  if that had been done, transducers could have been lazily explored (ultimately allowing application of a lazy FSA through a transducer, yielding another lazy FSA).  can always do best/breadth-first search through a lazy graph.  of course, composition order would be complicated for a chain of lazy (comp is associative, choose smallest interior index and iterate over rest?).
+
+in TT, we might want a polymorphic interface for RTGs (e.g. smoothed sibling HMM collins LM, or results from application cascade)
+
+a virtual function iterator might be more expensive than a template fold/apply/map taking a functor and applying it inline (one virtual dispatch vs. one per edge)
+
+on memoization = alphabet with data: or, a hashtable mapping key to some data that is default-initialized with consecutive indices starting from 0.  static count var that must be pushed/popped off stack?  int oldD = Data::reset();  ... (new Data objects) ... Data::restore(oldD); ?  or, complicated interface that doesn't default construct?
+
+IndexedMemo : functor:ArgType->ResultType, apply:ArgType->index, getResult:index->ResultType, getArg:index->ArgType
+or ... Alphabet: index_of:ArgType-><bool,index> (bool=false) ? data[index]=functor(ArgType) : data[index]
+ - for recursion-safety, make sure that memo is marked in-progress with default value as soon as begun
+   + already done, added comments
+
+forward application of Tree *t through Treexdcr X:
+	output = derivation RTG; Treexdcr::Deriv
+	nonterminals N are {Tree *input_tree; unsigned xdcr_state;} - need an Alphabet assigning them consecutive state #s
+
+extraction of best tree from RTG
+    output = derivation tree; will have to copy shared best-derivations to allow dealloc_recursive, or else used refct-ptr Tree, or else return a collection of Tree nodes (that are linked to each other)
+    could output pruned derivation RTG (unambiguous) - same really as shared Tree*
+
+forward application with integrated best search:
+	at end of VISIT(N), return cost of cheapest deriv tree and set Pi(N)
+
+
+construction of output Tree || String from derivation tree
+
+biggest problem: handle -to-string and -to-tree transducers, tree and (context-free-string) grammars the same as far as possible: pruning,k-best,!training(except lhs matching),!inverse_image,forward_image(string version is just trees yielding the string?)
+
+next problem: derivation RTG = same idea for -to-string and -to-tree, could represent as a Symbol-xR since we have that integer variable slot field, or just use the Symbol space without constructor as storing rule pointer or index instead?  for now (and probably best) templatize on S so you have RTG<Symbol=string> and RTG<Symbol=Rule-in-some-transducer>.  derivation RTG of derivation RTG = itself (using same order for rules)?
+
+what do we want to actually do with trees/strings that are produced as outputs?  just print them (with weight)?  represent them always as derivation RTG with pointers to rules (and provide method for actually printing)? (or index+pointer to from-RTG);  one application: normal-form RTG from derivation RTG+from-RTG.
+
+during application,RTG-intersection:  states aren't a finite set of indexed names, but a set of tuples.  when do we map tuples->finite set of indexed (named?) tuples that occur?  or define a tree type which has tuples as possible leaf labels and later transform?
+
+when do we index rules based on source state?  (carmel always stores them in state-indexed form and has a member void *data for each; but we may wish to have consecutive indexed list of rules to easily store ancillary rule/edge info).
+ -- default is just the array of rules, indexes are up to user for now
+
+doing funky sharing of fields depending on lhs/rhs, leaf/not-leaf, capture/not ... encapsulate that with separate accessors and never touch raw fields.
+ -- stopped the weird leaf sharing, since it doesn't work for string rhs data structures anyhow
+
+tree children: dynamic vs fixed vector = premature opt.
+ -- chose fixed anyhow
+
+allocators (contiguous/pool,fixed-sized) = premature opt.
+ -- have template choice but chose contiguous for Symbol (can't free individual symbols), and reference counted for state names / nonterms (on the theory that we may produce infinitely many of those but vocabularies are closed)
+
+symbol table (consecutive ints or interned char * or full string comparison) = abstract out
+ -- chose interned char *, ints for states (rather, states have names and are consecutively indexed)
+
+index rules on root label (+rank?) and state
+ -- index on nothing for now; have better ideas for future.
+
+tree class (template for different label data types)
+ -- yes, done, and provide argument for different readers of labels (can't be ambiguous with (,) of course)
+
+vararg tree builder (args = pointers to trees)
+ -- done 1,2,3,4,5 arg versions, who wants more?
+
+textual tree i/o
+ -- done
+
+dot graphic tree output
+
+ownership of trees (shared?  refcount?  gc?)
+ -- haven't seen a problem so far, as usual, it's you-ask-for-it, you-free-it (boost refct ptr?)
+
+interface (command line? graphical shell that logs script of UI commands? SWIG? C++ only?)
+ -- C++ only, doing initial development through inline unit tests
+ -- have trivial main program that echoes input transducer.  be careful it doesn't grow into a 50-option abomination
+
+revision control w/ shared carmel code (put in carmel project, or require checkout carmel in same directory?)
+ -- new project in same repository ... can do a checkout by date, but dependencies may become a problem
+
+FIXME: possible I/O code design flaw: optional suffixes to input checking for next character of input and failing if not good() (if the optional character wasn't seen, it's put back to the read buffer, then return success) ... but what if eof?  nonissue for our OVERALL system, but could be bad if classes used in isolation elsewhere
+

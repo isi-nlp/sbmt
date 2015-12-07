@@ -1,0 +1,21 @@
+import sbmt-util ;
+
+require = <include>. <library>../gusc//gusc ;
+project mpiserv : requirements $(require) : usage-requirements $(require) ;
+
+lib rhpipe : rhpipe.cpp ../gusc//gusc ;
+
+exe test_rhpipe : test.cpp rhpipe  /boost/thread ;
+explicit test_rhpipe ;
+
+exe mpiserv : mpiserv.cpp rhpipe /boost/mpi//boost_mpi /boost/thread ;
+
+# python-extension rhproc : rhpipe pypipe.cpp /boost/python//boost_python ;
+
+sbmt-util.install install 
+  : 
+  : mpiserv
+    test_rhpipe 
+  : rhpipe 
+    # rhproc 
+  ;

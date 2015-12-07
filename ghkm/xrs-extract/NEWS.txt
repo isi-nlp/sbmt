@@ -1,0 +1,70 @@
+------------------------------------------------------------------------
+Release 0.93:
+
+* 'extract -o' prints all error messages to stdout. This is helpful
+  when stderr and stdout are out of sync (which can make the redirect
+  ">&" hard to read).
+* fix of a bug reported by Wei (multiple-root parse trees).
+
+------------------------------------------------------------------------
+Release 0.92b:
+
+!!NOTE: do not use releases 0.92 and 0.92a!!
+(comment lines are stored in the DB files, and this creates 
+inconsistencies in the rule files)
+
+* bug fix: extract properly skips bad trees and parsing failures
+* the_button.failsafe can now be executed from any directory.
+* 'extract' has a new command-line parameter (-B). If enabled,
+  it determines the span-set, complement-span-set, crossing-set,
+  complement-crossing-set of each node (this is currently of no use,
+  but this will be useful to automatically find and delete the word 
+  alignment that creates the maximum number of crossings in each 
+  sentence pair).
+* rules files are compressed with bzip2.
+* all comments are now prefixed by '%%%' (instead of '%').
+* bug fix: ranges in step 1 of the_button.failsafe were overlapping
+  (e.g., [0-10], [10-20], etc.).
+
+------------------------------------------------------------------------
+Release 0.91:
+
+* 'extract' has a new command-line parameter (-O) that allows source-language
+  words (e.g. French) to be attached to POS rules. By default, 'extract' 
+  still avoids attaching unaligned words to POS rules.
+
+------------------------------------------------------------------------
+Release 0.9:
+
+* Can significantly speedup rule extraction by turning off some features. 
+  It is now possible to:
+    1) disable LHS normalization counts (i.e. p(RHS|LHS))
+    2) disable either ``count'' or `fraccount'' relative frequencies
+  Disabling both reduces the number of passes through the DB 
+  from 9 to 2 in the (time consuming) last step.
+    
+* Can create multiple rule files for different sizes at once,
+  e.g. size{0,3,4}.rules.bz2
+  (where sizeX stands for "minimal rules + rules of size <= X")
+  Note that, in each file, probabilities sum to 1 for each normalization
+  group (this is of course not the same as grepping the smaller rules 
+  of a rule file to get, e.g., size3 out of size4).
+
+* Can create rule files without "oversize" (and bad?) minimal rules.
+ 
+* The threshold on the number of unaligned foreign words per RHS (default
+  value is 10) is no longer hard-coded, and can be specified on the
+  command-line. If that threshold is exceeded, the program does _not_
+  search all possible ways (see the "GHKM-2" paper) of attaching unaligned
+  words to constituents in the tree (it instead defaults to highest possible
+  attachment, as in experiments performed for the GHKM paper). Incidentally,
+  if that threshold is set to 0, and only minimal rules are extracted, the
+  program only generates one derivation per e-tree/f-string/alignment
+  triple. If rule extraction is too slow for large rule sizes (>= 4) or for
+  sparser alignments, it might be worth using a lower threshold (10 is
+  probably too large anyway).
+
+* Minor bug fixes.
+* Compiles with gcc/g++ 3.4.3
+* Compiles without any warning (even if -Wall is turned on).
+* 'ComplexRules' renamed 'xrs-extract'....

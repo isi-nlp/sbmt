@@ -1,0 +1,31 @@
+This libraray implements the xRs rule class. It includes the
+implementation of two classes: Rule and RuleNode. The LHS of a rule is
+composed of RuleNode's. 
+
+INSTALLATION:
+
+    make
+    ./test < ../test/example.rule1
+
+DOC:
+    under the RuleReader dir, type 
+     doxygen Doxygen
+    The docs are generated into the doc dir. Use doc/html/index to 
+    browse.
+
+NOTICE:
+    The rule reader (probably still) has problem in reading the rules
+from a very larger file. So in stead of go through the entire rule
+file, please segment it into chunks, and perform the operations in the
+rule reader on each chunk, respectively.
+
+REPORT BUG to
+
+    Wei Wang
+    wwang@languageweaver.com
+
+Acknoledgements:
+    Dave's (dave kauchak @ ucsd) for generating these classes.
+        
+   
+

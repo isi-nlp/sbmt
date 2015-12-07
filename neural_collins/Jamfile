@@ -1,0 +1,8 @@
+import sbmt-util ;
+
+project neural_collins
+  : requirements <include>.. 
+  : usage-requirements <include>.. 
+  ;
+  
+

@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+
+import argparse
+import os.path
+import cfg
+import sys
+import subprocess
+import itertools
+
+def repack(lst):
+    return ' '.join('"%s"' % escaped for escaped in (s.replace('\\','\\\\').replace('"',r'\"') for s in lst))
+
+cmdline = []
+mapper = []
+formapper = False
+for tok in sys.argv:
+    if tok == '--':
+        formapper = True
+        continue
+    if formapper and tok != '--':
+        mapper.append(tok)
+    elif tok != '--':
+        cmdline.append(tok)
+
+print >> sys.stderr, cmdline
+print >> sys.stderr, mapper
+
+parser = argparse.ArgumentParser()
+args = cfg.parse_args(parser,cmdline[1:])
+hp = args.hadoop
+
+def input():
+    for line in sys.stdin:
+        #print >> sys.stderr, line.rstrip('\n').split('\t')
+        id,rule = line.rstrip('\n').split('\t')
+        yield id,rule
+
+def mapinput(cmd):
+    def genrules(coll):
+        for id,rule in coll:
+            yield rule
+    
+    for id,rules in itertools.groupby(input(),lambda x : x[0]):
+        proc = subprocess.Popen( cmd
+                               , stdin=subprocess.PIPE
+                               , stdout=subprocess.PIPE
+                               )
+        changedrules,_ = proc.communicate('\n'.join(r for r in genrules(rules)))
+        if proc.returncode != 0:
+            sys.exit(proc.returncode)
+        for rule in changedrules.strip('\n').split('\n'):
+            print '%s\t%s' % (id,rule)
+
+mapinput(mapper)
+
+

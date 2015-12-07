@@ -1,0 +1,292 @@
+#include <sbmt/chart/chart.hpp>
+#include <sbmt/chart/ordered_cell.hpp>
+#include <sbmt/chart/ordered_span.hpp>
+#include <sbmt/grammar/grammar_in_memory.hpp>
+#include <sbmt/grammar/grammar.hpp>
+#include <sbmt/edge/edge.hpp>
+#include <sbmt/edge/null_info.hpp>
+#include <sbmt/sentence.hpp>
+#include <sbmt/search/concrete_edge_factory.hpp>
+
+#include <boost/test/test_case_template.hpp>
+#include <boost/test/auto_unit_test.hpp>
+#include <boost/mpl/vector.hpp>
+
+#include "grammar_examples.hpp"
+
+typedef sbmt::grammar_in_mem gram_t;
+using namespace sbmt;
+using namespace std;
+
+/// this class is solely for feeding parameters to the templated test
+/// case below.
+template <class EP, class CP, class IT>
+struct test_chart_traits
+{
+    typedef EP edge_container_policy;
+    typedef CP cell_container_policy;
+    typedef IT info_type;
+};
+
+/// these are our arguments to the templated test-case below
+typedef boost::mpl::vector<
+    test_chart_traits<
+        ordered_chart_edges_policy
+      , ordered_chart_cells_policy
+      , null_info
+    >
+  , test_chart_traits<
+        ordered_chart_edges_policy
+      , unordered_chart_cells_policy
+      , null_info
+    >
+  , test_chart_traits<
+        unordered_chart_edges_policy
+      , ordered_chart_cells_policy
+      , null_info
+    >
+  , test_chart_traits<
+        unordered_chart_edges_policy
+      , unordered_chart_cells_policy
+      , null_info
+    >
+> test_args;
+
+template <class EdgeT, class GramT, class ChartT>
+void lame_cyk_fill_chart( ChartT& chart
+                        , GramT const& gram
+                        , concrete_edge_factory<EdgeT,GramT>& ef
+                        , span_t max_span );
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(test_chart, test_arg, test_args)
+{
+    using namespace sbmt;
+    using namespace std;
+    
+    typedef typename test_arg::info_type     info_type;
+    typedef info_factory<info_type> info_factory_type;
+
+    typedef typename test_arg::edge_container_policy edge_container_policy;
+    typedef typename test_arg::cell_container_policy cell_container_policy;
+
+    typedef edge<info_type>                tm_edge;
+    typedef concrete_edge_factory<tm_edge,grammar_in_mem> tm_edge_factory;
+    typedef edge_equivalence_pool<tm_edge> tm_equiv_pool;
+    
+    tm_edge_factory tm_ef;
+    tm_equiv_pool   tm_epool;
+    
+    string fss = "THESE 7PEOPLE INCLUDE COMINGFROM "
+                 "FRANCE AND RUSSIA p-DE ASTRO- -NAUTS .";
+    fat_sentence s = foreign_sentence(fss);
+    
+    basic_chart<tm_edge,edge_container_policy,cell_container_policy> 
+        chart(s.length());
+    
+    
+    
+    grammar_in_mem gram;
+    init_grammar_marcu_1(gram);
+    
+    fat_sentence::iterator itr = s.begin();
+    fat_sentence::iterator end = s.end();
+   
+    std::size_t i = 0;
+    /// initializing the chart with a sentence.
+    for(; itr != end; ++itr,++i) {
+        tm_edge e = tm_ef.create_edge(gram,itr->label(),span_t(i,i+1));
+        BOOST_CHECK(is_lexical(*itr));
+        BOOST_CHECK(is_lexical(e.root()));
+        BOOST_CHECK(chart.find(e).second == false);
+        chart.insert_edge(tm_epool,e);
+        BOOST_REQUIRE(chart.find(e).second == true);
+        BOOST_CHECK(chart.find(e).first->representative() == e);
+    }
+    BOOST_CHECK_EQUAL(i,s.length());
+    
+    lame_cyk_fill_chart( chart, gram, tm_ef, tm_epool, span_t(0,i));
+    
+//    cout << print(chart,gram.dict()) << endl;
+}
+
+template<class EdgeT, class GramT, class ChartT>
+void apply_binary_rules( ChartT& chart
+                       , GramT const& gram
+                       , concrete_edge_factory<EdgeT,GramT >& ef
+                       , edge_equivalence_pool<EdgeT>& epool
+                       , typename GramT::rule_type r
+                       , edge_equivalence<EdgeT> const& e_left
+                       , span_t span_right )
+{
+    BOOST_CHECKPOINT("begin inner apply_binary_rules");
+    typedef typename chart_traits<ChartT>::edge_range    edge_range;
+    typedef typename chart_traits<ChartT>::edge_iterator edge_iterator;
+    typedef typename chart_traits<ChartT>::edge_type     edge_type;
+    
+    BOOST_CHECK(adjacent(e_left.representative().span(),span_right));
+    
+    edge_range    range_right = chart.edges(gram.rule_rhs(r,1), span_right);
+    edge_iterator itr_right   = range_right.begin();
+    edge_iterator end_right   = range_right.end();
+
+    for (; itr_right != end_right; ++itr_right) {
+        BOOST_CHECKPOINT("begin inner loop apply_binary_rules");
+        
+        span_t combo_span(0,1); 
+        BOOST_CHECK_NO_THROW(
+        combo_span = combine( e_left.representative().span()
+                                   , itr_right->representative().span() );
+        );
+                                       
+        BOOST_CHECKPOINT("before create binary edge");
+        edge_type e = ef.create_edge(gram,r,e_left,*itr_right);
+        BOOST_CHECKPOINT("after create binary edge");
+            
+        BOOST_CHECK( e.span() == combo_span );
+        
+        chart.insert_edge(epool,e);
+        BOOST_CHECKPOINT("end inner loop apply_binary_rules");
+    }
+    BOOST_CHECKPOINT("end inner apply_binary_rules");
+}
+
+template<class EdgeT, class GramT, class ChartT>
+void apply_binary_rules( ChartT& chart
+                       , GramT const& gram
+                       , concrete_edge_factory<EdgeT,GramT>& ef
+                       , edge_equivalence_pool<EdgeT>& epool
+                       , typename GramT::rule_range& r
+                       , edge_equivalence<EdgeT> const& e_left
+                       , span_t span_right )
+{
+    BOOST_CHECKPOINT("begin middle apply_binary_rules");
+    typedef typename GramT::rule_iterator rule_iterator;
+    
+    rule_iterator rule_itr = r.begin();
+    rule_iterator rule_end = r.end();
+    
+    for (; rule_itr != rule_end; ++rule_itr) {
+        apply_binary_rules(chart,gram,ef,epool,*rule_itr,e_left,span_right);
+    }
+    BOOST_CHECKPOINT("end middle apply_binary_rules");
+}
+
+template<class EdgeT, class GramT, class ChartT>
+void apply_binary_rules( ChartT& chart
+                       , GramT const& gram
+                       , concrete_edge_factory<EdgeT,GramT>& ef
+                       , edge_equivalence_pool<EdgeT>& epool
+                       , span_t span_left
+                       , span_t span_right )
+{
+    BOOST_CHECKPOINT("begin main apply_binary_rules");
+    typedef typename chart_traits<ChartT>::cell_range    cell_range;
+    typedef typename chart_traits<ChartT>::cell_iterator cell_iterator;
+    typedef typename chart_traits<ChartT>::edge_range    edge_range;
+    typedef typename chart_traits<ChartT>::edge_iterator edge_iterator;
+    
+    cell_range range_left = chart.cells(span_left);
+    cell_iterator itr_left = range_left.begin();
+    cell_iterator end_left = range_left.end();
+    
+    for (; itr_left != end_left; ++itr_left) {
+        typename GramT::rule_range r = 
+            gram.binary_rules(itr_left->root());
+        edge_range edges_left = itr_left->edges();
+        edge_iterator edge_itr = edges_left.begin();
+        for (;edge_itr != edges_left.end(); ++edge_itr) {
+            apply_binary_rules(chart,gram,ef,epool,r,*edge_itr,span_right);
+        }
+    }    
+    BOOST_CHECKPOINT("end main apply_binary_rules");
+}
+
+template<class EdgeT, class GramT, class ChartT>
+void apply_unary_rules( ChartT& chart
+                      , GramT const& gram
+                      , concrete_edge_factory<EdgeT,GramT>& ef
+                      , edge_equivalence_pool<EdgeT>& epool
+                      , typename GramT::rule_range range
+                      , edge_equivalence<EdgeT> const& eq )
+{
+    BOOST_CHECKPOINT("begin inner apply_unary_rules");
+    typedef typename GramT::rule_iterator rule_iterator;
+    typedef typename chart_traits<ChartT>::edge_type      edge_type;
+    
+    rule_iterator rule_itr = range.begin();
+    rule_iterator rule_end = range.end();
+    
+    for (; rule_itr != rule_end; ++rule_itr) {
+        BOOST_CHECKPOINT("before create unary edge");
+        edge_type e = ef.create_edge(gram, *rule_itr, eq);
+        BOOST_CHECKPOINT("after create unary edge");
+        BOOST_CHECK(e.span() == eq.representative().span());
+        chart.insert_edge(epool,e);
+    }
+    BOOST_CHECKPOINT("end inner apply_unary_rules");
+}
+
+template <class EdgeT, class GramT, class ChartT>
+void apply_unary_rules( ChartT& chart
+                      , GramT const& gram
+                      , concrete_edge_factory<EdgeT,GramT>& ef
+                      , edge_equivalence_pool<EdgeT>& epool
+                      , span_t s )
+{
+    BOOST_CHECKPOINT("begin main apply_unary_rules");
+    /// for the time being, we are handling unary rules incorrectly, 
+    /// by only allowing one iteration
+    
+    typedef typename chart_traits<ChartT>::edge_range    edge_range;
+    typedef typename chart_traits<ChartT>::edge_iterator edge_iterator;
+    typedef typename chart_traits<ChartT>::cell_range    cell_range;
+    typedef typename chart_traits<ChartT>::cell_iterator cell_iterator;
+    typedef typename GramT::rule_range   rule_range;
+    
+    cell_range range = chart.cells(s);
+    
+    cell_iterator itr = range.begin();
+    cell_iterator end = range.end();
+    
+    for (; itr != end; ++itr) {
+        rule_range r = gram.unary_rules(itr->root()); 
+        edge_range er = itr->edges();
+        
+        for (edge_iterator e_itr = er.begin(); e_itr != er.end(); ++e_itr) {
+            apply_unary_rules(chart, gram, ef, epool, r, *e_itr);
+        }
+    }
+    BOOST_CHECKPOINT("end main apply_unary_rules");
+}
+
+
+
+template<class EdgeT, class GramT, class ChartT>
+void lame_cyk_fill_chart( ChartT& chart
+                        , GramT const& gram
+                        , concrete_edge_factory<EdgeT,GramT>& ef
+                        , edge_equivalence_pool<EdgeT>& epool
+                        , span_t max_span )
+{
+    using namespace sbmt;
+    shift_generator sg(max_span,1);
+    for (shift_generator::iterator s = sg.begin(); s != sg.end(); ++s) {
+        apply_unary_rules(chart,gram,ef,epool,*s);
+    }
+    
+    for (unsigned size = 2; size <= length(max_span); ++size) {
+        shift_generator ssg(max_span,size);
+        for (shift_generator::iterator s = ssg.begin(); s != ssg.end(); ++s) {
+            partitions_generator pg(*s);
+            partitions_generator::iterator pitr = pg.begin();
+            partitions_generator::iterator pend = pg.end();
+            
+            for (; pitr != pend; ++pitr) {
+                span_t span_left  = pitr->first;
+                span_t span_right = pitr->second;
+                apply_binary_rules(chart,gram,ef,epool,span_left,span_right);
+            }
+            apply_unary_rules(chart,gram,ef,epool,*s);
+        }
+    }
+}

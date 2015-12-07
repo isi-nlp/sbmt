@@ -1,0 +1,35 @@
+
+*-* syntax-mira-features.pl -e <insertion-eword-list>  < rule_file > features
+
+This script computes the following featuers:
+    a) rule root features
+    b) num of variables features. i.e., is_np_rooted=1
+    c) is_e_insertion features if the -e option is used. And these features
+        are computed only on nonlex rules without looking into the word
+        alignments.
+    d) num of label L features; i.e., np_nodes=3 .
+
+*-* I also had the n_bad_rewrite=\d+ feature. It is computed via the following 
+    command:
+
+    cat rule_file | perl rule2tree.pl | python single-level-rewrite.py \
+              > bad_rewrite_features
+
+    The output is of form "rule-id \t featur-values". Each line
+    corresponds to one orignal rule.
+
+    The rule2tree.pl converts rule LHS to tree format, and single-level-rewrite.py
+    reads in the trees and checks if they contain any bad rewrites. 
+
+    Bad rewrite set is defined in single-level-rewrite.py
+
+    The single-level-rewrite.py relies on David Chiang's tree.py.
+
+*-* I generated the insertion-eword list from nonlex rules only, without looking
+    at the word alignments. The script to generate e-insertion words:
+
+    generate-insert-ewords-from-nonlex-rules.pl < rules > output
+
+
+
+

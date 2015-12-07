@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+
+import os, sys
+
+keepgoing=True
+dirs = []
+d = os.getcwd()
+configs = []
+dirs.append(d)
+while True:
+    nd,f = os.path.split(d)
+    if f == '' and nd == d:
+        break
+    dirs.append(nd)
+    d = nd
+dirs.reverse()
+#print >> sys.stderr, dirs
+for dir in dirs:
+    #print >> sys.stderr, '#####################'
+    for f in os.listdir(dir):
+        #print >> sys.stderr, os.path.join(dir,f)
+        if f.endswith('pipeline.config'):
+            configs.append(os.path.join(dir,f))
+
+print ' '.join(configs),

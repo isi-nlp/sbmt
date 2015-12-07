@@ -1,0 +1,116 @@
+#!/usr/bin/env perl
+#
+# program to unique rules by just looking at (LHS,RHS) but omitting all
+# feature values. Then sorts all given rules by their ID. 
+#
+use 5.006;
+use strict;
+
+use File::Temp qw(tempfile);
+use File::Basename qw(dirname);
+use Getopt::Long qw(:config bundling no_ignore_case);
+
+use lib dirname($0);
+use NLPRules qw(extract_lrf);
+
+$main::verbose = 0;
+
+sub usage {
+    my $prg = basename($0,'.pl');
+    print << "EOF";
+
+Usage: $prg [options] [xrs[.gz] [xrs.[gz] [..]]]
+
+Optional arguments:
+ -h|--help        print this help and exit
+ -v|--verbose     more debug output while running
+ --tmp dir        alternative temp dir.
+ -s|--options fn  extra options to pass to GNU sort
+
+Mandatory arguments:
+ xrs[.gz]         1+ rule file(s), or uses stdin.
+
+You can use this program to concatinate multiple rule files. 
+
+EOF
+
+    exit 1;
+}
+
+#
+# --- main -------------------------------------------------
+#
+warn "# $0 @ARGV\n";
+
+my $tmp = $ENV{'MY_TMP'} ||     # Wei likes MY_TMP, so try that first
+    $ENV{TMP} ||                # standard
+    $ENV{TEMP} ||               # windows standard
+    $ENV{TMPDIR} ||             # also somewhat used
+    File::Spec->tmpdir() ||     # OK, this gets used if all above fail
+    ( -d '/scratch' ? '/scratch' : '/tmp' ); # last resort
+
+my @sort =();
+GetOptions( 'help|h' => \&usage
+          , 'verbose|v+' => \$main::verbose
+          , 'tmp=s' => sub {
+	      $tmp = $_[1];
+	      push( @sort, '-T', $tmp );
+	  }
+          , 'option|s=s' => \@sort
+          )
+    || die( "FATAL: Option processing failed due to an illegal option\n",
+            join(' ',$0,@ARGV), "\n" );
+push( @ARGV, '-' ) unless @ARGV; # default to stdin
+
+
+# create temporary file
+my ($fh,$fn) = tempfile( "rsu-XXXXXX", SUFFIX => '.xrs',
+			 DIR => $tmp, UNLINK => 0 );
+die "FATAL: Unable to create tempfile in $tmp: $!\n" unless defined $fh;
+
+# filter uniq all rule files
+my (%seen,%sanity,$lhs,$rhs,$feat);
+foreach my $fn ( @ARGV ) {
+    if ( substr($fn,-3) eq '.gz' ) {
+	die "FATAL: Unable to read $fn\n" unless -r $fn;
+	open( IN, "gzip -cd $fn|" ) || die "FATAL: gzip: $!\n";
+    } else {
+	open( IN, "<$fn" ) || die "FATAL: open $fn: $!\n";
+    }
+
+    while ( <IN> ) {
+	if ( (($lhs,$rhs,$feat) = extract_lrf($_)) == 3 ) {
+	    if ( exists $seen{$lhs}{$rhs} ) {
+		print STDERR "Warning [$fn:$.] Omitting duplicate rule\n$_";
+	    } elsif ( $feat =~ /(?:^|\s)id=(-?\d+)/ ) {
+		my $id = $1;
+		if ( exists $sanity{$id} ) {
+		    print STDERR "Warning [$fn:$.] Duplicate ID $id seen in line $sanity{$id}\n$_"; 
+		} else {
+		    print $fh "$1\t$_";
+		    $seen{$lhs}{$rhs} = 1;
+		    $sanity{$1} = $.;
+		}
+	    } else {
+		print STDERR "Warning [$fn:$.] Rule is missing a rule id\n$_";
+	    }
+	} else {
+	    print STDERR "Warning [$fn:$.] Ignoring ill-formated rule\n$_";
+	}
+    }
+
+    close IN || warn "ERROR: close $fn: $!\n";
+}
+
+# done writing tmp file
+close $fh;
+
+# sort remainder by rule-id
+open( SORT, "sort -n -k 1 @sort $fn|" ) || die "FATAL: starting sort: $!\n";
+while ( <SORT> ) {
+    s{^-?\d+\s}{};
+    print ;
+}
+close SORT || warn "Warning: pclose sort: $!\n";
+unlink $fn;
+

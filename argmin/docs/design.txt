@@ -1,0 +1,68 @@
+
+Design documentation for argmin
+
+argmin
+Find the lowest-cost derivation
+
+Pseudo-code:
+	initialize chart C to have cost infinity for every statement
+	initialize agenda Q (push all statements that have no antecedents)
+	while we have not achieved the stopping condition (e.g. passed global threshold on # of statements to score, or Q is empty, or we have exceed some time threshold)
+		pop lowest priority statement i from Q
+		if i is not in C or has a lower cost than is in C:
+			update using all assignments derivable from i using grammar G and chart C
+
+**********
+DEFINITIONS
+
+score
+	The score of a Derivation is its *inside* score, i.e. the
+	cumulative score of the Derivation up to the Statement it
+	derived. We are trying to maximize the score, and typically
+	we assume that the score is non-increasing. (not sure if this
+	requirement is strict though).	This score, in our case, is a
+	probability. (Alternately, we could talk about minimizing cost
+	/ weight.)
+
+**********
+OLDER DEFINITIONS (may be out-of-date)
+
+statement AKA item (or ItemToken) AKA edge
+I'm not sure if Item suffices or if it's necessary to distinguish conceptually between an ItemToken (NP at [2,5]) and an ItemType (NP).
+We may also wish to distinguish between a statement and a weight assignment (statement and the best cost known for it)
+
+	template <type T>
+	class Item : public {
+	private:
+		/// We templatize by type T of the corresponding grammar level,
+		/// e.g.
+		///	lexicalized label + 2 LM words on each side,
+		///	unlexicalized label + 1 LM words on each side,
+		/// &tc.
+		T _t;
+
+		/// \note These may not be necessary
+		vector<Item smartptrs> _antecedents;
+		Chart smartptr _chart;
+
+	public:
+		/// cost AKA weight AKA inside cost.
+		/// probably best to use the term "weight" since using "cost" to mean "inside cost" can confuse.
+		/// negative log-probability, in our case.
+		double cost() const;
+
+		/// priority AKA FOM
+		/// typically, the cost plus some outside estimate.
+		/// The outside estimate may be an admissable or inadmissable A* heuristic. (If it's inadmissable, then we may need an extra hyperparameter to control overparsing) 
+		/// The outside estimate may be based upon a precomputed table, direct computation, or an argmin over an abstraction.
+		/// Examples include:
+		///	* estimates based upon decoder logs (perhaps using length)
+		///	* H_ij^(1/(j-i)
+		///	* context heuristics (hand-crafted or learned using FOM regression)
+		///	* outside cost over a grammar reduction
+		double priority() const;
+	};
+
+**
+
+$Id: design.txt 1308 2006-10-06 04:37:37Z jturian $

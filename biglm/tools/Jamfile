@@ -1,0 +1,22 @@
+SRILM_ROOT = "/home/nlg-01/chiangd/pkg64/srilm" ;
+SRILM_LIBDIR = "$(SRILM_ROOT)/lib/i686-m64_c" ;
+
+alias use_srilm : oolm dstruct misc
+    :
+    :
+    :
+    <include>$(SRILM_ROOT)/include
+    <define>USE_SARRAY
+    <define>USE_SARRAY_TRIE
+    <define>USE_SARRAY_MAP2
+    ;
+
+lib oolm    : : <search>$(SRILM_LIBDIR) <name>oolm ;
+lib dstruct : : <search>$(SRILM_LIBDIR) <name>dstruct ;
+lib misc    : : <search>$(SRILM_LIBDIR) <name>misc ;
+
+exe tunelm : tunelm.cpp FilterNgram.cpp use_srilm ;
+
+exe rescore_lines : rescore_lines.cpp FilterNgram.cpp use_srilm ;
+
+exe rescore_interpolated : rescore_interpolated.cpp FilterNgram.cpp use_srilm ;

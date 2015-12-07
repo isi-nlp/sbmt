@@ -1,0 +1,8 @@
+Suggested convention regarding config files:
+
+*.cfg.template  : configuration files stored in the CVS repository; 
+                  if you see bugs/problems, feel free to modify them.
+*.cfg           : your own customized configuration files reflecting
+                  your environment (you should at least change $OUTDIR 
+                  so that it points to a directory you own). Do not
+                  add any .cfg file to the repository!

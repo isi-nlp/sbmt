@@ -1,0 +1,9 @@
+#!/bin/sh
+
+cd `dirname $0`
+TOOLDIR=`pwd`
+
+echo version=1
+echo tooldir=$TOOLDIR
+echo creator=$USER
+echo creation=`date -u '+%Y-%m-%dT%H:%M:%SZ'`

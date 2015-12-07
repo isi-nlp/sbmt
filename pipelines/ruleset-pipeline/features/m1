@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import os.path
+
+parser = argparse.ArgumentParser()
+parser.add_argument('type', choices=['inverse','normal'])
+parser.add_argument('table')
+parser.add_argument('-s','--suffix',nargs='?',default='')
+args = cfg.parse_args(parser)
+
+ttable = os.path.abspath(args.table)
+type = ''
+mapper = ''
+suffix = ''
+if args.suffix:
+    suffix = args.suffix
+
+#dir = os.path.dirname(os.path.dirname(__file__))
+#scriptdir = os.path.abspath(os.path.join(dir,'scripts'))
+scriptdir = args.config['variables']['rhsdir']
+
+if args.type == 'inverse':
+    type = 'model1inv'
+    mapper = 'phrase_pfe.pl'
+else:
+    type = 'model1nrm'
+    mapper = 'phrase_pef.pl'
+    
+mapper = os.path.join(scriptdir,mapper)
+reducer = os.path.join(scriptdir,'model1.pl') + ' ' + type + suffix + ' ' + ttable + ' .'
+
+hp = args.hadoop
+
+hp.start(reducers=1)
+hp.mapreduce( mapper=mapper
+            , reducer=reducer
+            , input='rules'
+            , output='part.%s' % type + suffix
+            )
+hp.start()

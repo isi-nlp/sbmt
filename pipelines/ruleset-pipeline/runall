@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+import cfg, os, sys, argparse
+import extract
+
+curr = os.path.dirname(__file__)
+parser = extract.parser
+nkparser = argparse.ArgumentParser()
+
+for p in [parser,nkparser]:
+    p.add_argument( '-k', '--keeprules' \
+                  , help='keep pre-filtered rules in hdfs format' \
+                  , action='store_true'
+                  )
+    p.add_argument( '-n', '--nocleanup' \
+                  , help='do not toss the temporary $tmpdir'
+                  , action='store_false'
+                  , dest='cleanup'
+                  )
+d = cfg.parse_args(parser,modeldir=True)
+vals,remain = nkparser.parse_known_args()
+nk=''
+
+if d.keeprules:
+    nk += ' --keeprules'
+if not d.cleanup:
+    nk += ' --nocleanup'
+
+cfg.execute( d, '$curr/runextract ' + ' '.join('"'+x+'"' for x in remain)
+           , curr=curr )
+cfg.execute( d, '$curr/runfeatures -o "$outdir" -t "$tmpdir"'
+           , outdir=d.outdir
+           , tmpdir=d.tmpdir
+           , curr=curr )
+cfg.execute( d, '$curr/runfilter -o "$outdir" -t "$tmpdir"'
+           , outdir=d.outdir
+           , tmpdir=d.tmpdir
+           , curr=curr )
+cfg.execute( d, '$curr/runxsearchdb -o "$outdir" -t "$tmpdir"$nk'
+           , outdir=d.outdir
+           , tmpdir=d.tmpdir
+           , curr=curr
+           , nk=nk )
+

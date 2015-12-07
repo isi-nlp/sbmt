@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import sys
+import subprocess
+import itertools
+import os
+
+def get_args(opts):
+    args = '-x - -t radu-new '
+    args += opts['option-string']
+    args += ' -l %s:%s' % (opts['node-limit'],opts['compose-limit'])
+    args += ' -G - -g %s' % opts['wsd-size']
+    return args
+
+def subcorpora_extract(inp,config):
+    root = os.path.abspath(os.path.dirname(__file__))
+    
+    lcrepair = os.path.join(config['variables']['rhsdir'], 'lcrepair')
+    ext = config['rule-extraction']['extractor']
+    opts = config['rule-extraction']['extraction-options']
+    if 'subcorpora' in opts:
+        for k,v in opts['subcorpora'].iteritems():
+            opts['subcorpora'][k] = cfg.merge_configs(v,opts)
+    firstline = True
+    for sc,data in itertools.groupby(inp, lambda x : x[-1]):
+        args = get_args(opts['subcorpora'][sc])
+        ext = cfg.PTemplate(ext).safe_substitute(extraction_options=args)
+        extractor = None
+        for d in data:
+            if firstline:
+                print >> sys.stderr, 'firstline:'
+                print >> sys.stderr, '\t'.join(str(dd) for dd in d)
+                print >> sys.stderr, "COMMAND:", ext
+                firstline = False
+            lc = int(d[0]) - 1
+            if extractor is None:
+                extractor = subprocess.Popen( ext +' | ' + lcrepair +' '+ str(lc)
+                                            , stdin=subprocess.PIPE
+                                            , stdout=sys.stdout
+                                            , shell=True )
+            for n in xrange(1,4):
+                print >> extractor.stdin, d[n].rstrip()
+        extractor.stdin.close()
+        extractor.wait()
+
+def uniform_extract(inp,config):
+    lcrepair = os.path.join(config['variables']['rhsdir'], 'lcrepair')
+    root = os.path.abspath(os.path.dirname(__file__))
+    ext = config['rule-extraction']['extractor']
+    opts = config['rule-extraction']['extraction-options']
+    args = get_args(opts)
+    ext = cfg.PTemplate(ext).safe_substitute(extraction_options=args)
+    fcmd = ext
+    print >> sys.stderr, "COMMAND:", fcmd
+    extractor = None
+    
+    for data in inp:
+        lc = int(data[0]) - 1
+        if extractor is None:
+            extractor = subprocess.Popen( fcmd + ' | ' + lcrepair + ' ' + str(lc)
+                                        , stdin=subprocess.PIPE
+                                        , stdout=sys.stdout
+                                        , shell=True )
+        for n in xrange(1,4):
+            print >> extractor.stdin, data[n].rstrip()
+    extractor.stdin.close()
+    extractor.wait()
+    
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-s',dest='subcorpora',action='store_true')
+parser.add_argument('-c',dest='config',default='',nargs='?')
+
+def valid(di):
+   di = di.rstrip('\n').split('\t')
+   #print >> sys.stderr, di
+   if len(di) < 3:
+      return False
+   for d in di:
+      if d.strip() == '':
+         return False
+   return True
+d = parser.parse_args()
+config = cfg.load_config(d.config)
+gen = (d.rstrip('\n').split('\t') for d in sys.stdin)
+if d.subcorpora:
+    subcorpora_extract(gen,config)
+else:
+    uniform_extract(gen,config)

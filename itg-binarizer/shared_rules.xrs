@@ -1,0 +1,11 @@
+VP(DT("a") NP(x0:CC DT("b") DT("c") x1:NN VB("d"))) -> "A" x1 "B" x0 "C" ### id=1 binprob=e^-2 foos=0.1
+
+NP(x0:CC DT("b") x1:NN VB("d")) -> x1 "B" x0 "C" ### id=2 binprob=e^-45 foos=0.8
+
+XP(x0:CC DT("b") x1:NN VB("d")) -> x0 "B" x1 "C" ### id=3 binprob=e^-22 foos=0.4
+
+CC(VP("p") PP("q") NP("r")) -> "P" "Q" "R" "S" ### id=4 binprob=e^-3 foos=0.09
+
+CC(XP("p") RR("q")) -> "P" "Q" ### id=5 binprob=e^-2 foos=0.08
+
+VB("t") -> "T" ### id=6 binprob=e^0 foos=0.1

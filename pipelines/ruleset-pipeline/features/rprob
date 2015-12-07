@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import os.path
+import sys
+
+parser = argparse.ArgumentParser()
+args = cfg.parse_args(parser)
+scriptdir = args.config['variables']['rhsdir']
+bindir = args.config['variables']['rhbin']
+
+hp = args.hadoop
+
+# decompose rules
+
+hp.mapreduce( mapper = os.path.join(bindir,'justdecomp')
+            , input  = 'rules'
+            , output = 'rdecomp'
+            )
+
+# count root of minimal and all rules
+hp.mapreduce( mapper = os.path.join(bindir,'rootcount')
+            , reducer = os.path.join(scriptdir,'count')+" -c 2"
+            , input  = 'rules'
+            , output = 'rcounts.all'
+            , compress = False 
+            )
+
+# isolate all count
+hp.mapreduce( mapper = os.path.join(scriptdir,'select_fields_map')+" -f 0 1"
+            , input  = 'rcounts.all'
+            , output = 'rcounts'
+            , compress = False 
+            )
+
+# isolate min count
+hp.mapreduce( mapper = os.path.join(scriptdir,'select_fields_map')+" -f 0 2"
+            , input  = 'rcounts.all'
+            , output = 'rcounts.min'
+            , compress = False 
+            )
+
+hp.getmerge('rcounts', os.path.join(args.tmpdir,'rcounts'))
+hp.getmerge('rcounts.min', os.path.join(args.tmpdir,'rcounts.min'))
+
+hp.put(os.path.join(args.tmpdir, 'part.count'), 'part.count')
+
+# minrule compruleid + (min)rule count = minrule compruleid count
+mp={ 'join':os.path.join(scriptdir,'join')
+   , 'rdecomp':'rdecomp'
+   , 'count':'part.count'
+   , 'decompjoin':'decompjoin'
+   , 'config':args.config_files }
+joincall=cfg.PTemplate('$join $rdecomp $count -c $config -e -E -k 1 -o $decompjoin').substitute(mp)
+# is a hp.start needed?
+hp.syscall(joincall)
+
+# make count look like a feature
+hp.mapreduce( mapper = os.path.join(bindir,'reshape_join_mapper.py')
+            , input  = 'decompjoin'
+            , output = 'decompjoin.reshape' 
+            )
+
+# sum of rprob for min rule per ruleid
+hp.mapreduce( mapper = 'cat'
+              , reducer = os.path.join(bindir,'rootprob_reducer') + ' ' + os.path.join(args.tmpdir,'rcounts.min')
+              , input  = 'decompjoin.reshape'
+              , output = 'attr.rprobdecomp'
+            )
+
+# regular rprob from full rules file
+
+hp.mapreduce( mapper = os.path.join(bindir,'rootprob') + ' ' + os.path.join(args.tmpdir,'rcounts')
+            , input  = 'rules'
+            , output = 'attr.rprob' 
+            )
+
+# join the rprobs
+
+mp={ 'join':os.path.join(scriptdir,'join')
+   , 'rprob':'attr.rprob'
+   , 'decomp':'attr.rprobdecomp'
+   , 'feature':'part.rprob'
+   , 'config':args.config_files }
+joincall=cfg.PTemplate('$join $rprob $decomp -c $config -e -E -k 1 -o $feature').substitute(mp)
+hp.syscall(joincall)
+
+hp.remove('attr.rprob')
+hp.remove('attr.rprobdecomp')

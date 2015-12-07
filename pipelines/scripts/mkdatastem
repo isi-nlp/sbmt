@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+WD=$(dirname $0)
+BD=$(dirname $(dirname $0))/bin
+set -e
+set -o pipefail
+dtemp=$(mktemp -d /tmp/XXXXXXXXXXXXXXXX)
+
+cat > $dtemp/data
+DATA=$dtemp/data
+
+paste <(cut -f1 $DATA) <(cut -f2 $DATA) <(cut -f2 $DATA | $WD/porter.pl) <(cut -f3 $DATA) <(cut -f4 $DATA)
+
+

@@ -1,0 +1,98 @@
+#!/usr/bin/env python
+
+import cfg
+import hadoop
+import argparse
+import itertools
+import os
+import subprocess
+import sys
+import string
+
+def lattice_map(inp):
+    mp = {}
+    for line in open(inp):
+        v = line.rstrip('\n').split('\t')
+        mp[int(v[0])] = v[2]
+    return mp
+
+def prefix_map(inp):
+    #print >> sys.stderr, 'reading', inp
+    mp = {}
+    for line in open(inp):
+        if line[0] != '#':
+            #print >> sys.stderr, 'process:',line
+            v = line.rstrip('\n').split('\t')
+            mp[int(v[0])] = v[2]
+    return mp
+
+parser = argparse.ArgumentParser()
+d = cfg.parse_args(parser,config='$outdir/corpus-prep.config')
+hp = d.hadoop
+steps = cfg.steps(d)
+
+pointers = []
+usedcmp = False
+for step in steps:
+    
+    if step.name == 'headmarker':
+       usedcmp = True
+
+bin = d.config['rule-extraction']['binarizer']
+gbin = d.config['rule-extraction']['global-binarizer']
+dcmp = os.path.join(d.config['variables']['rhbin'],'decompose_dlm_events') + ' --dlm-order 3 -t trigram'
+ndwf = os.path.join(d.config['variables']['rhbin'],'new_decoder_weight_format')
+ar = d.config['rule-extraction']['archiver']
+unk = d.config['rule-extraction']['unknown']
+
+unkwords = os.path.join(d.config['variables']['rhbin'],'unknown_words') + ' -g '
+unkrules = os.path.join(d.config['variables']['rhbin'],'unknown_word_rules') + ' --id-origin 600000000000 --xrs-rule-format --unk-tag-file %s/grammar.unk-tags --native-unk \'""UNK_F_HERE""\' -f- -r ' % \
+           d.config['rules']
+lattice_words = os.path.join(d.config['variables']['rhbin'],'lattice_words')
+if len(pointers):
+    bin  += ' -p ' + ','.join(pointers)
+    gbin += ' -p ' + ','.join(pointers)
+if usedcmp:
+    bin = dcmp + ' | ' + bin
+    gbin = dcmp + ' | ' + gbin
+def input():
+    for line in sys.stdin:
+        v = line.rstrip('\n').split('\t')
+        yield int(v[0]),'\t'.join(v[1:])
+
+def mapper():
+    pmap = prefix_map(os.path.join(d.outdir,'corpus.map'))
+    lmap = lattice_map(os.path.join(d.tmpdir,'input'))
+    tmpdir = d.tmpdir
+    for id,rules in itertools.groupby(input(),lambda x : x[0]):
+        if id > 0:
+            out = os.path.join(d.outdir,pmap[id])
+            lat = open('%s/lattice' % out, 'w')
+            print >> lat, lmap[id]
+            lat.close()
+            cmd_t = 'set -e; set -o pipefail; export LC_ALL=C; export LANG=C; ' + \
+                    'tfile=$(mktemp -d XXXXXX); ' + \
+                    '$ndwf > $tfile/rules; ' + \
+                    'sort -u $tmpdir/unknown_vocab > $tfile/gunk; ' + \
+                    '$lattice_words < $out/lattice | tr \' \' \'\\n\' | sort -u | comm -12 $tfile/gunk - | $unkrules $tfile/rules > $tfile/rules.unk; ' + \
+                    'cat $tfile/rules $tfile/rules.unk > $out/extra.rules; rm $tfile/*; rmdir $tfile'
+        else:
+            out = d.outdir
+            cmd_t = '/bin/cat | $ndwf > $out/extra.rules'
+        print >> sys.stderr, 'archiving sentence', id
+        cmd = string.Template(cmd_t).safe_substitute(tmpdir=tmpdir,unkwords=unkwords,unkrules=unkrules,ar=ar,bin=bin,gbin=gbin,out=out,ndwf=ndwf,lattice_words=lattice_words)
+        print >> sys.stderr, cmd
+        proc = subprocess.Popen( cmd
+                               , shell=True
+                               , executable='/bin/bash'
+                               , stdin=subprocess.PIPE )
+        for rule in rules:
+            print >> proc.stdin, rule[1]
+        proc.stdin.close()
+        proc.wait()
+        ret = proc.returncode
+        if ret != 0:
+            return ret
+    return 0
+sys.exit(mapper())
+

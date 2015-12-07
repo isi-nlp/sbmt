@@ -1,0 +1,1 @@
+FRAG(NP(NPB(NNP("clerk"))) PRN(-LRB-("(") PP(IN("in") NP-C(NPB(NNP("cantonese")))) -RRB-(")")) x0:: NP(NPB(NNP("clause"))) .("14.")) -> "“Ú¥À" x0 ### id=488208 root_prob=e^-13.6348 root_count=e^0 lhs_prob=e^0 lhs_count=e^0 count=1 lhscount=1 rootcount=225793 fraccount=1 lhsfraccount=1 rootfraccount=175836

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Classify by type all rules in a compressed rule file.
+# (make sure that the rule file contains the field 'type')
+
+RULE_FILE=$1
+
+die "$RULE_FILE.rules.gz does not exist\n"
+  unless -f "$RULE_FILE.rules.gz";
+zcat $RULE_FILE.rules.gz | grep -e "type=AT" -e "^\\$\\$\\$" | gzip > $1_AT.rules.gz
+zcat $RULE_FILE.rules.gz | grep -e "type=slex" -e "^\\$\\$\\$" | gzip > $1_slex.rules.gz
+zcat $RULE_FILE.rules.gz | grep -e "type=tlex" -e "^\\$\\$\\$" | gzip > $1_tlex.rules.gz
+zcat $RULE_FILE.rules.gz | grep -e "type=unlex" -e "^\\$\\$\\$" | gzip > $1_unlex.rules.gz
+zcat $RULE_FILE.rules.gz | grep -e "type=complex" -e "^\\$\\$\\$" | gzip > $1_complex.rules.gz

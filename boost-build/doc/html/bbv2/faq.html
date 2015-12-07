@@ -1,0 +1,90 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Chapter 7. Frequently Asked Questions</title>
+<link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.69.1">
+<link rel="start" href="../index.html" title="Part I. Boost.Build v2 User Manual">
+<link rel="up" href="../index.html" title="Part I. Boost.Build v2 User Manual">
+<link rel="prev" href="reference/generators.html" title="Generators">
+<link rel="next" href="faq/s02.html" title="
+        I'm getting &quot;Duplicate name of actual target&quot; error. What
+        does it mean?
+      ">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../boost.png"></td></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="reference/generators.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="faq/s02.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+<div class="chapter" lang="en">
+<div class="titlepage"><div><div><h2 class="title">
+<a name="bbv2.faq"></a>Chapter 7. Frequently Asked Questions</h2></div></div></div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="section"><a href="faq.html#id2579924">
+        How do I get the current value of feature in Jamfile?
+      </a></span></dt>
+<dt><span class="section"><a href="faq/s02.html">
+        I'm getting "Duplicate name of actual target" error. What
+        does it mean?
+      </a></span></dt>
+<dt><span class="section"><a href="faq/envar.html">
+      Accessing environment variables
+      </a></span></dt>
+<dt><span class="section"><a href="faq/s04.html">
+        How to control properties order?
+      </a></span></dt>
+<dt><span class="section"><a href="faq/s05.html">
+      How to control the library order on Unix?
+    </a></span></dt>
+<dt><span class="section"><a href="faq/external.html">Can I get output of external program as a variable in a Jamfile?
+    </a></span></dt>
+<dt><span class="section"><a href="faq/s07.html">How to get the project-root location?
+    </a></span></dt>
+<dt><span class="section"><a href="faq/s08.html">How to change compilation flags for one file?
+    </a></span></dt>
+<dt><span class="section"><a href="faq/dll-path.html">Why are the <code class="computeroutput">dll-path</code> and
+    <code class="computeroutput">hardcode-dll-paths</code> properties useful?
+    </a></span></dt>
+<dt><span class="section"><a href="recipies/site-config.html">Targets in site-config.jam</a></span></dt>
+<dt><span class="section"><a href="faq/header-only-libraries.html">Header-only libraries</a></span></dt>
+</dl>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="id2579924"></a>
+        How do I get the current value of feature in Jamfile?
+      </h2></div></div></div>
+<p>
+        This is not possible, since Jamfile does not have "current" value of any 
+        feature, be it toolset, build variant or anything else. For a single invocation of
+        <code class="filename">bjam</code>, any given main target can be built with several property sets.
+        For example, user can request two build variants on the command line. Or one library
+        is built as shared when used from one application, and as static when used from another.
+        Obviously, Jamfile is read only once, so generally, there's no single value of a feature
+        you can access in Jamfile.               
+      </p>
+<p>A feature has a specific value only when building a target, and there are two ways how you
+      can use that value:</p>
+<div class="itemizedlist"><ul type="disc">
+<li>Use conditional requirements or indirect conditional requirements. See 
+        <a href="advanced/targets.html#bbv2.advanced.targets.requirements.conditional">the section called &#8220;Requirements&#8221;</a>.</li>
+<li>Define a custom generator and a custom main target type. The custom generator can do arbitrary processing
+        or properties. See the <a href="extender.html" title="Chapter 5. Extender Manual">Chapter 5, <i>Extender Manual</i></a>.
+        </li>
+</ul></div>
+</div>
+</div>
+<table width="100%"><tr>
+<td align="left"></td>
+<td align="right"><small></small></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="reference/generators.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="faq/s02.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

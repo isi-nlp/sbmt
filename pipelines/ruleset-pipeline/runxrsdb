@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+import cfg
+
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument( '-k', '--keeprules' \
+                   , help='keep pre-filtered rules in hdfs format' \
+                   , action='store_true'
+                   )
+parser.add_argument( '-n', '--nocleanup' \
+                   , help='do not toss the temporary $tmpdir'
+                   , action='store_false'
+                   , dest='cleanup'
+                   )
+
+d = cfg.parse_args(parser,config='$outdir/rules.config')
+tmpdir = d.tmpdir
+outdir = d.outdir
+hp = d.hadoop
+hp.start()
+scriptdir = d.config['variables']['rhsdir']
+rhdir = os.path.abspath(d.config['variables']['rhbin'])
+
+if not hp.file_exists('rules.filtered'):
+    hp.put(os.path.join(tmpdir,'rules.filtered'),'rules')
+else:
+    hp.move('rules.filtered','rules')
+
+hp.mapreduce( input='rules'
+            , output='rules.nlr.gz'
+            , mapper=os.path.join(scriptdir,'select-nonlex')
+            , compress=True )
+            
+hp.getmerge('rules.nlr.gz', os.path.join(outdir,'rules.nlr.gz'))
+
+hp.mapreduce( input='rules'
+            , output='freq.txt'
+            , mapper=os.path.join(scriptdir,'foreign-words')
+            , reducer=os.path.join(scriptdir,'count') + ' -u' 
+            , compress=False )
+
+hp.getmerge('freq.txt', os.path.join(tmpdir,'freq.txt'))
+
+freq = os.path.join(tmpdir,'freq')
+mp = { 'makefreq':os.path.join(rhdir,'xrsdb_makefreq')
+     , 'in':os.path.join(tmpdir,'freq.txt')
+     , 'out':freq }
+hp.syscall('%(makefreq)s < %(in)s -f %(out)s' % mp)
+
+xrsdb_root = os.path.join(outdir,'xrsdb')
+mp = { 'create':os.path.join(rhdir,'xrsdb_create')
+     , 'freq':freq 
+     , 'root':xrsdb_root }
+hp.syscall('%(create)s -d %(root)s -f %(freq)s' % mp)
+
+mp = { 'write_config':os.path.join(rhdir,'xrsdb_write_config')
+     , 'xconfig':os.path.join(outdir,'xrsdb.config') }
+hp.syscall('%(write_config)s > %(xconfig)s' % mp)
+
+mp = {'xbin':rhdir, 'freq':freq, 'root':xrsdb_root}
+hp.mapreduce( mapper='%(xbin)s/xrsdb_assignkeys -f %(freq)s' % mp
+            , reducer='%(xbin)s/xrsdb_populate %(root)s' % mp
+            , input='rules'
+            , output='index' 
+            , compress=False
+            , options='-jobconf mapred.reduce.tasks.speculative.execution=false ' + \
+                      '-partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner ' + \
+                      '-jobconf stream.num.map.output.key.fields=2 ' + \
+                      '-jobconf num.key.fields.for.partition=1' ) 
+
+hp.getmerge('index',os.path.join(tmpdir,'index'))
+mp = { 'index':os.path.join(rhdir,'xrsdb_index')
+     , 'root':xrsdb_root
+     , 'idfile':os.path.join(tmpdir,'index') }
+hp.syscall('%(index)s %(root)s < %(idfile)s' % mp)
+
+hp.remove('rules')
+hp.remove('index')
+hp.remove('freq.txt')
+
+if d.keeprules:
+    hp.syscall('mv ' + os.path.join(tmpdir,'rules.final') + ' ' + outdir)
+if d.cleanup:
+    hp.syscall('rm -rf ' + tmpdir)
+

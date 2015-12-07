@@ -1,0 +1,125 @@
+HUH?
+
+The score of a derived edge (either from unary or binary derivation)
+can *increase* over that of one of its antecedents?
+
+***
+
+EXPERIMENT
+
+* Multi-agenda parsing. One agenda per (length, is_virtual). Each agenda
+is processed best-first (priority = score). Work is allocated uniformly
+between each agenda, which we cycle through.
+
+	* NB we could make the probability of working on an edge =
+	probability of this edge being in the solution. We could estimate
+	these probabilities using just the edge length (and is_virtual).
+	Or, we could even divvy it up by the precise span boundaries if
+	our *estimates* were good enough
+
+* Working with 1-best now. We can get k-best, but:
+	* More difficult to analyze and compare quantitatively.
+	* We can only do early stopping against the score of the *worst*
+	k-best hypothesis.
+	* Moreover, this business about edge_equivalences is tricky
+	to solve.
+
+* Parse until 1000 usec per sentence, but also look at the output 10
+and 100 usecs.
+
+* Parsed 15 Arabic sentences (lengths 11-16), using a huge rule file
+and trigram LM (from Voeckler's workflow).
+
+	* I'd like to test on long sentences. It will be most interesting
+	to see how this decoder scales, since the point of our method
+	is we try to get complete hypotheses greedily. However, there
+	are a few kinks to work out.
+
+* Still using quite a bit of memory. Simplest way to avoid that is to
+turn the agendas into n-best lists (set an upper bound on the amount of
+Derivation%s is can contain), which I shall do.
+Other memory tricks are available (e.g. converting certain duplicates to
+smart_ptrs).
+
+* Experiment ran long because it started swapping!
+I now set an upper-bound on the wall time used per sentence.
+Running better now, I should be able to test on a larger scale than just
+15 sentences.
+
+* Uh-oh. On sentences 9 and 12, it takes a while to get even a single
+complete hypothesis. Why? (Exploratory data analysis.)
+
+* Visualization tool to LaTeX the trees like in the spiral notebook?
+
+***
+
+STOPPING CRITERIA
+
+We could return the first hypothesis found, except it's not very good.
+With exhaustive parsing, we hope for early stopping: We are done when
+no Derivation on the agenda has a score exceeding that of the current
+best hypothesis.
+
+The longer we wait for better solutions, the more we are overparsing.
+We can control overparsing using some hyper-parameter.
+However, we'd like this hyper-parameter to be relatively easy to pick,
+and not be very sensitive or require some black magic.
+
+If we make the assumption that relationship between the total cost and
+the BLEU score is log-linear, we can imagine plotting the total cost
+vs. some uniform time step. We can then stop when the *rate of decrease*
+of the exponent falls below some threshold.
+
+Some uniform time step =
+	* user time. Except this is architecture dependent.
+	* # edges created / # edges popped. What is the most expensive
+	operation? What is the most uniform quantity of measurement
+	(wrt user time)?
+
+***
+
+EXHAUSTIVE PARSING
+
+We can parse to exhaustion using this method, and cross our fingers that
+we can stop early. Maybe that could be the inner loop, and the outer
+loop is to start with very high beam pruning (e.g. only 1 item per cell)
+and then progressively relax the beams.
+As we progress, we'll tighten our hypothesis (i.e. our 1-best hypothesis's
+score will increase) and get better early stopping.
+
+Advantage:
+* We don't have to pick the beams a priori and just hope that they're
+appropriate and don't underconstrain or overconstrain.
+
+Problems:
+1. It's hard to do this correctly while saving previous work,
+because we'd have to store all dead items I think. Or, at least
+all dead items that would be saved by some upper-bound hard-limit beam
+threshold.
+2. We'd still need some hyper-parameter controlling stopping.
+
+***
+
+A BETTER STOPPING CRITERION
+
+Maybe we don't want to make strong assumptions about our cost function
+(e.g. it having a log-linear relationship with the true objective
+function).
+
+Let's make just the simpler assumption that a decrease in total cost will
+not correspond to a decrease in translation quality. i.e. just assume
+rank correlation between cost and translation quality.
+
+A lot of the time, we are finding 'better hypotheses' (lower cost),
+but the estring remains the same! But what we really care about in
+translation is the estring.
+
+We can then stop if the 1-best estring has not changed in the past T
+time units. There are several reasonable ways to pick T.
+I propose to plot a curve relating T and the percent of sentences for
+which the 1-best estring using T is equivalent to the exhaustive parsing
+estring.
+
+***
+
+$Id: update-20061003.txt 1308 2006-10-06 04:37:37Z jturian $

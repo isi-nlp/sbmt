@@ -1,0 +1,181 @@
+##########################################################################
+### Main programs and scripts (present in bin/ and scripts/)           ###
+##########################################################################
+
+extract:  "all-in-one" GHKM extraction program. Can be used to 
+          do the following:
+          - extract rules, with or without attributes 
+            after the '###'
+          - extract derivations and locally indexed rules
+            (see Bryant's derivation format); rules 
+            are printed after each derivation. Advantage: 
+            you can run this even if you don't have a DB
+            in the first place.
+          - extract derivations with globally indexed rules
+            (rules are not printed after derivations).
+            Requires read access to DB.
+          - produce a .count file containing counts and 
+            fractional counts (1/k). The format of a given 
+            j-th line is: "COUNT,FRACCOUNT" (means
+            that the j-th rule in the DB has a count of COUNT, 
+            etc). 
+          - the two last bullets combined in one pass.
+          - extract AT rules.
+          Run ./extract -h for additional information about
+          parameters.
+
+          - some functionalities worth mentioning.
+
+		  (i)  -m <n> : the maximum number of rules that can be extracted from
+			   a tree node cannot be larger than n. This options is intended
+               to deal with the situation where there are many unaligned words.
+
+               if this option is not set, there will be no limit set in the 
+               program.
+
+			   this option helps significantly reduce the number of rules
+               extracted when operating on projected trees because projected 
+               trees have higher rank and higher ranks lead to more rules.
+
+		 (ii) If the input parse trees are projected from other language, the
+              parse tree can carry the rule sizes projected from the other 
+              langauge in the tree node lables (i.e., NP^5~1~1). When ever the 
+              extract sees trees of this format, it will treat the expansion 
+              of node NP^5 as size 5. This is also helpful to reduce the 
+              number of rules extracted from the projected trees.
+
+
+the_button.pl: use "the button" to generate from scratch all 
+          derivations, count files, rules files, normalization 
+          groups (all what I did during SyntaxFest03/04). All at 
+          once. Edit the button to customize: number of cluster 
+          nodes you want to use, threshold on the size of LHS 
+          (for composed rules), destination directory. There
+          is a text version (PIPELINE.txt) of the same program.
+
+### Specific to running jobs on the cluster (or locally):
+
+qsubrun.sh: Modified version of Ignacio's qsubrunsh. Two optional 
+          arguments: 1st: number of seconds the job must sleep before
+          running anything. 2nd: IDs of jobs that must finish their
+          execution before the current job can run.
+run.sh:   a dummy replacement of qsubrun.sh that actually runs all
+          jobs locally (instead of using the command qsub). Helpful
+          if you just want to test on a tiny portion of the data
+          if the programs work properly.
+
+safe_copy: Copies a file from /tmp to the destination and checks for 
+          integrity. For failsafe.
+
+### Specific to managing databases:
+
+create_db: reads rules from STDIN store them into the DB specified 
+           with argument '-d'. Note: to make DB insertion more
+           efficient, it is **strongly** recommended to 'sort'
+           and 'uniq' rules before feeding them into create_db. If
+           you have the sorted, uniq'ed output different jobs, 
+           just merge sort them, e.g.:
+           'sort -m *.rules | uniq | create_db -d foo.db'
+           (again, don't forget the 'uniq'!) 
+
+index_db:  index rules in a DB. By default, rules added by 
+           'create_db' get the place-holder ID '-1'. 'index_db'
+           traverses the DB specified by '-d' (lex order)
+           and assignes a unique identifier to each '-1' 
+           rule it encounters. 
+           IMPORTANT: There is a command-line paramenter '-i' to
+           specify the first identifier to use. If you don't use
+           '-i', rule IDs will start with 1, which is a big 
+           problem if you already have a rule 1 in your DB...
+
+### Specific to outputting derivations:
+
+print_norm_groups: print LHS (or root) normalization groups.
+          Indices of all rules that have the same LHS (or root) are
+          printed in the same group.
+
+filter_deriv_EM: Filter derivations in Bryant's format into one the
+          EM training program can read.
+
+### Specific to collecting rule counts, fraccounts, and adding 
+### these counts to rule files.
+
+create_rule_file: Merge counts, add normalization counts (lhscount, 
+          rootcount, etc), and produce a rule file. It is used
+          by the_button.pl, and if you know how to use the latter, 
+          you don't need to worry about the former...
+          'create_rule_file' used the following programs. To understand
+          their usage, please refer to the file section of 'PIPELINE.txt'.
+
+add_weights        : see 'PIPELINE.txt', section 6).
+add_norm_counts    : see 'PIPELINE.txt', section 6).
+create_em_weights  : see 'PIPELINE.txt', section 6).
+merge_weights      : see 'PIPELINE.txt', section 6).
+print_rules        : see 'PIPELINE.txt', section 6).
+
+##########################################################################
+### Misc programs
+### (you do _not_ need them to extract rules, print derivations, etc,  ###
+##########################################################################
+
+add_probs: add RF probabilities to a "weight" file (see 'PIPELINE.txt') that
+already contains counts and normalization counts
+(not compiled by default).
+
+dump_db:  print rules or ruleIDs (or both) contained in the DB.
+If both keys (rules) and data (ruleIDs) are printed, 
+ruleIDs come first and are padded with 0's at the beginning
+so that you can sort them (not compiled by default).
+
+##########################################################################
+### Misc scripts (see contrib directory)                               ###
+### (you do _not_ need them to extract rules, print derivations, etc)  ###
+##########################################################################
+
+compute_probs: read rule files containing only minimal information
+(in particular: counts), and output the same information + 
+additional fields for probabilities (p_lhs = count/lhscount,
+pf_lhs = fraccount/lhsfraccount, p_root = count/rootcount,
+pf_root = fraccount/rootfraccount)
+
+create_prob_file{s,}: create probability files (1 probability per line).
+File(s) can be loaded by 'extract' to output Viterbi derivation.
+
+create_rule_type_files: classify by type all rules in a compressed rule file.
+
+create_rules_count_file: (deprecated) create rule file that contains 
+counts and fractional counts. Uses 'sort' and 'uniq' (slow
+and uses a lot of temporary disk space...). 
+
+find_examples: script that uses 'extract' to find examples of etree/cstring/align
+tuples where given rules occur. See experiments/find_examples to
+find out how to use this script.
+
+get_nb_deriv_nodes: read dforests from STDIN and output the number of nodes
+in each dforest.
+
+get_onebest: return the Viterbi derivations instead of a derivation forest.
+
+lookatpair: extracts human-readable information about a specific line of the 
+etree, cstring, alignment files.
+
+list_rules_in_deriv: list all rule IDs used in derivations read from STDIN.
+
+radu2radunew: transforms parse trees in old radu format into new one.
+
+reverse_align: if you have an c-e alignment file, this script will 
+print it in the right (e-c) order.
+
+rule_file_stats: reads a rule file from STDIN and prints some statistics:
+nb of rules, nb of unique rules, and nb of rules that appear only once.
+
+select_align: reads a word alignment file from STDIN, and restrict it 
+to a specific range (arg1: range affecting target-language words; 
+arg2: range affecting source-language words).
+
+sort_AT_rules_by_ATSline: reads ATS rules from STDIN (i.e. it assumes that 
+the field ATSline exists), and prints counts of each ATS rule 
+(STDERR), and rules sorted by ATSline (STDOUT).
+
+sort_rules_by_counts: rules read from STDIN are printed to STDOUT sorted
+by counts.

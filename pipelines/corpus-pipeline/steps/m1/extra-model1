@@ -1,0 +1,126 @@
+#!/usr/bin/env python
+import cfg, os, sys, argparse, subprocess, threading, itertools, collections, fcntl
+
+class FiFo:
+    def __init__(self):
+        self.queue_ = collections.deque()
+        self.lock_ = threading.Condition()
+        self.close_request_ = False
+    def __iter__(self):
+        return self
+    def next(self):
+        return self.__next__()
+    def __next__(self):
+        #print >> sys.stderr, 'someone wants something from FiFo'
+        with self.lock_:
+            while len(self.queue_) == 0 and not self.close_request_:
+                #print >> sys.stderr, 'FiFo waits'
+                self.lock_.wait()
+                #print >> sys.stderr, 'FiFo finishes waiting'
+            if len(self.queue_) == 0:
+                #print >> sys.stderr, 'FiFo raises Stop'
+                raise StopIteration()
+            else: 
+                #print >> sys.stderr, 'FiFo sends'
+                return self.queue_.popleft()
+    def send(self,value):
+        with self.lock_:
+            assert not self.close_request_
+            self.queue_.append(value)
+            if len(self.queue_) == 1:
+                self.lock_.notify_all()
+    def close(self):
+        with self.lock_:
+            if not self.close_request_:
+                self.close_request_ = True
+                self.lock_.notify_all()
+
+parser = argparse.ArgumentParser()
+parser.add_argument('kind')
+parser.add_argument('file')
+parser.add_argument('-m','--mapper',action='store_true')
+parser.add_argument('-M','--Mapper',action='store_true')
+parser.add_argument('-s','--suffix',nargs='?',default='')
+d = cfg.parse_args(parser)
+kind = d.kind
+file = d.file
+suffix = ''
+suffixcmd = ''
+if d.suffix:
+    suffix = d.suffix
+if d.Mapper:
+    pc = subprocess.Popen( 'cut -f2 | ' + os.path.join(d.config['variables']['rhbin'],'rule_target_words')
+                         , shell=True
+                         , stdin=subprocess.PIPE
+                         , stdout=sys.stdout )
+    for line in sys.stdin:
+        pc.stdin.write(line)
+    pc.stdin.close()
+    pc.wait()
+    sys.exit(pc.returncode)
+if d.mapper:
+    pc = subprocess.Popen( 'cut -f3 | ' + os.path.join(d.config['variables']['rhbin'],'lattice_words') + ' | tr \' \' \'\\n\''
+                         , shell=True
+                         , stdin=subprocess.PIPE
+                         , stdout=sys.stdout )
+    for line in sys.stdin:
+        pc.stdin.write(line)
+    pc.stdin.close()
+    pc.wait()
+    sys.exit(pc.returncode)
+
+fltrcmd = os.path.join(d.rootdir,'corpus-pipeline','steps','m1','filter') + ' %s %s -t' + d.tmpdir
+if kind == 'normal':
+  phrase = 'phrase_pef.pl'
+  m1kind = 'model1nrm'
+  fltrcmd = fltrcmd % (os.path.join(d.tmpdir,'m1.source.words.'+kind+suffix),os.path.join(d.tmpdir,'m1.target.words.'+kind+suffix)) 
+elif kind == 'invers':
+  phrase = 'phrase_pfe.pl'
+  m1kind = 'model1inv'
+  fltrcmd = fltrcmd % (os.path.join(d.tmpdir,'m1.target.words.'+kind+suffix),os.path.join(d.tmpdir,'m1.source.words.'+kind+suffix))
+else:
+  sys.exit(2)
+
+nbcat = os.path.join(d.config['variables']['rhbin'],'nbcat')
+hp = d.hadoop
+filtered = os.path.join(d.tmpdir,'filtered.m1.'+kind+suffix+'.bz2')
+
+if not os.path.exists(filtered):
+    hp.mapreduce( input=['global-rules.extra.pre','rules.extra.pre']
+                , mapper=os.path.join(d.rootdir,'corpus-pipeline','steps','m1','extra-model1') + ' -M %s %s -s %s' % (kind,file,suffix)
+                , output='m1.target.words.'+kind+suffix
+                , compress=False )
+    hp.mapreduce( input='input'
+                , mapper=os.path.join(d.rootdir,'corpus-pipeline','steps','m1','extra-model1') + ' -m %s %s -s %s' % (kind,file,suffix)
+                , output='m1.source.words.'+kind+suffix
+                , compress=False )
+    hp.getmerge('m1.source.words.'+kind+suffix,d.tmpdir)
+    hp.getmerge('m1.target.words.'+kind+suffix,d.tmpdir)
+    cfg.execute(d,'bzcat $file | $fltrcmd | bzip2 > $filtered.tmp',file=file,fltrcmd=fltrcmd,filtered=filtered)
+    cfg.execute(d,'mv $filtered.tmp $filtered',filtered=filtered)
+
+# i love to abuse subprocess
+cmd = cfg.PTemplate('$nbcat | $sdir/$phrase | $sdir/model1.pl $m1kind $file | $nbcat').substitute(file=filtered,sdir=d.scriptdir,m1kind=m1kind+suffix,phrase=phrase,nbcat=nbcat)
+print >> sys.stderr, cmd
+proc = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stdin=subprocess.PIPE)
+oq = FiFo()
+
+def input(proc,oq):
+  for line in sys.stdin:
+    line = line.rstrip('\n')
+    oq.send(line)
+    #print >> sys.stderr, 'putting', line
+    print >> proc.stdin, line
+  proc.stdin.close()
+  oq.close()
+
+def output(oq):
+  while True:
+    yield oq.get()
+
+pt = threading.Thread(target=input,args=(proc,oq))
+pt.daemon = True
+pt.run()
+for l,r in itertools.izip(oq,proc.stdout):
+  print '%s %s' % (l,r.rstrip('\n').split('\t')[1])
+sys.exit(0)

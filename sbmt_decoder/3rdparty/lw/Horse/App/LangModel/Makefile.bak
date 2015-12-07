@@ -1,0 +1,21 @@
+# This file was automatically generated. DO NOT EDIT!
+
+all: /home/wwang/lw-dev/Troy/Horse/build-linux/bin/LangModel
+	@ echo ++ Horse__Horse_App_LangModel is done.
+
+.obj/linux/Horse_App_LangModel/LangModelMain.o: LangModelMain.cpp
+	@ echo '+ [Horse_App_LangModel] compiling LangModelMain.cpp...'
+	@ mkdir -p .obj/linux/Horse_App_LangModel 
+	@ c++ -MM -MT .obj/linux/Horse_App_LangModel/LangModelMain.o -O3 -g -Wno-deprecated -I/home/wwang/lw-dev/Troy/Shared -I/home/wwang/lw-dev/Troy/Shared/Core -I/home/wwang/lw-dev/Troy/Horse/Lib -I/home/wwang/lw-dev/Troy/Horse/Lib -I/home/wwang/lw-dev/Troy/Buffalo/Lib -I/home/wwang/lw-dev/Troy/Buffalo/Lib -I/home/wwang/lw-dev/Troy/3rdParty/linux/qt-4.1.0_32/include -I/home/wwang/lw-dev/Troy/3rdParty/linux/qt-4.1.0_32/include/Qt -I/home/wwang/lw-dev/Troy/3rdParty/common/qt-4.1.0/include -I/home/wwang/lw-dev/Troy/3rdParty/common/qt-4.1.0/include/Qt -I/home/wwang/lw-dev/Troy/3rdParty/linux/db-4.3.29 -I/home/wwang/lw-dev/Troy/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSVOCAB_USE_STD_MAP -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -DQT_THREAD_SUPPORT LangModelMain.cpp > .obj/linux/Horse_App_LangModel/LangModelMain.d
+	@ c++ -O3 -g -Wno-deprecated -I/home/wwang/lw-dev/Troy/Shared -I/home/wwang/lw-dev/Troy/Shared/Core -I/home/wwang/lw-dev/Troy/Horse/Lib -I/home/wwang/lw-dev/Troy/Horse/Lib -I/home/wwang/lw-dev/Troy/Buffalo/Lib -I/home/wwang/lw-dev/Troy/Buffalo/Lib -I/home/wwang/lw-dev/Troy/3rdParty/linux/qt-4.1.0_32/include -I/home/wwang/lw-dev/Troy/3rdParty/linux/qt-4.1.0_32/include/Qt -I/home/wwang/lw-dev/Troy/3rdParty/common/qt-4.1.0/include -I/home/wwang/lw-dev/Troy/3rdParty/common/qt-4.1.0/include/Qt -I/home/wwang/lw-dev/Troy/3rdParty/linux/db-4.3.29 -I/home/wwang/lw-dev/Troy/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSVOCAB_USE_STD_MAP -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -DQT_THREAD_SUPPORT -o .obj/linux/Horse_App_LangModel/LangModelMain.o -c LangModelMain.cpp
+-include .obj/linux/Horse_App_LangModel/LangModelMain.d
+
+#/home/wwang/lw-dev/Troy/Horse/build-linux/bin/LangModel:  .obj/linux/Horse_App_LangModel/LangModelMain.o  /home/wwang/lw-dev/Troy/Horse/build-linux/bin/libShared_Core_LangModel.a /home/wwang/lw-dev/Troy/Horse/build-linux/bin/libShared_Core_Filters.a /home/wwang/lw-dev/Troy/Horse/build-linux/bin/libShared_Common.a
+
+/home/wwang/lw-dev/Troy/Horse/build-linux/bin/LangModel:  .obj/linux/Horse_App_LangModel/LangModelMain.o  /home/wwang/lw-dev/Troy/Horse/build-linux/bin/libShared_Core_LangModel.a /home/wwang/lw-dev/Troy/Horse/build-linux/bin/libShared_Common.a
+	@ echo '+ [Horse_App_LangModel] Linking application /home/wwang/lw-dev/Troy/Horse/build-linux/bin/LangModel...'
+	@ mkdir -p /home/wwang/lw-dev/Troy/Horse/build-linux/bin
+	@ c++ -o $@ $^  -L/home/wwang/lw-dev/Troy/3rdParty/linux/qt-4.1.0_32/lib -L/home/wwang/lw-dev/Troy/3rdParty/linux/qt-4.1.0_32/lib/plugins/codecs -L/home/wwang/lw-dev/Troy/3rdParty/linux/db-4.3.29 -lpthread -ldl -lz -lm 
+
+clean:
+	@ rm -f  .obj/linux/Horse_App_LangModel/LangModelMain.o .obj/linux/Horse_App_LangModel/LangModelMain.d /home/wwang/lw-dev/Troy/Horse/build-linux/bin/LangModel

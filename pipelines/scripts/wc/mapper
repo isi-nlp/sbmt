@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+
+wcmrline=`/usr/bin/wc`
+echo "1  $wcmrline" 2>&1 | sed -e 's/\s\s*/\t/g'
+
+
+

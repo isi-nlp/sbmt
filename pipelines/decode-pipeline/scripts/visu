@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+
+import cfg, argparse, os, sys
+parser = argparse.ArgumentParser()
+d = cfg.parse_args(parser,config='$outdir/decode.config')
+
+cfg.execute( d
+           , '$bin/grammar_view -g $cprep/global.far.gz -f fat-archive -a $tmpdir/unpack.xrs.gz'
+           , bin=d.config['variables']['rhbin']
+           , cprep=d.config['cprep']
+           , tmpdir=d.tmpdir )

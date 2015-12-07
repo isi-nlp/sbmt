@@ -1,0 +1,9 @@
+#!/usr/bin/env perl
+
+use FindBin qw($Bin);
+use lib $Bin;
+use NLPRules qw(:all);
+
+while (<>) {
+    print if (source_words(extract_rhs_safe($_)) == 0);
+}

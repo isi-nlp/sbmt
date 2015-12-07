@@ -1,0 +1,49 @@
+24 Aug 2010
+
+run-kneserney.sh <training-file> <lm-file>
+run-make_biglm.sh <lm-file> <noisy-lm-file>
+
+<training-file> is the training data, one sentence per line, tokenized
+<lm-file> is the language model in ARPA (SRI-LM) format
+<noisy-lm-file> is the language model in noisy (.nz) format
+
+run-kneserney.sh creates a Hadoop cluster to do its work, so you should give it plenty of nodes.
+run-make_biglm.sh is only able to use a single node.
+
+-----
+
+In more detail
+
+1. Prepare the data
+
+The training data should be one sentence per line, tokenized, and, if
+desired, all digits should be mapped to @.
+
+2. Build the language model in ARPA (SRI-LM) format
+
+kneserney/kneserney.sh <training-file> <lm-file> <order>
+
+This script assumes a running Hadoop cluster whose location is
+specified by $HADOOP_CONF_DIR.
+
+3. Quantize probabilities
+
+tools/quantize.py <lm-file> -n <order> -P 4 -B 4 -u 0.01
+
+The quantizer is written to stdout.
+
+4. Create perfect hash functions
+
+pagh/dist/make_biglm <lm-file> --mph-only -o <mph-file>
+
+The <mph-file> can be reused as long as the <lm-file> doesn't
+change. Note that in rare cases this step may fail, maybe permanently
+for some unlucky <lm-file>s. We don't yet have a workaround.
+
+5. Create noisy LM
+
+pagh/dist/make_biglm <lm-file> -m <mph-file> -q <quantizer> -k 16 -o <biglm-file>
+
+Alternatively, steps 4 and 5 can be combined into one:
+
+pagh/dist/make_biglm <lm-file> -q <quantizer> -k 16 -o <biglm-file>

@@ -1,0 +1,115 @@
+#!/usr/bin/env perl
+#
+# extracts ranges of lines from input file.
+#
+#use 5.006;
+use strict;
+use File::Spec;
+use File::Basename qw(basename dirname);
+use Getopt::Long qw(:config bundling no_ignore_case);
+use Carp;
+
+#use lib dirname($0);
+#use NLPTools qw(:all);
+
+# global
+$main::verbose = 0;
+
+sub usage {
+    my $prg = basename($0,'.pl');
+    print << "EOF";
+Usage: $prg [options] -r spec [-r spec [..]] file
+
+Optional arguments:
+ -v|--verbose              Increase verbosity level.
+ -o|--output fn[.gz]       Put output into fn instead of STDOUT.
+ -i|--input fn[.gz]        Read from input file, defaults to STDIN. 
+
+Mandatory arguments:
+ -r|--range a-b[,c-d[,..]] Extracts a range from line a to line b inclusively
+                           NOTE: Currently, no overlaps permitted!
+
+EOF
+    exit 1;
+}
+
+#
+# --- main ------------------------------------------------------
+#
+my $outfile;
+my $infile = '-'; 
+my @ranges = (); 
+GetOptions( 'help|h' => \&usage
+          , 'verbose|v+' => \$main::verbose
+          , 'outfile|output|o=s' => \$outfile
+          , 'infile|input|i=s' => \$infile
+          , 'range|r=s' => sub {
+              foreach my $pair ( split /,/, $_[1] ) {
+                  my ($a,$b) = split /-/, $pair, 2; 
+                  $a = 1 unless defined $a; 
+                  ($b,$a) = ($a,$b) if $a > $b;
+                  push( @ranges, [ $a, $b ] ); 
+              }
+          }
+          )
+    || die( "FATAL: Option processing failed due to an illegal option\n",
+            join(' ',$0,@ARGV), "\n" );
+
+usage() unless @ranges; 
+@ranges = sort { $a->[0] <=> $b->[0] } @ranges; 
+for ( my $i=1; $i < @ranges; ++$i ) {
+    die "ERROR: Sorry, overlapping ranges are not supported (yet).\n"
+        if $ranges[$i][0] < $ranges[$i-1][1]; 
+}
+
+
+# say good-bye however we exit
+$main::start = time();
+$SIG{INT} = $SIG{TERM} = sub { exit(42) };
+
+# open input
+if ( $infile ne '-' ) {
+    die "FATAL: No such file $infile\n" unless -r $infile;
+    if ( substr( $infile, -3 ) eq '.gz' ) {
+        open( IN, "gzip -cd $infile|" ) || die "FATAL: run gzip: $!\n"; 
+    } else {
+        open( IN, "dd if=$infile |" ) || die "FATAL: run dd: $!\n"; 
+    }
+} else {
+    open( IN, "dd |" ) || die "FATAL: run dd: $!\n"; 
+}
+
+# alternative output file, open now
+if ( defined $outfile ) {
+    if ( substr($outfile,-3) eq '.gz' ) {
+        open( OUT, "|gzip -c5 > $outfile" ) || die "FATAL: gzip failed: $!\n";
+    } else {
+        open( OUT, ">$outfile" ) || die "FATAL: open $outfile: $!\n";
+    }
+    select OUT;                 # print now goes to OUT, not STDOUT
+}
+
+my $state = 0; 
+my $cursor = 0; 
+while ( <IN> ) {
+    if ( $state == 0 && $. == $ranges[$cursor][0] ) {
+        ++$state; 
+    }
+
+    print if $state; 
+
+    if ( $state == 1 && $. == $ranges[$cursor][1] ) {
+        --$state; 
+        ++$cursor; 
+        ## DO NOT exit early when reading from pipes!
+        #last if $cursor >= @ranges;
+    }
+}
+
+if ( defined $outfile ) {
+    close OUT || warn "Warning: close $outfile: $! ($?)\n";
+    select STDOUT;              # restore
+}
+
+close IN || warn "Warning: close $infile: $!\n";
+

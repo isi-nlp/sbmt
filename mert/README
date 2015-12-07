@@ -1,0 +1,65 @@
+CMERT 1.0
+10 May 2006
+David Chiang <chiang@isi.edu>
+
+(copied from /home/nlg-01/chiangd/cmert/cmert-1.01.tar.gz )
+(added cmd-level verbosity control and defaulted to quiet)
+
+Copyright (c) 2004-2006 University of Maryland. All rights
+reserved. Do not redistribute without permission from the author. Not
+for commercial use.
+
+Minimalist installation instructions:
+
+- make
+- set #! lines and sys.path lines in Python scripts
+- set PATH line in mert-driver
+- set MERT_OPTIONS in mert-driver
+    * use -f<n> to fix the nth dimension to 1
+    * use -t for TER
+- set SCORER in mert-driver
+    * use $MERT/score-nbest-bleu.py for BLEU; options are shown in comments
+    * use $MERT/score-nbest-ter.sh for TER if you have BBN calc_approx_ter
+- run it like this:
+	mert-driver <working-directory> <foreign-text> <reference-prefix> <n> <decoder> <decoder-options> <weights>
+  where
+    * any files with names beginning with <reference-prefix> plus zero
+      or more digits will get used as the reference sets
+    * <n> is the size of the n-best lists (1000 is recommended)
+    * <decoder> is the name of the decoder
+    * <decoder-options> are options to pass the decoder; be sure to quote
+    * <weights> looks like
+	0.2,0-1;0.3,-1-1;0.1,-1-1
+      which means, there are three features, and the first weight is
+      to start at 0.2, with random restarts in the range 0 to 1; the
+      second weight is to start at 0.3, with random restarts in the
+      range -1 to 1, and so on.  
+
+- The mert-driver script will periodically emit a line that says
+  something like:
+	Best point: 0.032604 0.035044 -0.023867 ||| 0.364979
+  These are the feature weights and the score for this
+  iteration (note that TER is reported as 1-TER). At the end of
+  optimization, it will emit a line like:
+	Training finished: 0.081542 0.014630 0.000385
+  which is the final feature weight setting. After each iteration,
+  it will also dump the decoder stdout (which might be the
+  1-best list, or derivations, or something), and the most recent
+  such dump can be recovered from the log file using lastrun.pl.
+
+Decoder interface: the decoder should take a sentence per line as
+input and output an n-best list in the following format:
+	<sentence id> ||| <english translation> ||| <feature values>
+where <sentence id> is zero-based.
+
+Parallelized version: since every cluster is different, I imagine, you
+will have to do substantial adaptation. But you will have to build the
+programs in the sentserver/ subdirectory and uncomment the line in
+mert-driver that says 
+	PARALLEL=1
+
+Hint: if you're doing parallelized *decoding* (see hiero-wrapper.sh
+for an example), you will want to wrap each line of the <foreign-text>
+file with <seg id="0">...</seg> and make the decoder use that id when
+generating its n-best list.
+

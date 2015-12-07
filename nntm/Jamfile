@@ -1,0 +1,12 @@
+import sbmt-util ;
+
+project nntm 
+  : requirements <include>.. <library>/site-config//nplm <library>/sbmt_decoder//sbmt
+  : usage-requirements <include>.. <library>/site-config//nplm <library>/sbmt_decoder//sbmt
+  ;
+  
+#lib nntm
+#  : nntm_info.cpp
+#    nndm_info.cpp
+#    nnfm_info.cpp
+#  ;

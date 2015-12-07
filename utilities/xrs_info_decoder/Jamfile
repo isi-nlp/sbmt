@@ -1,0 +1,47 @@
+import sbmt-util ;
+import package ;
+
+local allocator = [ option.get allocator : off ] ;
+
+project xrs_info_decoder ;
+
+echo using allocator library $(allocator) ;
+
+exe xrs_info_decoder
+  : main.cpp
+    parse_options.cpp
+    lazy_decode.cpp
+    decode_lattice.cpp
+    run.cpp
+    xrs_decoder_options.cpp
+    /boost/program_options
+    /sbmt_decoder//sbmt
+    ..//numproc
+    ../decoder_filters
+    ..//grammar_args
+    ../../gusc//gusc
+    ..//decode_sequence_reader
+    ..//lattice_tree_construct
+    ../../rule_head//rule_head_info
+    ../../rule_length//rule_length_info
+    ../../distortion_model//distortion_model
+    # ../../preterminal_model//preterminal_model
+    ../../td_model//td_model
+    ../../force_info//force_info
+    ../../source_structure//source_structure
+    ../../word_context//word_context
+    ../../sblm//sblm
+    ../../source_syntax//source_syntax
+    ../../ruleset_info//ruleset_info
+    ../../rvdist//rvdist
+    ../../sbmt_decoder/builtin_infos
+  : <allocator>$(allocator)
+    <include>.
+    <include>..
+  : <allocator>$(allocator)
+  ;
+
+sbmt-util.install install
+  :
+  : xrs_info_decoder
+  ;

@@ -1,0 +1,47 @@
+carmel: finite state transducer toolkit (and k-best graph paths).
+ EM and gibbs training
+ (see carmel/README and carmel/carmel-tutorial).
+ To build, cd carmel; make install
+
+forest-em: derivation forests EM and gibbs (dirichlet prior bayesian) training
+
+shared: generic routines used by both
+
+PREREQUISITES:
+
+Boost (http://boost.org - usually already installed in /usr)
+
+BUILDING:
+
+If this directory is not called 'graehl', then either rename it, or make sure
+there's a symlink from . to graehl (ln -s . graehl) in this directory.  This is
+necessary for the headers <graehl/shared/X> to be located - or you can install
+the headers with
+
+    ./install.sh /usr/local
+
+To specify where to install built binaries, do for e.g. Carmel:
+
+    cd carmel
+    INSTALL_PREFIX=/usr/local ARCH_FLAGS="-m32" make -j 4 install
+
+or, to build without installing (look in bin/`hostname`for binaries)
+
+    make -j 4
+
+You can have the binaries built in bin/YOURDIR by:
+
+    make -j 4 BUILDSUB=YOURDIR
+
+If your system can't build static executables, you can:
+
+   make -j 4 NOSTATIC=1
+
+Static executables are already excluded if ARCH=macosx
+
+Requires GNU make 3.80 or later, and a recent C++ compiler (gcc 4.3 is
+known good, as is Microsoft Visual C++ 7.1)
+
+If you're mystified by what's going on in the build, look at shared/graehl.mk
+
+"make depend" should run automatically.

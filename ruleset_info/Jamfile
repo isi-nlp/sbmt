@@ -1,0 +1,4 @@
+project ruleset_info ;
+
+lib ruleset_info : ruleset_info.cpp /sbmt_decoder//sbmt ;
+

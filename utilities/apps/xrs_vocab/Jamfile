@@ -1,0 +1,8 @@
+exe xrs_vocab
+  : xrs_vocab.cpp
+    /sbmt_decoder//sbmt
+    /boost/program_options//boost_program_options
+    /boost/regex//boost_regex
+    /RuleReader//RuleReader
+    /graehl//graehl
+  ;

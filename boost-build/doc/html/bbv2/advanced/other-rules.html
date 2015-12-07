@@ -1,0 +1,92 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Jamfile Utility Rules</title>
+<link rel="stylesheet" href="../../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.69.1">
+<link rel="start" href="../../index.html" title="Part I. Boost.Build v2 User Manual">
+<link rel="up" href="../advanced.html" title="Chapter 4. User documentation">
+<link rel="prev" href="projects.html" title="Projects">
+<link rel="next" href="build_process.html" title="The Build Process">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../boost.png"></td></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="projects.html"><img src="../../images/prev.png" alt="Prev"></a><a accesskey="u" href="../advanced.html"><img src="../../images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../images/home.png" alt="Home"></a><a accesskey="n" href="build_process.html"><img src="../../images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="bbv2.advanced.other-rules"></a>Jamfile Utility Rules</h2></div></div></div>
+<p>The following table describes utility rules that can be
+      used in Jamfiles. Detailed information for any of these rules can
+      be obtained by running:
+</p>
+<pre class="screen">
+bjam --help project.<em class="replaceable"><code>rulename</code></em>
+</pre>
+<p>
+      </p>
+<div class="table">
+<a name="id2573917"></a><p class="title"><b>Table 4.2. </b></p>
+<table class="table" summary="">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>Rule</th>
+<th>Semantics</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+<a href="projects.html#bbv2.advanced.projects.attributes.projectrule">project</a>
+              </td>
+<td>Define this project's symbolic ID or attributes.</td>
+</tr>
+<tr>
+<td>???</td>
+<td>Make another project known so that it can be referred to by symbolic ID.</td>
+</tr>
+<tr>
+<td>???</td>
+<td>Cause another project to be built when this one is built.</td>
+</tr>
+<tr>
+<td>???</td>
+<td>State that a target should be built only by explicit
+                request.</td>
+</tr>
+<tr>
+<td>glob</td>
+<td>Translate a list of shell-style wildcards into a
+              corresponding list of files.</td>
+</tr>
+<tr>
+<td>constant</td>
+<td>Injects a variable setting into this project's
+              Jamfile module and those of all its subprojects.</td>
+</tr>
+<tr>
+<td>path-constant</td>
+<td>Injects a variable set to a path value into
+              this project's Jamfile module and those of all its subprojects.
+              If the value is a relative path it will be adjusted for
+              each subproject so that it refers to the same
+              directory.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<table width="100%"><tr>
+<td align="left"></td>
+<td align="right"><small></small></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="projects.html"><img src="../../images/prev.png" alt="Prev"></a><a accesskey="u" href="../advanced.html"><img src="../../images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../images/home.png" alt="Home"></a><a accesskey="n" href="build_process.html"><img src="../../images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

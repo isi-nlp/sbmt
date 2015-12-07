@@ -1,0 +1,20 @@
+#include <sbmt/printer.hpp>
+
+simple closure:
+
+template <class X, class Y>
+printer< X,Y > 
+print(X const& x, Y const& tf)
+{
+    return printer< X,Y >(x,tf);
+}
+
+so you can call things like:
+
+template <class C, class T, class TokFactory>
+void print( std::basic_ostream<C,T>& out
+          , indexed_token const& t
+          , TokFactory const& tf );
+
+gets called by
+

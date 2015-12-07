@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+
+import cfg
+import hadoop
+import argparse
+import itertools
+import os
+import subprocess
+import sys
+import string
+import re
+
+fs = re.compile(r'(<foreign-sentence>)|(</foreign-sentence>)')
+
+def prefix_map(inp):
+    mp = {}
+    for line in open(inp):
+        if line[0] != '#':
+            v = line.rstrip('\n').split('\t')
+            mp[int(v[0])] = v[2]
+    return mp
+
+def input():
+    for line in sys.stdin:
+        yield line.rstrip('\n').split('\t')
+
+parser = argparse.ArgumentParser()
+d = cfg.parse_args(parser,config='$outdir/corpus-prep.config')
+
+pm = prefix_map(os.path.join(d.outdir,'corpus.map'))
+for v in input():
+    ins = os.path.join(d.rootdir,'scripts','per-sent-ins-file')
+    outfile = os.path.join(d.outdir,pm[int(v[0])],'decode.ins')
+    rulefile = os.path.join(pm[int(v[0])],'extra.rules')
+    sentfile = os.path.join(d.outdir,pm[int(v[0])],'sentence')
+    sent = fs.sub('',v[1]).strip()
+    cmd = "$ins $rulefile > $outfile"
+    cmd = string.Template(cmd).substitute(ins=ins, outfile=outfile, rulefile=rulefile)
+    try:
+        proc = subprocess.Popen(cmd,shell=True,executable='/bin/bash',stdin=subprocess.PIPE)
+        proc.communicate(v[2].strip() + '\n')
+        fl = open(sentfile,'w')
+        print >> fl, sent
+        fl.close()
+    except:
+        print >> sys.stderr, v
+        raise
+
+    

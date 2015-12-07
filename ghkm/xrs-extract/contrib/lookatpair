@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+
+# Extract a specific etree/cstring/alignment 
+# from the data. Data is selected by its ROOT, 
+# i.e. ROOT.{eng,cgb,a} must exist.
+#
+# e.g. ./lookatpair /home/hpc-22/dmarcu/nlg/summer04/resources/rule-extraction/data-radu/all-ignacio-noisy 1
+
+use strict;
+use vars qw($E_EXT $C_EXT $A_EXT);
+
+# Globals:
+$E_EXT = 'eng';
+$C_EXT = 'cgb';
+$A_EXT = 'a';
+
+die "$0 ROOT LINE\n" if $#ARGV != 1;
+
+
+my $ROOT = $ARGV[0];
+my $LINE = $ARGV[1]; 
+die "$ROOT.$E_EXT doesn't exist!\n" unless -f "$ROOT.$E_EXT";
+die "$ROOT.$C_EXT doesn't exist!\n" unless -f "$ROOT.$C_EXT";
+die "$ROOT.$A_EXT doesn't exist!\n" unless -f "$ROOT.$A_EXT";
+
+my $ENG = `cat $ROOT.$E_EXT | head -n $LINE | tail -n 1`; chop $ENG;
+my $ELEN = 0;
+while($ENG =~ /\(\S+ \S+\)/g) { $ELEN++ }
+my $CGB = `cat $ROOT.$C_EXT | head -n $LINE | tail -n 1`; chop $CGB;
+my $CLEN = scalar split(/\s+/, $CGB);
+my $A   = `cat $ROOT.$A_EXT | head -n $LINE | tail -n 1`; chop $A;
+print "##### alignment:\n";
+print "$A\n";
+print "##### eparse-cstring ($ELEN-$CLEN):\n";
+print "$ENG\n";
+print "$CGB\n";
+print "#####\n";

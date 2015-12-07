@@ -1,0 +1,6 @@
+project preterminal_model ;
+
+lib preterminal_model 
+  : preterminal_model.cpp
+    /sbmt_decoder//sbmt
+  ;

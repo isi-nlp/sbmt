@@ -1,0 +1,230 @@
+ITG Binarizer
+
+Hao Zhang & Liang Huang
+August 30, 2005
+
+
+**** how to compile ****
+
+The working directory is 
+
+/nfs/isd/zhanghao/nlg/nlp/itg-binarizer
+
+There is only one source file:
+binal.cc
+
+A ../lib/RuleReader directory is expected (see Makefile).
+
+the make command is:
+
+make
+
+(also "make depend" and "make clean")
+
+
+(updated by Hao)
+
+if 
+#define FLATTEN 1
+
+is on,
+
+instead of output strictly binary rules.
+unary rules are maximally lexicalized:
+
+(c1 c2 X1 c3 c4 X2; X1 e X2)
+
+will
+produce
+
+(c1 c2 X1 c3; X1)
+in one-step 
+
+
+The flattening operation is applied
+to any rhs appearances of such virtual
+nonterminals involving unary productions
+to real nonterminals.
+
+
+For 
+
+V = a b X c d Y e f Z g
+
+we will have
+
+V1 = (a b X c d Y e f)
+
+V = (V1 Z g)
+
+
+
+
+
+**** how to run ****
+
+bin/binal [-f]
+
+the input of the binarizer is from stdin.
+
+the program can run in two modes: filtering mode and
+binarization mode. -f (anything as long as there is more than
+zero arguments) will let it run in filtering mode.
+
+
+
+(updated by liang)
+
+1. Filtering mode:
+			cat rules | bin/binal -f >rules.bin 2>rules.log
+		    
+		    The .bin file will contain the binarizable rules from input while the .log file record the non-binarizable rules and wrong rules.
+		    At the end of .log file there is also a line of statistics.
+
+
+2. Binarization mode:
+
+the output of the binarizer in binarization mode is stdout.
+
+so, for EXAMPLE
+
+
+
+bin/binal </tmp/test.filtered >/tmp/test.bin 
+
+
+
+will do the job of "compiling" the xrs rules in the file
+of test.filtered to the bin rules in the file of test.bin.
+
+Note that it is not necessary that the binarizer has to
+take binarizable xrs rules as input. We do the two steps
+for the reason of decoder requirement. The decoder requires
+the xrs file and the brf file correspond perfectly, without
+any rule having no counterpart on the other side.
+
+
+**** brief explanation of the algorithm ****
+
+The core algorithm is a linear time parsing algorithm over
+the xrs rules, which are interpreted as permutations by the
+core algorithm. 
+
+For example,
+
+an xrs rule having the alignment pattern of
+
+x2       *
+       
+x1           *
+	  
+x0   *
+    x0  x2  x1
+
+is interpreted as
+
+0 2 1
+
+by the core algorithm. 
+
+the core algorithm will parse it as:
+
+[ 0 < 2  1 > ]
+
+where < > means inversion and [ ] means straight
+concatenation.
+
+
+The binarizer will utilize the itg tree structure
+produced by such an algorithm and emit virtual rules
+while post-order visiting the tree.
+
+
+Since there are chinese words along the x-axis and
+english words along the y-axis, that are scattered
+around the co-indexed variables, heuristics are needed
+to combine the actual words with virtual constituents
+to "grow" to larger constituents, in a snowball fashion.
+
+The current best heuristic is to combine chinese words
+greedily with coindexed variables, which are leaves
+on the tree, when the leaves are visited, and to combine
+english words greedily when the intermediate nodes
+are visited. By greedy, we mean grabbing as many neighboring
+words as possible.
+
+There are other alternatives, say, combining english words
+greedily as early as when the leaves are visited, or say,
+combining english words as lazily as possible until the 
+root is visited. Greediness will lead to more virtual states
+so as to be vulnerable to pruning. Laziness will defer lm
+score computation, however reducing unique virtual states.
+The current best solution seems to be a hybrid of the two
+so as to work well.
+
+The current binal.cc is actually the lazy-greedy version.
+We also included binal.lzlz.cc in the repository. If you
+want to try the lazy-lazy version, you can replace binal.cc
+with binal.lzlz.cc
+
+**** something useful if you are changing the binarizer ****
+
+For debugging purpose, we've developed a sanity-check module
+inside the binarizer. If you want to change the binarizer 
+somehow and want to make sure the output still makes sense,
+uncomment
+
+//#define SANITY 1
+
+at the beginning of the source file.
+
+Then, when in binarization mode, stderr will receive
+the reconstructed chinese symbol sequence and english
+symbol sequence. /tmp/binaltemp (hardcoded...) will 
+be the chinese symbol sequence/english symbol sequence
+pairs extracted directly from the xrs rules.
+
+for Example,
+
+
+bin/binal </tmp/test.filtered >/tmp/test.bin 2>/tmp/sanity
+
+and then
+
+diff /tmp/sanity /tmp/binaltemp
+
+will tell you what mistake the binarizer has made by examing
+the difference. Hopefully, the two files are identical. 
+We've found the sanity check very helpful for debugging the
+binarizer.
+
+
+
+
+**** what needs to be improved ****
+
+We've tried to run it on full-50 rule set that contains 16 million
+rules, it will take around 2 hours and use around 2gb memory. We think
+the hash tables are getting crowded so as to cause the program to 
+slow down at this scale. So, scaling it up to rule sets as large as
+tens of millions is wanted if you really want to speed up the experiment
+cycle.
+
+We felt the RuleReader can be improved. Otherwise, you have
+to be careful about generating virtual nonterminals containing symbols
+such as:
+
+...-RRB->..
+
+because the RuleReader will think -> is the deliminer...
+
+Our code can be made pretty...
+ 
+
+
+
+
+**** how to contact the main programmer ****
+
+email me at zhanghao dot cs dot rochester dot edu 
+if you have questions.

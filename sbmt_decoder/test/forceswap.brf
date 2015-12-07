@@ -1,0 +1,15 @@
+<f> ARRIVAL MOMENT ENFORCE TRANSLATION
+the moment is arriving to enforce the translation
+T:VL: T(X("the") X("time")) -> "MOMENT" ### p=10^-1 id=1 virtual_label=no complete_subtree=yes lm_string={{{"the" "time"}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=1 rhs={{{"MOMENT"}}}
+T:VL: T(X("the") X("moment")) -> "MOMENT" ### p=10^-2 id=2 virtual_label=no complete_subtree=yes lm_string={{{"the" "moment"}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=2 rhs={{{"MOMENT"}}}
+V:VL: V(X("to") X("force")) -> "ENFORCE" ### p=10^-3 id=3 virtual_label=no complete_subtree=yes lm_string={{{"to" "force"}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=3 rhs={{{"ENFORCE"}}}
+V:VL: V(X("to") X("enforce")) -> "ENFORCE" ### p=10^-4 id=4 virtual_label=no complete_subtree=yes lm_string={{{"to" "enforce"}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=4 rhs={{{"ENFORCE"}}}
+V:VL: V(X("has") X("come")) -> "ARRIVAL" ### p=10^-5 id=5 virtual_label=no complete_subtree=yes lm_string={{{"has" "come"}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=5 rhs={{{"ARRIVAL"}}}
+V:VL: V(X("is") X("arriving")) -> "ARRIVAL" ### p=10^-6 id=6 virtual_label=no complete_subtree=yes lm_string={{{"is" "arriving"}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=6 rhs={{{"ARRIVAL"}}}
+A:VL: A(X("the") X("decode")) -> "TRANSLATION" ### p=10^-7 id=7 virtual_label=no complete_subtree=yes lm_string={{{"the" "decode"}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=7 rhs={{{"TRANSLATION"}}}
+A:VL: A(X("the") X("translation")) -> "TRANSLATION" ### p=10^-8 id=8 virtual_label=no complete_subtree=yes lm_string={{{"the" "translation"}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=8 rhs={{{"TRANSLATION"}}}
+TP:VL: TP(x0:T x1:V) -> x0 x1 ### p=10^-9 id=9 virtual_label=no complete_subtree=yes lm_string={{{0 1}}} sblm_string={{{0 1 }}} lm=yes sblm=yes rule_file_line_number=9 rhs={{{x0 x1}}}
+TP:VL: TP(x0:T x1:V) -> x1 x0 ### p=10^-10 id=10 virtual_label=no complete_subtree=yes lm_string={{{1 0}}} sblm_string={{{1 0 }}} lm=yes sblm=yes rule_file_line_number=10 rhs={{{x1 x0}}}
+VP:VL: VP(x0:V x1:A) -> x0 x1 ### p=10^-11 id=11 virtual_label=no complete_subtree=yes lm_string={{{0 1}}} sblm_string={{{0 1 }}} lm=yes sblm=yes rule_file_line_number=11 rhs={{{x0 x1}}}
+S:VL: S(x0:TP x1:VP) -> x0 x1 ### p=10^-12 id=12 virtual_label=no complete_subtree=yes lm_string={{{0 1}}} sblm_string={{{0 1 }}} lm=yes sblm=yes rule_file_line_number=12 rhs={{{x0 x1}}}
+TOP:VL: TOP(x0:S) -> "<f>" x0 ### p=10^-13 id=13 virtual_label=no complete_subtree=yes lm_string={{{0}}} sblm_string={{{0 }}} lm=yes sblm=yes rule_file_line_number=13 rhs={{{"<f>" x0}}}

@@ -1,0 +1,505 @@
+<html><head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title> Coroutines</title>
+<link rel="stylesheet" href="files/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.70.1">
+<link rel="start" href="index.html" title="Chapter&nbsp;1.&nbsp;Boost.Coroutine">
+<link rel="up" href="tutorial.html" title=" Tutorial">
+<link rel="prev" href="stackful.html" title=" Stackful generators: Same fringe problem">
+<link rel="next" href="multitasking.html" title=" Multitasking">
+</head><body link="#0000ff" alink="#0000ff" bgcolor="white" text="black" vlink="#840084">
+<table width="100%" cellpadding="2">
+<tbody><tr><td valign="top"><img alt="boost.png (6897 bytes)" src="files/boost.png" width="277" height="86"></td>
+<td align="center"><a href="http://www.boost.org/">Home</a></td>
+<td align="center"><a href="http://www.boost.org/doc/libs">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="http://www.boost.org/users/index.html">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="stackful.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="tutorial.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="multitasking.html"><img src="files/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="coroutine.coroutines"></a> Coroutines</h3></div></div></div>
+<a name="coroutines.from_generators_to_coroutines"></a><h4>
+<a name="id2557032"></a>From generators to coroutines</h4>
+<p>
+So far we have learned to use generators, a special kind of
+coroutines. We have seen that generators are function objects with no
+parameters and that return a sequence of values. 
+We can generalize this concept to function objects that have zero, one or
+more parameters and return zero, one or more values.
+A generic coroutine is, not surprisingly, implemented with the
+<a href="">coroutine</a> template class.</p>
+<p>
+All examples in this sections will assume that the following using
+directive is in effect:</p>
+<pre class="programlisting"><code class="literal"><span class="preprocessor">#include</span><span class="special"> &lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">coroutine</span><span class="special">/</span><span class="identifier">coroutine</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code></pre>
+<a name="coroutines.the_accumulator_coroutine"></a><h4>
+<a name="id2609114"></a>The accumulator coroutine</h4>
+<p>
+Let's start with a very simple coroutine that takes as parameter an
+integer and returns the sum of that integer and all integers passed
+before. In practice it acts as an accumulator.
+As usual, we start by declaring its type:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">typedef</span><span class="identifier"> coro</span><span class="special">::</span><a href="">coroutine</a><span class="special">&lt;</span><span class="keyword">int</span><span class="special">(</span><span class="keyword">int</span><span class="special">)&gt;</span><span class="identifier"> coroutine_type</span><span class="special">;</span></code></pre>
+<p>
+The syntax is deliberately similar to the one used in <a href="asio.html" target="_top">Boost.Function</a>.
+This is the coroutine body:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">int</span><span class="identifier"> accumulator_body</span><span class="special">(</span><span class="identifier">coroutine_type</span><span class="special">::</span><a href="">self</a><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword"> int</span><span class="identifier"> val</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+  while</span><span class="special">(</span><span class="keyword">true</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+    val</span><span class="special"> +=</span><span class="identifier"> self</span><span class="special">.</span><a href="">yield</a><span class="special">(</span><span class="identifier">val</span><span class="special">);</span><span class="special">
+  }</span><span class="special">
+}</span></code></pre>
+<p>
+This is code is not very different from our first <a href="tutorial.html#generators.the_generator_class_template">generator example</a>. Still there
+are some differences. For example <code class="computeroutput"><a href="">yield</a><span class="special">()</span></code> now returns a
+value. Soon we will see what this value represent. The syntax used to declare
+a coroutine is not surprising:</p>
+<pre class="programlisting"><code class="literal"><span class="identifier">coroutine_type</span><span class="identifier"> accumulator</span><span class="special">(</span><span class="identifier">accumulator_body</span><span class="special">);</span>&nbsp;
+</code></pre>
+<p>
+And even its usage is straight forward:</p>
+<pre class="programlisting"><code class="literal"><span class="special">...</span><span class="keyword">
+for</span><span class="special">(</span><span class="keyword">int</span><span class="identifier"> i</span><span class="special"> =</span><span class="number"> 0</span><span class="special">;</span><span class="identifier"> i</span><span class="special"> &lt;</span><span class="number"> 1000</span><span class="special">;</span><span class="special"> ++</span><span class="identifier">i</span><span class="special">)</span><span class="identifier">
+   std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="identifier"> accumulator</span><span class="special">(</span><span class="identifier">i</span><span class="special">);</span><span class="special">
+...</span></code></pre>
+<p>
+This will print all values in the mathematical series <code class="computeroutput"><span class="identifier">a</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span><span class="special"> =</span><span class="identifier"> a</span><span class="special">[</span><span class="identifier">i</span><span class="special">-</span><span class="number">1</span><span class="special">]</span><span class="special">
++</span><span class="identifier"> i</span></code>.
+Let's see how the flow control evolves.</p>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/note.png"></span> A <a href="">coroutine</a>, unlike a <a href="">generator</a>, will enter its body only  when the
+<code class="computeroutput"><a href="">coroutine</a><span class="special">::</span><span class="keyword">operator</span><span class="special">()</span></code> is invoked for the first time. This is
+because, generally, a coroutine requires parameters to be passed. In
+our example the parameter is the value to accumulate. 
+<a href="">generator</a> and <a href="">coroutine</a> are intended for different use cases
+:generator functions and iterators the first, generalized control
+inversion the second. Their semantics are intended to be the most useful for each case.</td></tr></tbody>
+</table></div>
+<div class="itemizedlist"><ul type="disc">
+<li>
+The <code class="computeroutput"><span class="keyword">for</span></code> loop starts, <code class="computeroutput"><span class="identifier">accumulator</span><span class="special">(</span><span class="number">0</span><span class="special">)</span></code> is called.
+</li>
+<li>
+The coroutine body is entered for the first time.
+  The first statement of <code class="computeroutput"><span class="identifier">accumulator_body</span></code> is executed. At
+  this point the parameter <code class="computeroutput"><span class="identifier">val</span></code> is <code class="computeroutput"><span class="number">0</span></code>. 
+</li>
+<li>
+The <code class="computeroutput"><span class="keyword">while</span></code> loop is entered and <code class="computeroutput"><a href="">yield</a><span class="special">(</span><span class="identifier">val</span><span class="special">)</span></code> is invoked. The coroutine
+stops and relinquishes control to the main program, back in the <code class="computeroutput"><span class="keyword">for</span></code>
+loop. 
+</li>
+<li>
+At the next iteration, <code class="computeroutput"><span class="identifier">accumulator</span><span class="special">(</span><span class="number">1</span><span class="special">)</span></code> is called.
+</li>
+<li>
+The coroutine is resumed at the point of the call to
+<code class="computeroutput"><a href="">coroutine</a><span class="special">::</span><a href="">yield</a><span class="special">()</span></code>, 
+that returns the parameter passed to <code class="computeroutput"><span class="identifier">accumulator</span></code>, in this case <code class="computeroutput"><span class="number">1</span></code>.
+</li>
+<li>
+The value returned by <code class="computeroutput"><a href="">yield</a><span class="special">()</span></code> is
+added to <code class="computeroutput"><span class="identifier">val</span></code> and the coroutine continues to the next iteration,
+yielding <code class="computeroutput"><span class="identifier">val</span></code> again, now equal to <code class="computeroutput"><span class="number">1</span></code>. 
+</li>
+<li>
+At the next iteration of the
+<code class="computeroutput"><span class="keyword">for</span></code> loop <code class="computeroutput"><span class="identifier">accumulator</span><span class="special">(</span><span class="number">2</span><span class="special">)</span></code> is called and the coroutine will yield <code class="computeroutput"><span class="number">3</span></code>,
+the new value of <code class="computeroutput"><span class="identifier">val</span></code>. 
+</li>
+<li>
+... and so on, until the end of the <code class="computeroutput"><span class="keyword">for</span></code> loop.
+</li>
+</ul></div>
+<p>
+When <code class="computeroutput"><span class="identifier">accumulator</span></code> goes out of scope, the coroutine is destroyed in
+the same way generators are destroyed: it is resumed and <a href="">yield</a>()
+throws an instance of <code class="computeroutput"><a href="">exit_exception</a></code>.</p>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/caution.png"></span> Coroutines have the same limitation that generators
+<a href="stackful.html#recursive_generators">have</a>: a coroutine can
+never be recursive.</td></tr></tbody>
+</table></div>
+<a name="coroutines.copyability"></a><h4>
+<a name="id2610020"></a>Copyability</h4>
+<p>
+While you can freely copy a generator, you can't do the same with
+coroutines: during the development of Boost.Coroutine it has been
+deemed that giving reference counted shallow copying to coroutines
+was too risky. Coroutines usually have a longer lifetime and are more
+complex. Different coroutines can interact in dynamic ways, especially
+with the ability to yield to another coroutine (<code class="computeroutput"><a href="">yield_to</a><span class="special">()</span></code> will
+be introduced in an <a href="symmetric_coroutines.html" title=" Symmetric coroutines">advanced
+section</a>).</p>
+<p>
+The possibility of creating a cycle was very high and very
+hard to debug, thus the possibility of copying a <a href="">coroutine</a> object
+has been removed. Coroutines instead are <a href="">Movable</a>: you can return a
+coroutine from a function, copy construct and assign from a temporary,
+and explicitly <code class="computeroutput"><span class="identifier">__move__</span><span class="special">()</span></code> them, but you can't for example add them
+to a standard container, unless your standard library already has
+support for movable types (currently in the draft standard). A
+coroutine is also <a href="">Swappable</a> and <a href="">DefaultConstructible</a>.</p>
+<p>
+Unfortunately most libraries expect copyable types and do not support
+moving. For interoperability with this libraries you should use
+a <code class="computeroutput"><span class="identifier">shared_ptr</span></code> to manage the lifetime of a
+<code class="computeroutput"><a href="">coroutine</a></code>.</p>
+<p>
+Boost.Coroutine also provides the
+<code class="computeroutput"><a href="">shared_coroutine</a></code> that acts as a counted reference to a coroutine
+object. You should use this class template with care because
+potentially reopens the cycle loophole, and use it only as a temporary
+workaround for lack of movability.</p>
+<a name="coroutines.exiting_a_coroutine_and_the__code__link_linkend__boost__coroutines__coroutine_exited__coroutine_exited__link___code__exception"></a><h4>
+<a name="id2610162"></a>Exiting a coroutine and the <code class="computeroutput"><a href="">coroutine_exited</a></code> exception</h4>
+<p>
+A coroutine can be exited from inside its body exactly like a
+generator by invoking <code class="computeroutput"><a href="">coroutine</a><span class="special">::</span><a href="">self</a><span class="special">::</span><a href="">exit</a><span class="special">()</span></code>, but
+the semantics from the point of view of the caller are
+different. consider this piece of code that represent a call to the
+object <code class="computeroutput"><span class="identifier">my_coroutine</span></code> of type <code class="computeroutput"><a href="">coroutine</a><span class="special">&lt;</span><span class="keyword">int</span><span class="special">()&gt;()</span></code></p>
+<pre class="programlisting"><code class="literal"><span class="keyword">int</span><span class="identifier"> i</span><span class="special"> =</span><span class="identifier"> my_coroutine</span><span class="special">();</span></code></pre>
+<p>
+If <code class="computeroutput"><span class="identifier">my_coroutine</span></code> returns to the caller by invoking <code class="computeroutput"><a href="">exit</a><span class="special">()</span></code>,
+there is no value can be returned from <code class="computeroutput"><span class="keyword">operator</span><span class="special">()</span></code> and be assigned to
+<code class="computeroutput"><span class="identifier">i</span></code>. Instead a <code class="computeroutput"><a href="">coroutine_exited</a><span class="identifier"> exception</span><span class="identifier"> is</span><span class="identifier"> thrown</span><span class="identifier"> from</span></code>operator()`.</p>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/note.png"></span>
+Generators never throw <code class="computeroutput"><a href="">coroutine_exited</a></code> because if a generator
+is valid it is always guaranteed that a value can be returned. We will
+see <a href="coroutines.html#coroutines.behind_generators">later</a> how this is possible.</td></tr></tbody>
+</table></div>
+<p>
+A coroutine can also be exited by throwing any other exception from
+inside the body and letting the stack unwind below the coroutine main
+body. The coroutine is terminated and <code class="computeroutput"><span class="keyword">operator</span><span class="special">()</span></code> will throw an
+instance of <code class="computeroutput"><a href="">abnormal_exit</a></code> exception.</p>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/note.png"></span> Generators too may throw <code class="computeroutput"><a href="">abnormal_exit</a></code> from
+<code class="computeroutput"><span class="keyword">operator</span><span class="special">++</span></code> or <code class="computeroutput"><span class="keyword">operator</span><span class="special">()</span></code>.</td></tr></tbody>
+</table></div>
+<p>
+Finally a coroutine can be exited from outside its body by calling
+<code class="computeroutput"><a href="">coroutine</a><span class="special">::</span><a href="">exit</a><span class="special">()</span></code>. It behaves exactly as if the coroutine
+had exited out of scope.</p>
+<a name="coroutines.other_member_and_friend_functions"></a><h4>
+<a name="id2610536"></a>Other member and friend functions</h4>
+<p><code class="computeroutput"><a href="">coroutine</a></code> provides a set of member functions to query its state;
+these are <code class="computeroutput"><a href="">exited</a><span class="special">()</span></code>, <code class="computeroutput"><a href="">empty</a><span class="special">()</span></code>, <code class="computeroutput"><a href="">waiting</a><span class="special">()</span></code> and
+<code class="computeroutput"><a href="">pending</a><span class="special">()</span></code>.
+<code class="computeroutput"><a href="">exited</a><span class="special">()</span></code> returns true if a coroutine has been exited (by
+throwing an exception, by calling <code class="computeroutput"><a href="">exit</a><span class="special">()</span></code> or by a plain
+return), <code class="computeroutput"><a href="">empty</a><span class="special">()</span></code> returns true if a coroutine has not been
+assigned. <code class="computeroutput"><a href="">waiting</a><span class="special">()</span></code> and <code class="computeroutput"><a href="">pending</a><span class="special">()</span></code> are related to the event
+waiting mechanics and will be explained <a href="events.html" title=" Events">later</a>.</p>
+<p>
+Both <code class="computeroutput"><a href="">coroutine</a><span class="special">::</span><a href="">swap</a><span class="special">()</span></code> and a friend <code class="computeroutput"><a href="">swap</a><span class="special">()</span></code> are
+provided with the usual semantics.</p>
+<p><code class="computeroutput"><a href="">coroutine</a><span class="special">::</span><a href="">self</a></code> provides a <code class="computeroutput"><a href="">result</a><span class="special">()</span></code> member function
+that returns the value returned by the last <code class="computeroutput"><a href="">yield</a><span class="special">()</span></code> (or as a
+parameter to the body if <code class="computeroutput"><a href="">yield</a><span class="special">()</span></code> has not been called yet).</p>
+<p>
+The <code class="computeroutput"><a href="">coroutine</a><span class="special">::</span><a href="">self</a><span class="special">::</span><a href="">yield_to</a><span class="special">()</span></code> member function will be explained in an advanced
+section about <a href="symmetric_coroutines.html" title=" Symmetric coroutines">symmetric coroutines</a>.</p>
+<a name="coroutines.multiple_arguments_and_return_values"></a><h4>
+<a name="id2610885"></a>Multiple arguments and return values</h4>
+<a name="accumulator_2"></a><p>
+A coroutine can have more than one argument. For example the coroutine
+<code class="computeroutput"><span class="identifier">accumulator2</span></code> is similar to <a href="coroutines.html#coroutines.the_accumulator_coroutine">accumulator</a>, but it takes two
+parameters and accumulate only the larger of the two values:
+</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">typedef</span><span class="identifier"> coro</span><span class="special">::</span><a href="">coroutine</a><span class="special">&lt;</span><span class="keyword">int</span><span class="special">(</span><span class="keyword">int</span><span class="special">,</span><span class="keyword"> int</span><span class="special">)&gt;</span><span class="identifier"> coroutine_type</span><span class="special">;</span><span class="keyword">
+
+int</span><span class="identifier"> accumulator2_body</span><span class="special">(</span><span class="identifier">coroutine_type</span><span class="special">::</span><a href="">self</a><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword">
+                      int</span><span class="identifier"> arg1</span><span class="special">,</span><span class="keyword">
+                      int</span><span class="identifier"> arg2</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+  int</span><span class="identifier"> i</span><span class="special"> =</span><span class="number"> 0</span><span class="special">;</span><span class="keyword">
+  while</span><span class="special">(</span><span class="keyword">true</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+     i</span><span class="special"> +=</span><span class="identifier">  std</span><span class="special">::</span><span class="identifier">max</span><span class="special">(</span><span class="identifier">arg1</span><span class="special">,</span><span class="identifier"> arg2</span><span class="special">);</span><span class="identifier">
+     boost</span><span class="special">::</span><span class="identifier">tie</span><span class="special">(</span><span class="identifier">arg1</span><span class="special">,</span><span class="identifier"> arg2</span><span class="special">)</span><span class="special"> =</span><span class="identifier"> self</span><span class="special">.</span><a href="">yield</a><span class="special">(</span><span class="identifier">i</span><span class="special">);</span><span class="special">
+  }</span><span class="special">
+}</span><span class="identifier">
+
+coroutine_type</span><span class="identifier"> accumulator2</span><span class="special">(</span><span class="identifier">accumulator2_body</span><span class="special">);</span></code></pre>
+<p>
+Note that <a href="">yield</a> now returns two values in the form of a
+<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="keyword"> int</span><span class="special">&gt;</span></code>. <code class="computeroutput"><span class="identifier">accumulator2</span></code> can be called like any other
+binary function or function object:</p>
+<pre class="programlisting"><code class="literal"><span class="special">...</span><span class="keyword">
+int</span><span class="identifier"> i</span><span class="special"> =</span><span class="identifier"> accumulator2</span><span class="special">(</span><span class="number">0</span><span class="special">,</span><span class="number"> 1</span><span class="special">);</span><span class="special">
+...</span></code></pre>
+<a name="muladd"></a><p>
+Multiple return values are also handled with tuples. The coroutine
+<code class="computeroutput"><span class="identifier">muladd</span></code> returns the partial sum and the partial product of the argument
+passed so far:
+</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">typedef</span><span class="identifier"> coro</span><span class="special">::</span><a href="">coroutine</a><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="keyword"> int</span><span class="special">&gt;(</span><span class="keyword">int</span><span class="special">)&gt;</span><span class="identifier"> coroutine_type</span><span class="special">;</span><span class="identifier">
+
+boost</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="keyword"> int</span><span class="special">&gt;</span><span class="identifier"> muladd_body</span><span class="special">
+  (</span><span class="identifier">coroutine_type</span><span class="special">::</span><a href="">self</a><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword"> 
+   int</span><span class="identifier"> val</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+  int</span><span class="identifier"> prod</span><span class="special"> =</span><span class="number"> 0</span><span class="special">;</span><span class="keyword">
+  int</span><span class="identifier"> sum</span><span class="special"> =</span><span class="number"> 0</span><span class="special">;</span><span class="keyword">
+  while</span><span class="special">(</span><span class="keyword">true</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+    prod</span><span class="special"> +=</span><span class="identifier"> val</span><span class="special">;</span><span class="identifier">
+    sum</span><span class="special">  +=</span><span class="identifier"> val</span><span class="special">;</span><span class="identifier">
+    val</span><span class="special"> =</span><span class="identifier"> self</span><span class="special">.</span><a href="">yield</a><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">make_tuple</span><span class="special">(</span><span class="identifier">prod</span><span class="special">,</span><span class="identifier"> sum</span><span class="special">));</span><span class="special">
+  }</span><span class="special">
+}</span><span class="identifier">
+
+coroutine_type</span><span class="identifier"> muladd</span><span class="special">(</span><span class="identifier">muladd_body</span><span class="special">);</span></code></pre>
+<p>
+Again, <code class="computeroutput"><span class="identifier">muladd</span></code> behaves like any other function that return a tuple:</p>
+<pre class="programlisting"><code class="literal"><span class="special">...</span><span class="keyword">
+int</span><span class="identifier"> prod</span><span class="special">;</span><span class="keyword">
+int</span><span class="identifier"> sum</span><span class="special">;</span><span class="identifier">
+boost</span><span class="special">::</span><span class="identifier">tie</span><span class="special">(</span><span class="identifier">prod</span><span class="special">,</span><span class="identifier"> sum</span><span class="special">)</span><span class="special"> =</span><span class="identifier"> muladd</span><span class="special">(</span><span class="number">0</span><span class="special">);</span><span class="special">
+...</span></code></pre>
+<p>
+Notice that there is a slight asimmetry between <a href="coroutines.html#accumulator_2">the first</a> and <a href="coroutines.html#muladd">the second</a> example. In the call to
+<code class="computeroutput"><span class="identifier">accumulator2</span></code> there is no need to call <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">make_tuple</span><span class="special">(...)</span></code>,
+the arguments to <code class="computeroutput"><span class="keyword">operator</span><span class="special">()</span></code> are automatically packed in the tuple
+that is returned by <code class="computeroutput"><a href="">yield</a><span class="special">()</span></code>. On the other hand, in the call to
+<code class="computeroutput"><a href="">yield</a><span class="special">()</span></code> in <code class="computeroutput"><span class="identifier">muladd_body</span></code>, the result types must manually packed
+in a tuple. It would be nice if this syntax could be used:</p>
+<pre class="programlisting"><code class="literal"><span class="special">...</span><span class="identifier">
+self</span><span class="special">.</span><a href="">yield</a><span class="special">(</span><span class="identifier">prod</span><span class="special">,</span><span class="identifier"> sum</span><span class="special">);</span><span class="special">
+...</span></code></pre>
+<p>
+Boost.Coroutine in fact allows this user friendlier syntax, but it is
+not enabled by default because it could conflict with generic code. To
+enable it <code class="computeroutput"><span class="identifier">coroutine_type</span></code> must be redefined like this:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">typedef</span><span class="identifier"> coro</span><span class="special">::</span><a href="">coroutine</a><span class="special">&lt;</span><span class="identifier">coro</span><span class="special">::</span><span class="identifier">tuple_traits</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="keyword"> int</span><span class="special">&gt;(</span><span class="keyword">int</span><span class="special">)&gt;</span><span class="identifier"> coroutine_type</span><span class="special">;</span></code></pre>
+<p>
+The <code class="computeroutput"><a href="">coroutine</a></code> class template recognizes the special
+<code class="computeroutput"><span class="identifier">coro</span><span class="special">::</span><span class="identifier">tuple_traits</span></code> type and enables <code class="computeroutput"><a href="">yield</a><span class="special">()</span></code> to automatically
+pack its arguments.</p>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/note.png"></span><a href="">coroutine</a> can handle any number of arguments and
+return values up to a implementation defined limit. The macro
+<code class="computeroutput"><span class="identifier">BOOST_COROUTINE_ARG_MAX</span></code> expands to the current limit. While it is
+technically possible to 
+increase this number by redefining this macro, it also
+requires support for more arguments from other boost components
+(at least Boost.Tuple and Boost.MPL), thus this cap
+cannot be modified easily.</td></tr></tbody>
+</table></div>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/caution.png"></span> Both <code class="computeroutput"><a href="">coroutine</a><span class="special">::</span><span class="keyword">operator</span><span class="special">()</span></code> and
+<code class="computeroutput"><a href="">coroutine</a><span class="special">::</span><a href="">yield</a></code> can be called with a smaller amount of
+arguments than required by the <code class="computeroutput"><a href="">coroutine</a></code> signature. The
+rightmost missing arguments are default constructed. This is an
+artifact of the current implementation, and at least in one instance
+has caused an hard to find bug. You shouldn't rely on this feature
+that will be probably removed from future versions of
+Boost.Coroutines. Finally note that non default
+constructible arguments cannot be omitted.</td></tr></tbody>
+</table></div>
+<a name="coroutines.behind_generators"></a><h4>
+<a name="id2612332"></a>Behind generators</h4>
+<p>
+To complete the tour of the basic capabilities of Boost.Coroutine we
+will return to the <a href="">generator</a> class template and explain how it is
+implemented in term of coroutines. This is its definition:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span><span class="identifier"> ValueType</span><span class="special">&gt;</span><span class="keyword">
+class</span><span class="identifier"> generator</span><span class="special"> :</span><span class="keyword"> public</span><span class="identifier"> std</span><span class="special">::</span><span class="identifier">iterator</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">input_iterator_tag</span><span class="special">,</span><span class="identifier"> ValueType</span><span class="special">&gt;</span><span class="special"> {</span><span class="keyword">
+  typedef</span><span class="identifier"> shared_coroutine</span><span class="special">&lt;</span><span class="identifier">ValueType</span><span class="special">()&gt;</span><span class="identifier"> coroutine_type</span><span class="special">;</span><span class="keyword">
+public</span><span class="special">:</span><span class="keyword">
+  typedef</span><span class="keyword"> typename</span><span class="identifier"> coroutine_type</span><span class="special">::</span><span class="identifier">result_type</span><span class="identifier"> value_type</span><span class="special">;</span><span class="keyword">
+  typedef</span><span class="keyword"> typename</span><span class="identifier"> coroutine_type</span><span class="special">::</span><span class="identifier">self</span><span class="identifier"> self</span><span class="special">;</span><span class="identifier">
+
+  generator</span><span class="special">()</span><span class="special"> {}</span><span class="identifier">
+
+ generator</span><span class="special">(</span><span class="keyword">const</span><span class="identifier"> generator</span><span class="special">&amp;</span><span class="identifier"> rhs</span><span class="special">)</span><span class="special"> :</span><span class="identifier">
+    m_coro</span><span class="special">(</span><span class="identifier">rhs</span><span class="special">.</span><span class="identifier">m_coro</span><span class="special">),</span><span class="identifier">
+    m_val</span><span class="special">(</span><span class="identifier">rhs</span><span class="special">.</span><span class="identifier">m_val</span><span class="special">)</span><span class="special"> {}</span><span class="keyword">
+
+  template</span><span class="special">&lt;</span><span class="keyword">typename</span><span class="identifier"> Functor</span><span class="special">&gt;</span><span class="identifier">
+  generator</span><span class="special">(</span><span class="identifier">Functor</span><span class="identifier"> f</span><span class="special">)</span><span class="special"> :</span><span class="identifier">
+    m_coro</span><span class="special">(</span><span class="identifier">f</span><span class="special">),</span><span class="identifier"> 
+    m_val</span><span class="special">(</span><span class="identifier">assing</span><span class="special">())</span><span class="special"> {}</span><span class="identifier">
+
+  value_type</span><span class="keyword"> operator</span><span class="special">*()</span><span class="special"> {</span><span class="keyword">
+    return</span><span class="special"> *</span><span class="identifier">m_val</span><span class="special">;</span><span class="special">
+  }</span><span class="identifier">
+
+  generator</span><span class="special">&amp;</span><span class="keyword"> operator</span><span class="special">++()</span><span class="special"> {</span><span class="identifier">
+    m_val</span><span class="special"> =</span><span class="identifier"> assing</span><span class="special">();</span><span class="special">
+  }</span><span class="identifier">
+
+  generator</span><span class="keyword"> operator</span><span class="special">++(</span><span class="keyword">int</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+     generator</span><span class="identifier"> t</span><span class="special">(*</span><span class="keyword">this</span><span class="special">);</span><span class="special">
+     ++(*</span><span class="keyword">this</span><span class="special">);</span><span class="keyword">
+     return</span><span class="identifier"> t</span><span class="special">;</span><span class="special">
+  }</span><span class="keyword">
+
+  friend</span><span class="keyword"> operator</span><span class="special">==(</span><span class="keyword">const</span><span class="identifier"> generator</span><span class="special">&amp;</span><span class="identifier"> lhs</span><span class="special">,</span><span class="keyword"> const</span><span class="identifier"> generator</span><span class="special">&amp;</span><span class="identifier"> rhs</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+    lhs</span><span class="special">.</span><span class="identifier">m_val</span><span class="special"> ==</span><span class="identifier"> rhs</span><span class="special">.</span><span class="identifier">m_val</span><span class="special">;</span><span class="special">
+  }</span><span class="keyword">
+private</span><span class="special">:</span><span class="identifier">
+  boost</span><span class="special">::</span><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">vale_type</span><span class="special">&gt;</span><span class="identifier"> assign</span><span class="special">()</span><span class="special"> {</span><span class="keyword">
+    try</span><span class="special"> {</span><span class="keyword">
+      return</span><span class="identifier"> m_coro</span><span class="special">?</span><span class="identifier"> m_coro</span><span class="special">()</span><span class="special"> :</span><span class="identifier">  boost</span><span class="special">::</span><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">&gt;();</span><span class="special">
+    }</span><span class="keyword"> catch</span><span class="special"> (</span><a href="">coroutine_exited</a><span class="special">)</span><span class="special"> {</span><span class="keyword">
+      return</span><span class="identifier"> boost</span><span class="special">::</span><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">&gt;()</span><span class="special">
+    }</span><span class="special">
+  }</span><span class="identifier">
+
+  coroutine_type</span><span class="identifier"> m_coro</span><span class="special">;</span><span class="identifier">
+  boost</span><span class="special">::</span><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">&gt;</span><span class="identifier"> m_val</span><span class="special">;</span><span class="special">
+};</span></code></pre>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/note.png"></span> The code above is simplified for the sake of
+exposition. The actual <a href="">generator</a> class template is a bit more
+complex: it handles correctly <code class="computeroutput"><span class="keyword">void</span></code> result types and <code class="computeroutput"><span class="identifier">tuple_traits</span></code>,
+it has an <code class="computeroutput"><span class="keyword">operator</span><span class="special">()</span></code>, a <code class="computeroutput"><span class="identifier">safe</span><span class="special">-</span><span class="keyword">bool</span></code> conversion and a friend
+<code class="computeroutput"><span class="keyword">operator</span><span class="special"> !=</span></code>
+</td></tr></tbody>
+</table></div>
+<p><a href="">generator</a> has two members variables:</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<code class="computeroutput"><span class="identifier">m_coro</span></code> of type <code class="computeroutput"><span class="identifier">shared_coroutine</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">()&gt;</span></code> is the coroutine
+in term of which <code class="computeroutput"><a href="">generator</a></code> is implemented.
+</li>
+<li>
+<code class="computeroutput"><span class="identifier">m_val</span></code> of type <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">&gt;</span></code> is the next value that
+will be returned by <code class="computeroutput"><span class="keyword">operator</span><span class="special">*</span></code>. An empty optional represent a
+past-the-end iterator.
+</li>
+</ul></div>
+<p>
+The first two member functions are the default constructor and the
+copy constructor. There is nothing peculiar in them. Note how a
+default constructed <code class="computeroutput"><a href="">generator</a></code> has an empty <code class="computeroutput"><span class="identifier">m_val</span></code> and thus is a
+past-the-end iterator.</p>
+<p>
+The third member constructs the generator from a function or function
+object parameter. The argument is forwarded to the <code class="computeroutput"><span class="identifier">m_coro</span></code> member
+to initialize the internal coroutine. <code class="computeroutput"><span class="identifier">m_val</span></code> is then initialized by a
+call to <code class="computeroutput"><span class="identifier">assing</span><span class="special">()</span></code>.</p>
+<p><code class="computeroutput"><span class="keyword">operator</span><span class="special">*</span></code> simply returns <code class="computeroutput"><span class="special">*</span><span class="identifier">m_val</span></code>, that is the current value stored
+in the optional. The result of dereferencing a past-the-end iterator
+is undefined.</p>
+<p>
+The prefix <code class="computeroutput"><span class="keyword">operator</span><span class="special">++</span></code> simply reassign the result of <code class="computeroutput"><span class="identifier">assign</span><span class="special">()</span></code> to <code class="computeroutput"><span class="identifier">m_val</span></code>.</p>
+<p>
+The postfix <code class="computeroutput"><span class="keyword">operator</span><span class="special">++</span></code> is implemented in terms of the prefix
+<code class="computeroutput"><span class="keyword">operator</span><span class="special">++</span></code> in the usual way.</p>
+<p><code class="computeroutput"><span class="keyword">operator</span><span class="special">==</span></code> compares two generators for equality by comparing their
+<code class="computeroutput"><span class="identifier">m_val</span></code> members. Notice that two past-the-end iterators have both
+empty <code class="computeroutput"><span class="identifier">m_val</span></code> and compare equally.</p>
+<p><code class="computeroutput"><span class="identifier">assign</span><span class="special">()</span></code> is responsible of returning the next value in the sequence
+by invoking the underlying coroutine and eventually signaling the end
+of iteration. It first checks the coroutine for liveness
+(through <a href="">coroutine</a><code class="computeroutput"><span class="identifier">safe</span><span class="special">-</span><span class="keyword">bool</span></code> conversion). If the coroutine is
+live it returns the result of a call to the coroutine. If the
+coroutine is dead (it has exited or has never been initialized) it
+returns an empty optional. Notice that the call to the coroutine could
+throw a <code class="computeroutput"><span class="identifier">coroutine_exited</span></code> exception if the coroutine exited, without
+yielding a value, by invoking <code class="computeroutput"><a href="">exit</a><span class="special">()</span></code>. In that case an empty
+optional is returned.</p>
+<p>
+The <code class="computeroutput"><span class="keyword">try</span><span class="special"> {...}</span><span class="keyword"> catch</span><span class="special">(</span><a href="">coroutine_exited</a><span class="special">)</span><span class="special"> {...}</span></code> idiom is frequent in
+code that use coroutines that are expected to terminate via
+<code class="computeroutput"><a href="">exit</a><span class="special">()</span></code> (that this, the <code class="computeroutput"><a href="">exit</a><span class="special">()</span></code> termination path is not "exceptional").
+Boost.Coroutine provides a way to simplify this code by completely
+eliminating the exception. For example
+<code class="computeroutput"><span class="identifier">assign</span><span class="special">()</span></code> can be rewritten as:</p>
+<pre class="programlisting"><code class="literal"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">vale_type</span><span class="special">&gt;</span><span class="identifier"> assing</span><span class="special">()</span><span class="special"> {</span><span class="keyword">
+  return</span><span class="identifier"> m_coro</span><span class="special">?</span><span class="identifier"> m_coro</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">nothrow</span><span class="special">)</span><span class="special"> :</span><span class="identifier">  boost</span><span class="special">::</span><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">&gt;();</span><span class="special">
+}</span></code></pre>
+<p>
+Notice the extra <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">nothrow</span></code> parameter. If the first parameter to a
+<code class="computeroutput"><a href="">coroutine</a><span class="special">&lt;</span><span class="identifier">result_type</span><span class="special">(...)&gt;::</span><span class="keyword">operator</span><span class="special">()</span></code> is an object of type <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">nothrow_t</span></code>, the
+return type of the operator is modified to
+<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">result_type</span><span class="special">&gt;</span></code>. The optional will contain the normal
+result value in the case of a normal <code class="computeroutput"><span class="identifier">yield</span><span class="special">()</span></code> or <code class="computeroutput"><span class="keyword">return</span></code> statement,
+or will be empty if the coroutine has been exited via
+<code class="computeroutput"><a href="">exit</a><span class="special">()</span></code>. Notice that if <code class="computeroutput"><span class="identifier">result_type</span></code> was <code class="computeroutput"><span class="keyword">void</span></code> it will
+remain unchanged (no optional will be returned), but no exception will
+be thrown.</p>
+<p>
+If the coroutine terminates because of an uncaught exception not of
+type <code class="computeroutput"><a href="">exit_exception</a></code>, <code class="computeroutput"><span class="keyword">operator</span><span class="special">()(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">nothrow</span><span class="special">)</span></code> will still throw an
+<code class="computeroutput"><a href="">abnormal_exit</a></code> exception.</p>
+<p>
+If a coroutine takes one or more parameters, std::nothrow must be the
+first parameter. For example a coroutine <code class="computeroutput"><span class="identifier">my_coro</span></code> of type:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">typedef</span><span class="identifier"> coro</span><span class="special">::</span><span class="identifier">coroutine</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">(</span><span class="keyword">long</span><span class="special">,</span><span class="keyword"> double</span><span class="special">,</span><span class="keyword"> char</span><span class="special">)&gt;</span><span class="identifier"> coroutine_type</span><span class="special">;</span></code></pre>
+<p>
+Will be invoked like this:</p>
+<pre class="programlisting"><code class="literal"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">optional</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span><span class="identifier"> res</span><span class="special"> =</span><span class="identifier"> my_coro</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">nothrow</span><span class="special">,</span><span class="number"> 10000L</span><span class="special">,</span><span class="number"> 10.7</span><span class="special">,</span><span class="char"> 'a'</span><span class="special">);</span></code></pre>
+<a name="producer_consumer2"></a><p></p>
+<a name="coroutines.example__producer_consumer_revisited"></a><h4>
+<a name="id2614390"></a>Example: producer/consumer revisited</h4>
+<p>
+A <a href="producer_consumer1.html" title=" Example: the producer/consumer pattern">previous example</a> presented a consumer
+driven version of the <span class="emphasis"><em>producer/consumer</em></span> pattern. We will now
+implement a producer driven example of the same scenario:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">typedef</span><span class="identifier"> coroutine</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">(</span><span class="keyword">const</span><span class="identifier"> std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&amp;)&gt;</span><span class="identifier"> coroutine_type</span><span class="special">;</span><span class="keyword">
+
+template</span><span class="special">&lt;</span><span class="keyword">typename</span><span class="identifier"> Consumer</span><span class="special">&gt;</span><span class="keyword">
+void</span><span class="identifier"> producer</span><span class="special">(</span><span class="identifier">Consumer</span><span class="identifier"> consumer</span><span class="special">,</span><span class="identifier"> std</span><span class="special">::</span><span class="identifier">string</span><span class="identifier"> base</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+  std</span><span class="special">::</span><span class="identifier">sort</span><span class="special">(</span><span class="identifier">base</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span><span class="identifier"> base</span><span class="special">.</span><span class="identifier">end</span><span class="special">());</span><span class="keyword">
+  do</span><span class="special"> {</span><span class="identifier">
+    consumer</span><span class="special">(</span><span class="identifier">base</span><span class="special">);</span><span class="special">
+  }</span><span class="keyword"> while</span><span class="special"> (</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">next_permutation</span><span class="special">(</span><span class="identifier">base</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span><span class="identifier"> base</span><span class="special">.</span><span class="identifier">end</span><span class="special">()));</span><span class="special">
+}</span><span class="keyword">
+
+void</span><span class="identifier"> consumer</span><span class="special">(</span><span class="identifier">coroutine_type</span><span class="special">::</span><span class="identifier">self</span><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword"> const</span><span class="identifier"> std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&amp;</span><span class="identifier"> value</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+  std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="identifier"> value</span><span class="special"> &lt;&lt;</span><span class="string"> "\n"</span><span class="special">;</span><span class="keyword">
+  while</span><span class="special">(</span><span class="keyword">true</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+    std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="identifier"> self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">()&lt;&lt;</span><span class="string"> "\n"</span><span class="special">;</span><span class="special">
+  }</span><span class="special"> 
+}</span></code></pre>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/note.png"></span><a href="">coroutine</a> too correctly handles reference
+types. This specific example doesn't have the reference lifetimes
+issues the <a href="producer_consumer1.html" title=" Example: the producer/consumer pattern">previous</a> had, but coroutines
+aren't in general immune to them.</td></tr></tbody>
+</table></div>
+<p>
+Here we take advantage of the capability to pass arguments in a
+coroutine invocation to reverse the leading role of the
+pattern. Extending this pattern to support filter functions is left as
+an exercise for the reader.</p>
+<a name="coroutines.conclusions"></a><h4>
+<a name="id2614944"></a>Conclusions</h4>
+<p>
+We have now terminated our tour on the basic capabilities of
+<code class="computeroutput"><a href="">coroutine</a></code> and <code class="computeroutput"><a href="">generator</a></code>. The next section will
+describe more advanced features, including symmetric coroutines and
+event handling.</p>
+</div>
+<table width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright © 2006 Giovanni P. Deretta</small></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="stackful.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="tutorial.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="multitasking.html"><img src="files/next.png" alt="Next"></a>
+</div>
+</body></html>

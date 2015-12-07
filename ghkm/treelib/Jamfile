@@ -1,0 +1,10 @@
+project treelib 
+  : requirements <include>include 
+  : usage-requirements <include>include 
+  ;
+
+lib treelib
+  : src/treelib/Tree.cpp
+    src/treelib/TreeNode.cpp
+    /boost/regex
+  ;

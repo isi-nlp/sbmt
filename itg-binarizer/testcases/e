@@ -1,0 +1,1 @@
+VP(NP(x0:CC x1:NN) x2:JJ) -> x2 x1 x0 ### id=5408450 unit_root_count_it1=e^1.10639464855194 unit_root_prob_it1=e^-13.1155986785889 count=3 lhscount=3 rootcount=9808867 fraccount=3 lhsfraccount=3 rootfraccount=1562933 gt_prob=e^-15.3862461314677 min-top-k=256 model1inv=e^-1.81368611064602

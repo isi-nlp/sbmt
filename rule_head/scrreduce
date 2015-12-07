@@ -1,0 +1,195 @@
+#!/usr/bin/env python
+
+from itertools import islice, chain, izip, groupby
+import sys
+import re
+import math
+lhsre = re.compile(r'^([^()]*)')
+
+lhsvar = re.compile(r'x(\d+):([^\s()]*)')
+rhsvar = re.compile(r'x(\d+)')
+lhsrhs = re.compile(r'(.*)\s+->\s+(.*)')
+
+
+def ntvec(rule):
+    ls,rs = lhsrhs.match(rule).group(1,2)
+    lhs = dict( ( (int(m.group(1)),m.group(2)) for m in lhsvar.finditer(ls)) )
+    return [lhs[int(m.group(1))] for m in rhsvar.finditer(rs)]
+    
+
+
+def batch(iterable, size):
+    sourceiter = iter(iterable)
+    while True:
+        batchiter = islice(sourceiter, size)
+        yield chain([batchiter.next()], batchiter)
+
+class dist:
+    def __init__(self,line):
+        self.n = 0
+        linel = line.split()
+        self.c = int(linel.pop(0))
+        self.count = {}
+        for word,count in batch(linel,2):
+            c = int(count)
+            self.count[word] = c
+            self.n += c
+
+class mydatum:
+    def __init__(self,nt,head,dist):
+        self.nt = nt
+        self.head = head
+        self.dist = dist
+
+def reduce_data(lines):
+    for line in lines:
+        linel = line.split('\t')
+        
+        rule = linel.pop(0)
+        nts = [lhsre.match(rule).group(1)] + ntvec(rule)
+
+        N = len(linel)
+        m = (N - 2) / 2
+        headwords = linel[0:m]
+        dists = [dist(ln) for ln in linel[m+2:]]
+        ll = [ mydatum(p[0],p[1],p[2]) for p in izip(nts,headwords,dists) ]
+        yield ll
+
+
+def read_nt_table(lines):
+    class entry:
+        def __init__(self,c,n,dist):
+            self.c = c
+            self.n = n
+            self.count = dist
+    ret = {}
+    for line in lines:
+        dist = {}
+        linel = line.split()
+        nt = linel.pop(0)
+        n = int(linel.pop(0))
+        c = int(linel.pop(0))
+        for word,count in batch(linel,2):
+            dist[word] = int(count)
+        ret[nt] = entry(c,n,dist)
+    return ret
+    
+def num_words(nt_table):
+    words = set()
+    for tbl in nt_table.itervalues():
+        for x in tbl.count.iterkeys():
+            words.add(x)
+    #words = set(chain((x for x in tbl.count.iterkeys()) for tbl in nt_table.itervalues()))
+    return len(words)
+
+
+class sum_entry:
+    def __init__(self,c,n):
+        self.c = c
+        self.n = n
+
+def read_sum_table(lines):
+    class entry:
+        def __init__(self,sum,dist):
+            self.sum = sum
+            self.counts = dist
+    ret = {}
+    for line in lines:
+        dist = {}
+        linel = line.split()
+        nt = linel.pop(0)
+        sum = 0
+        linel.pop(0)
+        for word,c,n in batch(linel,3):
+            dist[word] = sum_entry(int(c),int(n))
+            sum += int(n)
+        ret[nt] = entry(sum,dist)
+    return ret
+
+def wb_prob(c,n,count,p,b):
+    #print "wb_prob",c,n,count,p
+    if n == 0:
+        return p
+    else:
+        p1 = float(count)/float(n+c)
+        p2 = (float(c)/float(n+c)) * p
+        return p1 + p2
+
+def logprob(x):
+    return math.log(x,0.1)
+    
+def pp_rule_given_root(datum,sum_table):
+    nt = datum[0].nt
+    count = datum[0].dist.n
+    denom = sum_table[nt].sum
+    #print nt, count, denom
+    return float(count)/float(denom)
+    
+def p_rule_given_root(d,s):
+    return logprob(pp_rule_given_root(d,s))
+
+def p_rule_given_head_root(datum,sum_table,nw):
+    nt = datum[0].nt
+    head = datum[0].head
+    n = sum_table[nt].counts.get(head,sum_entry(0,0)).n
+    c = sum_table[nt].counts.get(head,sum_entry(0,0)).c
+    count = datum[0].dist.count.get(head,0)
+    #return math.log(float(count)/float(n),0.1)
+    #print nt, head, count, c, n
+    return logprob(wb_prob(c,n,count,pp_rule_given_root(datum,sum_table),1.0))
+
+def p_head_given_rule_var(data,nt_table,nw):
+    rhead = data[0].head
+    found = False
+    for datum in data[1:]:
+        head = datum.head
+        nt = datum.nt
+        c = datum.dist.c
+        n = datum.dist.n
+        count = datum.dist.count.get(head,0)
+        bcount = nt_table[nt].count.get(head,0)
+        bc = nt_table[nt].c
+        bn = nt_table[nt].n
+        if head != rhead or found:
+            scr_ = wb_prob( c \
+                          , n \
+                          , count \
+                          , wb_prob(bc,bn,bcount,nw,1.0) \
+                          , 1.0 \
+                          )
+            yield logprob(scr_)
+        else:
+            found = True
+    
+
+def lineno_and_line(lines):
+    for line in lines:
+        yield line.split('\t',1)
+
+if __name__ == '__main__':
+    sum_table = read_sum_table(open(sys.argv[1]))
+    nt_table = read_nt_table(open(sys.argv[2]))
+    nwords = 150 #num_words(nt_table)
+    nw = 1.0/float(num_words(nt_table))
+    print >> sys.stderr, nwords, nw
+    #for x in sum_table.iteritems():
+    #    print x
+    #for x in nt_table.iteritems():
+    #    print x
+    
+    for n,lines in groupby(lineno_and_line(sys.stdin), lambda x : x[0]):
+        p = 0.0
+        r = 0.0
+        for datum in reduce_data(l[1] for l in lines):
+            #print datum
+            s = p_rule_given_root(datum,sum_table)
+            q = p_rule_given_head_root(datum,sum_table,nw)
+            qq = list(p_head_given_rule_var(datum,nt_table,nw))
+            p += s
+            r += q
+            for qqq in qq:
+                r += qqq
+            print '%s\t%s\t' % (n,s) + '\t'.join(str(qqq) for qqq in [q] + qq)
+        print '%s\t%s\t%s' % (n,p,r + logprob(1.0/float(nwords)))
+        
+        

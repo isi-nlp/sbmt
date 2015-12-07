@@ -1,0 +1,20 @@
+
+def slice_span(l,s):
+    "s=[a,b) out of l"
+    return l[s[0]:s[1]]
+
+def unused():
+    covers=dict() # maps source (x,y) to target (a,b)
+    def cover(s):
+        "s=(a,b), then return the target span [x,y) from position i to j on the input, you can derive s...s+(j-i) on the desired output 0,...,max. or None if there is no contig. span"
+        if s in covers:
+            return covers[s]
+        else:
+            l=slice_span(p,s) # super inefficient, not a dynamic program - will optimize later
+            a=min(l)
+            b=max(l)+1
+            r=None
+            if len(l)==b-a: #contiguous
+                r=(a,b)
+            covers[s]=r
+            return r

@@ -1,0 +1,32 @@
+#!/usr/bin/env perl
+#
+# For all given filenames, checks if they already exists. 
+# If yes, creates a backup (up to 1000) of the file. 
+#
+use 5.006; 
+use strict;
+
+foreach my $fn ( @ARGV ) {
+    # open() is faster than stat() 
+    if ( open( TEST, "<$fn" ) ) {
+	# original file exists, create backup
+	close TEST; 
+
+	my $flag = 1; 
+	for ( my $i=0; $i < 1000 && $flag; ++$i ) {
+	    my $newfn = $fn . sprintf( ".%03d", $i ); 
+	    if ( open( TEST, "<$newfn" ) ) {
+		# backup exists, try next
+		close TEST; 
+	    } else {
+		# backup slot is free, use it
+		rename $fn,$newfn || die "ERROR: rename $fn to $newfn: $!\n"; 
+		$flag = 0; 
+	    }
+	}
+	# complain, if we were unable to find a free slot 
+	die "FATAL: All available backup slots are used!\n" if $flag; 
+    } else {
+	# original file does not exist, nothing to do
+    }
+}

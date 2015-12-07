@@ -1,0 +1,84 @@
+From mini_decoder -h:
+
+{{{
+  --dynamic-lm-ngram arg ONLY use --ngram-order with this: 
+lm=lw[@,c][file.lw] or multi[@][lm1=lw[o][3gram.lw],lm2=lw[c][2gram.lw]]. 
+
+@->lm-at-numclass=1
+c->openclass-lm=0
+(c or u)->unknown-word-prob*=`[lmname]-unk' feature weight
+o->openclass-lm
+u->openclass-lm plus unk feature.
+--weight-lm-ngram replaced by `[lmname]' feature weight.
+}}}
+
+A dynamic ngram lm is specified as: NAME=TYPE[OPTIONS]PARAMS, where NAME= is optional (default name is "lm").  Whitespace and commas are not significant, except when something is described as a sequence of characters (e.g. a filename, name, or type).  In what follows, ('[' ']' ',' '@', and '=' are literal)
+
+OPTIONS:
+{{{
+[@] transform digits to '@'
+[c] or [c=10^-20] closed (weight vector LMNAME-unk feature overrides)
+[u] or [u=.001] open with additional unknown prob (weight vector overrides)
+[o] open (use p(<unk>) from LM; no additional unknown word prob feature)
+[@,o] openclass, digits->@.  comma is optional
+[]  (defaults to [o])
+}}}
+
+TYPE:
+{{{
+lw  Language Weaver binary ngram LM
+multi  multi LM
+}}}
+
+PARAMS:
+{{{
+[FILENAME] if type is lw
+[SPEC,SPEC,...,SPEC] if type is multi
+}}}
+
+FILENAME:
+Either any number of non-']' characters, or a double-quoted, backslash-escaped string.
+
+NAME:
+Any number of non-'[' characters.  The name is used to identify queries in the --ngram.file log, for status reports on loading the LM in the --sbmt.lm.file log, but most importantly, to get the weights to be used from the weight vector, and to output the computed scores in nbests (both are relevant for tuning).
+
+To reiterate, a specification of a dynamic ngram LM is:
+
+SPEC:
+NAME=TYPE[OPTIONS]PARAMS, where NAME= is optional 
+
+Examples of SPEC:
+{{{
+lw[u=10^-5]["ugly ] [ filename\"\\\""]
+multi[@][giga=lw[c][gigaword.lw],bitext=lw[o][tm.lw]]
+}}}
+
+Notes on multi-lm:
+You should not specify @ or c options for the multi-lm unless unless you understand the effect this will have on child LMs.  Setting @ for the multi-lm makes each component child LM behave as if it had @ set.  The default "safe" setting for a multi-lm is [o] (or equivalently, []).  Note that specifying c or u for the multi-lm only counts words that are unknown to *all* language models.  A closed multi-lm could lead to unexpected component lm-unk values (when a word is unknown to all the components, none of them will be queried for that word, so the count of each lm-unk feature will be smaller).
+
+Nbest output:
+
+{{{
+NBEST ... lm-with-unk=27.4829 lm=27.4829 lm-unk=1 lm1-with-unk=27.4829 lm1=7.48294 lm1-unk=1 lm2-with-unk=27.4829 lm2=7.48294 lm2-unk=1 lm-cost=27.0578 ...
+}}}
+
+is the result of these mini_decoder options (note: the two sub-lms are identical with weights adding to 1):
+{{{
+--dynamic-lm-ngram multi[c][lm1=lw[][small.lw],lm2=lw[][small.lw]] --weight-string lm1:.3,lm2:.7,lm1-unk:6,lm2-unk:14
+}}}
+
+The feature output relate to their weights exactly as you would think (just as regular sbtm features), so tuning should be simple.   Note that the unknown word probability used is actually lm1-unk (as a neglog10 probability) divided by the lm weight, in order to present the illusion that these are independent features. 
+
+The combined total "lm-cost" (includes everything due to the lm info, unscaled by the top-level lm weight) should not be used in tuning.  
+
+The combined "LMNAME-with-unk" features may be used, but if so, the weights for the LMNAME and will be ignored (you can specify the extra "<unk>" probability in the LM options or with LMNAME-unk's weight - but you should not tune both LMNAME-unk and LMNAME-with-unk).
+
+If a multi-lm is used, it will have a name and features (default: "lm").  You could tune those features safely if you fixed the component LM weights.  If you tune the component weights, you should not tune the multi-lm's.  The only appealing exception seems to be tuning an unknown weight for the u type multi-lm:
+
+{{{
+all=multi[u][l1=lw[c][a.lw],l2=lw[][b.lw]]
+tune: all-unk, l1, l1-unk, l2 (note: l2 is open so has no l2-unk feature)
+}}}
+
+Finally, the old feature weight for "lm-cost" or the command line --weight-lm-ngram do serve as a replacement for the default "lm" name and associated feature weight, although this use is discouraged.  If a feature matching the *name* of the LM is found, it takes priority over all previous methods of specifying the weight.
+

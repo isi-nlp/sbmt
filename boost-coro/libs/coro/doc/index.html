@@ -1,0 +1,105 @@
+<html><head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Chapter&nbsp;1.&nbsp;Boost.Coroutine</title>
+<link rel="stylesheet" href="files/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.70.1">
+<link rel="start" href="index.html" title="Chapter&nbsp;1.&nbsp;Boost.Coroutine">
+<link rel="next" href="tutorial.html" title=" Tutorial">
+</head><body link="#0000ff" alink="#0000ff" bgcolor="white" text="black" vlink="#840084">
+<table width="100%" cellpadding="2">
+<tbody><tr><td valign="top"><img alt="boost.png (6897 bytes)" src="files/boost.png" width="277" height="86"></td>
+<td align="center"><a href="http://www.boost.org/">Home</a></td>
+<td align="center"><a href="http://www.boost.org/doc/libs">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="http://www.boost.org/users/index.html">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav"><a accesskey="n" href="tutorial.html"><img src="files/next.png" alt="Next"></a></div>
+<div class="chapter" lang="en">
+<div class="titlepage"><div>
+<div><h2 class="title">
+<a name="coroutine"></a>Chapter&nbsp;1.&nbsp;Boost.Coroutine</h2></div>
+<div><div class="author"><h3 class="author">
+<span class="firstname">Giovanni P. </span> <span class="surname">Deretta</span>
+</h3></div></div>
+<div><p class="copyright">Copyright © 2006 Giovanni P. Deretta</p></div>
+<div><div class="legalnotice">
+<a name="id2594496"></a><p>
+        Distributed under the Boost Software License, Version 1.0.
+        (See accompanying file LICENSE_1_0.txt or copy at
+        <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">
+            http://www.boost.org/LICENSE_1_0.txt
+        </a>)
+	
+      </p>
+</div></div>
+</div></div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="section"><a href="index.html#coroutine.intro"> Introduction</a></span></dt>
+<dt><span class="section"><a href="tutorial.html"> Tutorial</a></span></dt>
+<dd><dl>
+<dt><span class="section"><a href="tutorial.html#coroutine.generators"> Generators</a></span></dt>
+<dt><span class="section"><a href="producer_consumer1.html"> Example: the producer/consumer pattern</a></span></dt>
+<dt><span class="section"><a href="stackful.html"> Stackful generators: Same fringe problem</a></span></dt>
+<dt><span class="section"><a href="coroutines.html"> Coroutines</a></span></dt>
+<dt><span class="section"><a href="multitasking.html"> Multitasking</a></span></dt>
+<dt><span class="section"><a href="events_simple.html"> Waiting for events</a></span></dt>
+</dl></dd>
+<dt><span class="section"><a href="advanced.html"> Advanced concepts</a></span></dt>
+<dd><dl>
+<dt><span class="section"><a href="advanced.html#coroutine.introduction"> Introduction</a></span></dt>
+<dt><span class="section"><a href="symmetric_coroutines.html"> Symmetric coroutines</a></span></dt>
+<dt><span class="section"><a href="finite_state_machines.html"> Finite state machines</a></span></dt>
+<dt><span class="section"><a href="events.html"> Events</a></span></dt>
+<dt><span class="section"><a href="asio.html"> Events: Boost.Asio</a></span></dt>
+<dt><span class="section"><a href="threads.html"> Coroutines and thread safety</a></span></dt>
+</dl></dd>
+<dt><span class="section"><a href="design.html"> Design Rationale</a></span></dt>
+<dt><span class="section"><a href="todo.html"> Further Development</a></span></dt>
+<dt><span class="section"><a href="details.html"> Details</a></span></dt>
+<dd><dl>
+<dt><span class="section"><a href="details.html#coroutine.supported"> Supported platforms</a></span></dt>
+<dt><span class="section"><a href="performance.html"> Performance</a></span></dt>
+<dt><span class="section"><a href="implementation.html"> Implementation</a></span></dt>
+<dt><span class="section"><a href="fibers.html"> Case study 1: Win32 Fibers</a></span></dt>
+<dt><span class="section"><a href="linuxasm.html"> Case study 2: Linux-x86-GCC</a></span></dt>
+<dt><span class="section"><a href="coroutine_thread.html"> Interaction between coroutines and threads</a></span></dt>
+</dl></dd>
+<dt><span class="section"><a href="acknowledgments.html"> Acknowledgments</a></span></dt>
+<dt><span class="section"><a href="bibliography.html"> Bibliography</a></span></dt>
+</dl>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="coroutine.intro"></a> Introduction</h2></div></div></div>
+<p>
+The Boost.Coroutine library contains a family of class templates that
+wrap function objects in coroutines. Coroutines are a
+generalization of subroutines that can return and be reentered more
+than once without causing the destruction of automatic objects.</p>
+<p>
+Coroutines are useful whenever it is necessary to keep state across a
+function call, a job usually reserved to stateful function objects.</p>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/caution.png"></span> This library has been developed as part of the Google
+Summer of Code 2006, with Boost as the Mentoring association. It has
+not been subject to a formal review, and thus is not part of the Boost
+library collection. Boost.Coroutine is only the tentative name</td></tr></tbody>
+</table></div>
+</div>
+<p>
+]</p>
+</div>
+<table width="100%"><tbody><tr>
+<td align="left"><small><p>Last revised: August 20, 2006 at 15:04:07 GMT</p></small></td>
+<td align="right"><small></small></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav"><a accesskey="n" href="tutorial.html"><img src="files/next.png" alt="Next"></a></div>
+</body></html>

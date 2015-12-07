@@ -1,0 +1,61 @@
+project pagh
+  : requirements <use>/boost// <include>.
+  : usage-requirements <include>.
+  ;
+
+#alias cmph : /cmph//cmph ;
+
+#lib cmphobj : cmph.cpp /cmph//cmph ;
+
+lib biglm
+  : cmph.cpp
+    biglm.cpp
+    quantizer.cpp
+    /cmph//ourcmph
+    /boost/iostreams//boost_iostreams
+  ;
+# -fPIC ?
+
+exe make_biglm
+  : biglm
+    make_biglm.cpp
+    arpa.cpp
+    /boost/program_options//boost_program_options
+    /boost/regex//boost_regex
+    /cmph//ourcmph
+  ;
+
+exe use_biglm
+  : biglm
+    use_biglm.cpp
+    /boost/program_options//boost_program_options
+    /boost/regex//boost_regex
+    /cmph//ourcmph
+  ;
+
+exe verify_biglm
+  : biglm
+    verify_biglm.cpp
+    arpa.cpp
+    /boost/program_options//boost_program_options
+    /boost/regex//boost_regex
+    /cmph//ourcmph
+  ;
+
+explicit install ;
+install dist
+	: make_biglm use_biglm verify_biglm
+	: <location>./dist
+	  <install-dependencies>on
+          <install-type>LIB
+          <install-type>EXE
+;
+
+install dist2
+	: make_biglm use_biglm verify_biglm
+	: <location>./dist2
+	  <install-dependencies>on
+          <install-type>LIB
+          <install-type>EXE
+;
+

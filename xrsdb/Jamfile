@@ -1,0 +1,4 @@
+project xrsdb ;
+
+alias install : ./apps//install ;
+explicit install ;

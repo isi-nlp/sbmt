@@ -1,0 +1,149 @@
+#!/usr/bin/env python
+import cfg, hadoop, os, sys, subprocess, threading, argparse, re, tempfile, itertools
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--green', action='store_true')
+parser.add_argument('--oldne', action='store_true')
+parser.add_argument('--reducer', action='store_true')
+parser.add_argument('--ireducer', action='store_true')
+d = cfg.parse_args(parser)
+
+self = os.path.abspath(sys.argv[0])
+
+def tread(p,i,f=-1):
+    sidre = re.compile(r'\bsid=([-0-9]*)')
+    for ln in p.stdout:
+        if f >= 0:
+            x = f
+        else:
+            x = int(sidre.search(ln).group(1))
+        if i >= 0:
+            sys.stdout.write('%s\t%s\t%s' % (x,i,ln))
+        else:
+            sys.stdout.write('%s\t%s' % (x,ln))
+
+def mapper(ne,id):
+    proc = None
+    read = None
+    for ln in sys.stdin:
+        k,ln = ln.split('\t')[0:2]
+        if proc is None:
+            lcrepair = os.path.join(d.scriptdir,'lcrepair')
+            paste = os.path.join(d.scriptdir,'paste')
+            necmd = d.config['rule-extraction']['features']['chi-ne'][ne]
+            proc = subprocess.Popen( necmd + ' | ' + lcrepair + ' ' + str(int(k)-1) + ' sid' 
+                                   , stdin=subprocess.PIPE
+                                   , stdout=subprocess.PIPE
+                                   , shell=True )
+            read = threading.Thread(target=tread,args=(proc,id))
+            read.start()
+        print >> proc.stdin, ln.rstrip('\n')
+    if proc is not None:
+        proc.stdin.close()
+        proc.wait()
+        read.join()
+        sys.exit(proc.returncode)
+
+def rreducer():
+    uniq = os.path.join(d.scriptdir,'rule-sort-uniq')
+    def input():
+        for x in sys.stdin:
+            yield x.split('\t')
+    for key,lines in itertools.groupby(input(),lambda x : x[0]):
+        cmd=cfg.PTemplate('$s --ireducer | $uniq').substitute(uniq=uniq,s=self)
+        proc = subprocess.Popen( cmd
+                               , stdin=subprocess.PIPE
+                               , stdout=subprocess.PIPE
+                               , shell=True )
+        read = threading.Thread(target=tread, args=(proc,-1,key))
+        read.start()
+        for line in lines:
+            proc.stdin.write('\t'.join(line))
+        proc.stdin.close()
+        proc.wait()
+        read.join()
+        if proc.returncode != 0:
+            sys.exit(proc.returncode)
+    sys.exit(0)   
+
+def reducer():
+    tmpdir = tempfile.mkdtemp()
+    tmpfifo = os.path.join(tmpdir,'ogre.tmp')
+    def init(fd,tmpfile,ogrf,key):
+        fd.close()
+        #print >> sys.stderr, 'fd', fd
+        proc = subprocess.Popen( ogrf + ' ' + tmpfile
+                               , stdin=subprocess.PIPE
+                               , stdout=sys.stdout
+                               , shell=True )
+        
+        return proc
+    ogrf = d.config['rule-extraction']['features']['chi-ne']['ogrf']
+    print >> sys.stderr, 'ogrf:', ogrf
+    def input():
+	for x in sys.stdin:
+            yield x.split('\t')
+    for key,lines in itertools.groupby(input(),lambda x : x[0]):
+        #os.mkfifo(tmpfifo)
+        #fd = open(tmpfifo,'w')
+        #print >> sys.stderr, 'fd', fd
+        proc = None
+        fd = open(tmpfifo,'w')
+        for line in lines:
+            #print >> sys.stderr, line
+            if line[1] == '0':
+                sys.stdout.write(line[2])
+                sys.stdout.flush()
+                fd.write(line[2])
+            elif line[1] == '1':
+                if proc is None:
+                    proc = init(fd,tmpfifo,ogrf,key)
+                proc.stdin.write(line[2])
+            else:
+                raise Exception("not a valid category")
+        if proc is None:
+            proc = init(fd,tmpfifo,ogrf,key)
+        proc.stdin.close()
+        proc.wait()
+        if proc.returncode != 0:
+            sys.exit(proc.returncode)
+    sys.exit(0)
+
+if d.green:
+    mapper('green',0)
+elif d.oldne:
+    mapper('oldne',1)
+elif d.reducer:
+    rreducer()
+elif d.ireducer:
+    reducer()
+else:
+    lines = 0
+    for line in open(d.config['corpus']):
+        lines += 1
+
+    hp = d.hadoop
+    inputs = ['part.ne-rules.green']
+    if 'necorpus' in d.config and d.config['necorpus'] is not None:
+        necorpus = d.config['necorpus']
+        nein = os.path.join(d.tmpdir,'necorpus.in')
+        lc = os.path.join(d.config['variables']['rhbin'],'lc')
+        cfg.execute(d,'$lc < $necorpus > $nein',lc=lc,necorpus=necorpus,nein=nein,tmpdir=d.tmpdir)
+        hp.put(nein,'necorpus.in')
+        hp.mapreduce(input='necorpus.in',output='part.ne-rules.oldne',mapper=self + ' --oldne')
+        inputs.append('part.ne-rules.oldne')
+        hp.getmerge('part.ne-rules.oldne',os.path.join(d.tmpdir,'ne-rules.oldne'))
+    hp.mapreduce( input='input'
+                , output='part.ne-rules.green'
+                , mapper=self + ' --green'
+                , options='-jobconf mapred.map.tasks='+str(int(lines/10)) )
+    hp.getmerge('part.ne-rules.green',os.path.join(d.tmpdir,'ne-rules.green'))
+    hp.mapreduce( input=inputs
+                , output='part.chi-ne'
+                , reducer=self + ' --reducer'
+                , sortkeys=2
+                , partitionkeys=1
+                , options='-jobconf mapred.map.tasks='+str(int(lines/10)) )
+    #for x in inputs:
+    #    hp.remove(x)
+    sys.exit(0)

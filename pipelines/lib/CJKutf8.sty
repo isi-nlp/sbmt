@@ -1,0 +1,72 @@
+% This is the file CJKutf8.sty of the CJK package
+%   for using Asian logographs (Chinese/Japanese/Korean) with LaTeX2e
+%
+% created by Werner Lemberg <wl@gnu.org>
+%
+% Version 4.6.0 (11-Aug-2005)
+
+\NeedsTeXFormat{LaTeX2e}[2003/12/01]
+
+\def\fileversion{4.6.0}
+\def\filedate{2005/08/11}
+\ProvidesFile{CJKutf8.sty}[\filedate\space\fileversion]
+
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[encapsulated]{CJK}
+\RequirePackageWithOptions{fontenc}
+
+\DeclareOption*{\OptionNotUsed}
+
+\ProcessOptions
+
+
+% we suppress any unwanted spaces produced by linefeeds
+
+\endlinechar\m@ne
+
+% We redefine the basic macros for handling multibyte sequences to call
+% a `\u8:...' macro if it has been defined.
+
+\def\CJK@XX#1#2{
+  \ifx #2\protect
+    \expandafter\CJK@XXp\expandafter#1
+  \else
+    \expandafter\ifx\csname u8:\string #1\string #2\endcsname \relax
+      \csname CJK@\number `#1\endcsname{`#2}
+    \else
+      \csname u8:\string #1\string #2\endcsname
+    \fi
+    \CJK@ignorespaces
+  \fi}
+\def\CJK@XXp#1#2{
+    \expandafter\ifx\csname u8:\string #1\string #2\endcsname \relax
+    \csname CJK@\number `#1\endcsname{`#2}\CJK@ignorespaces
+  \else
+    \csname u8:\string #1\string #2\endcsname
+  \fi
+  \CJK@ignorespaces}
+
+\def\CJK@XXX#1#2#3{
+  \ifx #2\protect
+    \expandafter\CJK@XXXp\expandafter#1#3
+  \else
+    \expandafter\ifx\csname u8:\string #1\string #2\string #3\endcsname \relax
+      \csname CJK@\number `#1\endcsname{`#2}{`#3}
+    \else
+      \csname u8:\string #1\string #2\string #3\endcsname
+    \fi
+    \CJK@ignorespaces
+  \fi}
+\def\CJK@XXXp#1#2#3#4{
+  \expandafter\ifx\csname u8:\string #1\string #2\string #4\endcsname \relax
+    \csname CJK@\number `#1\endcsname{`#2}{`#4}
+  \else
+    \csname u8:\string #1\string #2\string #4\endcsname
+  \fi
+  \CJK@ignorespaces}
+
+% reset endline character
+
+\endlinechar `\^^M
+
+\endinput

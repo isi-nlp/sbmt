@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+
+import cfg, argparse, os, sys, decodescript, re, socket
+
+parser = argparse.ArgumentParser()
+#group = parser.add_mutually_exclusive_group(required=True)
+parser.add_argument('-p','--progress',action='store_true')
+parser.add_argument('-j','--tune',action='store_true')
+parser.add_argument('-S','--stop',action='store_true')
+d = cfg.parse_args(parser,config='$outdir/tune.config')
+
+nodes = 3
+nodefile = os.getenv('PBS_NODEFILE')
+nodeset = set()
+if nodefile:
+    for v,line in enumerate(open(nodefile)):
+        nodeset.add(line.rstrip())
+nodes = max(len(nodeset),1) + 2
+unodesfile = open(os.path.join(d.tmpdir,'nodefile'),'w')
+print >> unodesfile, socket.gethostname()
+for f in nodeset:
+    if f != socket.gethostname():
+    	print >> unodesfile, f
+unodesfile.close()
+
+mp = {}
+
+mp['nodes'] = nodes
+mp['miradir'] = d.config['tuner']['mira']['exec-dir']
+os.environ['PYTHONPATH'] = os.path.join(mp['miradir'],'lib')+':'+os.environ['PYTHONPATH']
+os.environ['LD_LIBRARY_PATH'] = os.path.join(mp['miradir'],'lib')+':'+os.environ['LD_LIBRARY_PATH']
+mp['outdir'] = d.outdir
+mp['tmpdir'] = d.tmpdir
+mp['scorer'] = d.config['tuner']['mira']['bleu-variant']
+mp['order'] = d.config['tuner']['mira']['bleu-order']
+mp['weights'] = ','.join(d.config['tuner']['mira']['initial-weights'])
+mp['omit'] = ','.join(d.config['tuner']['mira']['omitted-features'])
+mp['src'] = d.config['corpus']
+mp['refs'] = d.config['lctokrefs'] #' '.join(d.lctokrefs)
+mp['scriptdir'] = d.scriptdir
+mp['unitrate'] = d.config['tuner']['mira']['unit-learning-rate']
+mp['maxrate'] = d.config['tuner']['mira']['max-learning-rate']
+mp['maxlen'] = d.config['tuner']['mira']['max-sentence-length']
+mp['badratio'] = d.config['tuner']['mira']['bad-sentence-threshold']
+mp['tunescriptdir'] = os.path.join(d.rootdir,'tune-pipeline','scripts')
+mp['cprep'] = d.config['cprep']
+mp['nodefile'] = os.path.join(d.tmpdir,'nodefile')
+mp['bindir'] = d.config['variables']['rhbin']
+mp['maxepochs'] = d.config['tuner']['mira']['max-epochs']
+if d.stop:
+   cfg.execute(d,'touch %s' % os.path.join(d.outdir,'STOP'))
+   sys.exit(0)
+if not d.progress:
+    cfg.execute(d,'rm -f %s %s' % (os.path.join(d.outdir,'epoch.scores'),os.path.join(d.outdir,'.epoch.scores.new')))
+    cfg.execute(d,'rm -f %s' % os.path.join(d.outdir,'mira.out'))
+    cfg.execute(d,'rm -f %s' % os.path.join(d.outdir,'trainer.weights'))
+    cfg.execute(d,'ln -fs %s %s' % (os.path.join(mp['cprep'],'corpus'), d.tmpdir)) 
+
+    capturecmd = "$scriptdir/capture-env $$(env | egrep '^(MPI|PBS)' | sed -e 's/=.*$$//' | tr '\\n' ' ') > $tmpdir/settings"
+    capturecmd = cfg.PTemplate(capturecmd).substitute(mp)
+    cfg.execute(d,capturecmd)
+
+    decodescript.write_script(d,'forest')
+
+    cmd = '. $tmpdir/settings && python $miradir/trainer.py $miradir/sbmt_decoder.py' + \
+          ' -d $tmpdir/decoder -p -S $outdir/STOP -W $outdir/trainer.weights -B $scorer -g $cprep' + \
+          ' -R $order' + \
+          ' -M $maxepochs' + \
+          ' -t $tmpdir' + \
+          ' -b $badratio' + \
+          ' -m $maxlen' + \
+          ' --max-learning-rate $maxrate' + \
+          ' --feature-weights $weights --delete-features $omit --holdout 0.1 --unit-learning-rate $unitrate $src $refs'
+    cmd = cfg.PTemplate(cmd).substitute(mp)
+    mp['cmd'] = cmd
+
+    mpirun = 'mpirun -v --mca mpi_warn_on_fork 0 --mca btl self,tcp --oversubscribe --map-by node:PE=$$($bindir/numcpu) --bind-to none -x PYTHONPATH -x PATH -np $nodes /bin/sh -c "$cmd" > $outdir/mira.out'
+    mpirun = cfg.PTemplate(mpirun).substitute(mp)
+    cfg.execute(d,mpirun)
+
+if os.path.exists(os.path.join(d.tmpdir,'src')):
+    mp['src'] = os.path.join(d.tmpdir,'src')
+if os.path.exists(os.path.join(d.tmpdir,'ref0')):
+    mp['refs'] = ' '.join(os.path.join(d.tmpdir,'ref%s' % str(x)) for x in xrange(len(mp['refs'].split()))) 
+cfg.execute(d,cfg.PTemplate('$tunescriptdir/mira-sum -d $outdir $src $refs').substitute(mp))
+
+if not d.progress:
+    iter = -1
+    scr = 0.
+    for line in open(os.path.join(d.outdir,'epoch.scores')):
+        if line[0] != "#":
+            m = re.match(r'(\d+)\s+([-0-9.]+).*',line)
+            i = int(m.group(1))
+            s = float(m.group(2))
+            if s >= scr:
+                scr = s
+                iter = i
+
+    bestw = os.path.join(d.outdir,'weights.final')
+
+    if iter >= 0 and not os.path.exists(bestw):
+        rw = os.path.join(d.outdir,'weights.'+str(iter))
+        cfg.execute(d,'ln -s %s %s' % (rw,bestw))

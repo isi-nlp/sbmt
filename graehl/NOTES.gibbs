@@ -1,0 +1,130 @@
+I think carmel hyperparameter inference for gibbs is working pretty well.
+
+I'm getting roughly the same final learned hyperparam. no matter what my initial value is (that's very good).
+
+I'm beating G&G on trigram accuracy (avg about 87% w/ hyperparam inference), and the hyperparams sujith manually set for bigram seem to perform worse than the inferred ones.
+
+I resample the hyperparams after each epoch, post-burnin.  What I think might need to happen: hyperparam inference starts running before count-averaging begins (burnin ends).  Right now I wait until burnin then start adjusting the hyperparam, because I thought it was sketchy to start guessing the hyperparams based on a random initial sample.  I don't like the fact that averaged counts are over a range of *different* hyperparam values.  The hyperparams do seem to converge.
+
+I think Sujith should run as many of the bayesian carmel experiments as he can, using hyperparam inference.
+
+I've had slightly more success just tuning the hyperparam for the channel model and leaving the lm hyperparam fixed, but that could be a meaningless coincidence.
+
+Here are the arguments I've added to the regular carmel --crp set:
+
+groupby=${groupby:-01}
+stddev=${stddev:-.05}
+anneal=${anneal:- --prior-inference-show --prior-inference-stddev=$stddev --prior-groupby=$groupby}
+
+groupby=01 means the first transducer has fixed prior (0); and the second has its priors scaled in the same direction (1).  (2) would mean to scale the priors in a different random direction for each normgroup (G&G's HMM2).  groupby=11111.... is the default (HMM1).  All you really need to do is supply a positive --prior-inference-stddev=x to carmel.
+
+the value printed at each iteration for the prior is actually a multiplicative factor applied to the initial p0*alpha pseudocounts.  Here's what you see after each iteration:
+
+>  accepted new priors (8.17429) with p1=2^-230992 p2=2^-230994 a1=p2/p1=0.275781 a2=q(1|2)/q(2|1)=0.99603 p_accept=0.274686.  cache-model prob=2^-230992 per-point-ppx(N=26)=2^8884.32 per-block-ppx(N=1005)=2^229.843
+a1 and a2 are the two parts of the acceptance prob (see http://en.wikipedia.org/wiki/Metropolis–Hastings_algorithm ) - p_accept may be >1.  a2 corrects for how much less likely it is to get back to the original hyperparams a from a', than it is to go from a to a'.  a1 is how much more likely the current sample is under the new hyperparams a'.
+
+stddev (was .1 in G&G; i used .05) is for each dimension independently, i.e. the expected distance grows w/ number of dimensions (each 1 adds a dimension, and 2 adds # of normgroups dimensions).  more dimensions => larger "a2" correction factor, which all things being equal may lead to more rejections; I recommend smaller stddev when there are more dimensions.
+
+---
+
+new gibbs option: don't collect avg counts from hard samples, but rather let impl. supply inside/outside probs, or call a "add delta for count @t" ?  combine sparse deltas first, or is delta_sum efficient enough when t=tmax?
+
+----
+
+> Ok, it's really only 3.3 that's relevant ( http://www.eecs.berkeley.edu/~bouchard/pub/bouchard-auxv.pdf <http://www.eecs.berkeley.edu/%7Ebouchard/pub/bouchard-auxv.pdf> ); carmel always generates the complete derivation lattice.
+>
+> I get impression that you think we can keep the possibility of sparsifying priors (alpha < 1), which EM can't give us, while converging in fewer iterations and less time, like EM does.
+>
+> The EM-style expected counts over the whole lattice are added to a cumulative running average (unlike EM, where you just use the latest expected counts).  The thing that makes this possibly interesting is that, as you mention, you still choose a single sample, and further, you still update the probabilities on the proposal HMM (derivation lattice) according to the cache model (i.e. using counts from the latest sample of all the blocks except the one you're on).  I don't think you just use it (the last sample) to compute cache sizes for normalization; you use it to put the probabilities on the derivation lattice before inside/outside (and random hard sample selection).  Maybe that's what you meant.
+
+Yes. Actually, everything stays the same, except that if you're collection "average" counts, then you use soft-counts from inside-outside. If you do the MAP thing of just keeping the last sample, then this modification would make no difference.
+
+
+-------
+
+David Chiang wrote:
+> If, as Jon rightly points out, our definition of alpha is different from the Goldwater HMM paper, does that mean we have correctly reproduced their experiment? I know that Ashish was reporting some numbers that looked different from theirs.
+>
+> David
+
+Let's call your concentration alpha (handout post eq. 8) "C" and G&G alpha "G" for this discussion.
+
+I'm going to use your {f(i)} vector notation which I like quite a lot.  It should be {a_i}_i=1^T in case there's any confusion about what the indices are, but let's just take i as the index from 1...T (the arity of the multinomial).  Without your notation, I'm forced to say something like A=(a_1,...,a_T) where a_i=f(i).
+
+I forgot exactly what G is so let me repeat myself:
+
+G is defined in the paper only in the context of a uniform p0, but I extended it to all p0 so the uniform special case agrees with them.  the prob they use for sampling is (n_k+G)/(sum_{i=1}^T{n_i+G}) = (n_k+G)/(sum(n)+TG).  Essentially, G are their pseudocounts. i.e. if G=1 then it's a uniform prior.  In carmel, I let the user specify G (per transducer in the composition) and use pseudocounts {(T*p0_i)*G}, where T*p0_i = 1 if p0 is uniform.
+
+Since in your handout eq. 26 you say that the bayesian probability adds pseudocounts {alpha_i}, this means that their {alpha_i}={G}. So C=sum{alpha_i}=TG.  This means that your "concentration" doesn't have a good interpretation without knowing the arity of the multinomial T; if C=T then it's a uniform prior.  If C>T then it's smoothing low count probs/favoring p0; if C<T then it's sparsifying (moving away from p0).  G has the more natural interpretation (for uniform p0 at least) that G=1 is uniform.
+
+In practice, one annoying thing about G is that in carmel I allow you to specify one G per transducer in a composition cascade.  But in some models (e.g. dictionary constrained pos tagging), within a single transducer there are multinomials of different arity (e.g. 10 possible words for IN and thousands for NN).  Because I normalize the p0 initially on the arcs, it's then impossible to choose a single G (or C for that matter) that results in the pseudocounts {1} i.e. (1) (1,1) (1,1,...1) for all the different arities. Forest-em accepts per-parameter G.
+
+So, to support the uniform-prior case for varying-size normalization groups in carmel, I need to add new option(s) or make the p0-normalizing optional.  If I let you do this then you can just set p0={alpha_i/T} and set G to 1.
+
+To reiterate, it's true that for each multinomial, there is some concentration parameter that lets you supply a normalized p0 so that {p0_i*concentration}={alpha_i} for any {alpha_i} you can imagine.  I'm just proposing allowing non-normalized p0 in carmel so I don't have to figure out how to supply per-normgroup G.  A perhaps simpler alternative is to have a separate option so that the initial probs on a transducer are exactly the pseudocounts alpha_i (i.e. G, T aren't used at all).
+
+----------
+
+  Ideas that were kicked around were:
+
+- recycle the inside probs from the previous iteration. Every k iterations, recompute the inside probabilities.
+- skip parts of the forest, e.g., those that we know from previous iterations to have low probability
+- when we adjust the rule counts, adjust their probabilities without renormalizing, and adjust the inside probabilities accordingly
+
+What will yield a speedup depends on the implementation details of forest-em. Jon G, do you have any thoughts?
+
+Then, the approximation can be corrected using Metropolis-Hastings. This would entail:
+  - calculate the probability of the old sampled derivation and the new sampled derivation, according to the cache model
+  - calculate the probability of the old sampled derivation and the new sampled derivation, according to the proposal distribution
+  - combine these into an acceptance probability alpha
+  - do a weighted coin flip: with probability alpha, use the new derivation, else reuse the old one (i.e., count it again, contrary to what Adam said)
+
+Since none of this involves a calculation over the whole forest, it seems like there could be a possibility of a big speedup while still sampling from the correct distribution.
+
+> min(1, P(new) * Q(old) / (P(old) Q(new))), where P is the right probability according to the cache model and Q is the approximate probability according to the proposal PCFG.
+>
+> The P() terms are supposed to be posterior probabilities, i.e., given the input sentence, which would require inside-outside, but because the formula uses a ratio of probabilities, all the hard parts cancel each other out and we can just use the cache-model probabilities.
+>
+> Also because the Q() terms are in a ratio, we don't need them to be normalized probabilities.
+>
+> David
+
+I'll need some work to comprehend the last two emails from David (especially the "don't renormalize" part), but generally speaking, here's my proposal, in the scheme of exact-inside (there's no outside; i choose randomly from the top down) every k iterations:
+
+N/k times:
+ for each forest:
+   compute exact inside from proposal hmm
+   draw k samples; save them and do nothing yet
+i=1..k:
+  for each forest:
+     accept the ith proposal sample or keep the current, based on the latest probs
+     update probs
+
+
+this way i don't waste time loading the forests from disk repeatedly (even though that doesn't seem to be the bottleneck yet)
+
+note: ability to use unnormalized probs doesn't help; i know exactly the proposal inside probs because that's how i sample in the first place.
+
+----
+
+should accept/reject apply to all block samples?
+
+----
+
+update counts from latest "all but this block" as i pass through blocks.  when i draw >1 sample, do i allow the counts from the previous samples to make the next more likely?  no, i think they should be independent.  but how about moving onto the next sentence - then update avged counts of all those blocks?  that's a decent normal mode anyway.  but then, in the N/k version above only update w/ first sample subject to MH accept/reject?  then accept/reject 2...kth saved samples as we go.  when you reject, just move to next sentence (according to david above)
+
+saved proposal probs for each of k samples.  each time through evaluate cache prob for old/new (start w/ all but that sentence counts, then scan l->r the sample so 2 reps of same thing enriches history for 2nd).
+
+---
+
+so why do i have cache prob counts distinct from regular?  don't they always agree at block boundaries?  can't i just accumulate a cache prob and proposal prob as i go?  for forest, linearization is ambiguous, but exchangability means it doesn't matter.  if it's free, remove cache prob option entirely and always print it (optional proposal prob for debugging only?)
+
+---
+
+use any out-of-date proposal (Q) you want (always update w/ first single even w/o up to date accept/reject?).  master process sequentially accept/reject + update and send out fresh proposal counts at leisure.
+
+master process abstraction applies to pregenerate k samples.
+
+---
+
+

@@ -1,0 +1,12 @@
+import sbmt-util ;
+
+project distortion_model 
+      : 
+      : usage-requirements <include>. ;
+
+lib distortion_model
+  : distortion_model.cpp
+    /sbmt_decoder//sbmt
+  ;
+
+sbmt-util.install install : : distortion_model ;

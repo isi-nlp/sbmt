@@ -1,0 +1,181 @@
+import option ;
+import os ;
+import package ;
+import path ;
+import project ;
+import feature ;
+import mpi ;
+
+
+# Locating boost and boost-build:
+#
+#   --boost=<BOOST>             The directotory of a Boost source tree.
+#                               default: BOOST env var (if found)
+#                               default: BOOST_LOCATION env var (if found)
+#                               default: ../boost (if found)
+#
+#   --boost-build=<BOOST_BUILD>
+#                               The directory for the Boost.Build v2 files.
+#                               default: BOOST_BUILD env var (if found)
+#                               default: BOOST_BUILD_PATH env var (if found)
+#                               default: <BOOST>/tools/build/v2 (if found)
+#
+# options for utilities:
+#
+#   --mini-ngram-order=n        only build one ngram order into mini_decoder
+#
+#   --mini-ngram-max-order=n    build ngram orders [0 .. max-order] into
+#                               mini_decoder
+#
+#   --allocator=(hoard|tbb|off) enable optional allocator -- must have location
+#                               of hoard or tbb specified in your
+#                               boost-build/site-config.jam
+#
+# installation:
+#
+#   install-pipeline            install all subprojects and library dependencies
+#
+#   install-world               install all subprojects, library dependencies,
+#                               and boost headers
+#
+#   $(project)//install         install single project and any library
+#                               dependencies
+#
+#   --prefix=<path>             root installation directory.
+#                               default: /usr/local
+#
+#   --exec-prefix=<path>        root installation directory for arch dependent
+#                               files
+#                               default: $(prefix)
+#
+#   --includedir=<path>         root header installlation directory.
+#                               default: $(prefix)/include
+#
+#   --libdir=<path>             library installation directory.
+#                               default: $(exec-prefix)/lib
+#
+#   --bindir=<path>             executable installation directory.
+#                               default: $(exec-prefix)/bin
+
+
+
+################################################################################
+#~
+#~  osx workaround.  indirect dll linking in directory heirarchy fails because
+#~  paths in dlls are relative to wrong directory.  this forces paths to be
+#~  absolute.
+#~
+#~  i've contacted the boost.build folks to see if im just doing something wrong
+#~
+################################################################################
+
+local prj = [ project.current ] ;
+local pwd = [ path.root [ $(prj).location ] [ path.pwd ] ] ;
+local boost_root = [ modules.peek : BOOST_ROOT ] ;
+
+#: <define>BOOST_NO_INTRINSIC_INT64_T
+
+use-project /boost : $(boost_root)  ;
+use-project /RuleReader : $(pwd)/RuleReader ;
+use-project /graehl : $(pwd)/graehl ;
+use-project /sbmt_decoder : $(pwd)/sbmt_decoder ;
+use-project /itg-binarizer : $(pwd)/itg-binarizer ;
+use-project /utilities : $(pwd)/utilities ;
+use-project /pagh : $(pwd)/biglm/pagh ;
+use-project /xrsdb : $(pwd)/xrsdb ;
+use-project /gusc : $(pwd)/gusc ;
+use-project /tbb_alloc : $(pwd)/tbb_alloc ;
+use-project /word_context : $(pwd)/word_context ;
+use-project /sblm : $(pwd)/sblm ;
+#use-project /noise : $(pwd)/noise ;
+use-project /source_structure : $(pwd)/source_structure ;
+use-project /ww : $(pwd)/ww ;
+use-project /xrsparse : $(pwd)/xrsparse ;
+use-project /rule_decompose : $(pwd)/rule_decompose ;
+
+use-project /boost_coro : $(pwd)/boost-coro/libs/coro/build ;
+
+################################################################################
+mpirequire = ;
+mpiinstall = ;
+if [ mpi.configured ] {
+  mpirequire = <library>/boost/mpi//boost_mpi ;
+  mpiinstall = ./mpiserv//install ;
+} else {
+  echo mpi not configured. you will be unable to install mpiserv, used by new pipeline ;
+}
+project sbmt_root
+    : requirements
+      <threading>multi
+      <include>$(boost_root)
+      <include>./boost_sandbox
+      $(mpirequire)
+      # <define>BOOST_FILESYSTEM_VERSION=2
+      <define>EIGEN_NO_DEBUG
+      <toolset>msvc:<define>NOMINMAX
+      <toolset>msvc:<link>static
+      <toolset>msvc:<asynch-exceptions>on
+      <toolset>darwin:<linkflags>-Wl,-multiply_defined,suppress
+      <toolset>darwin:<linkflags>-Wl,-u,_munmap
+      <toolset>darwin:<dll-path>/System/Library/Frameworks/Python.framework/Versions/2.7/lib
+      <toolset>darwin:<dll-path>/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config
+      # <library>/boost/locale//boost_locale
+    : build-dir build
+    ;
+
+use-project /world : $(pwd) ;
+
+alias z : /site-config//z ;
+alias pthread : /site-config//pthread ;
+
+    # ./utilities/mini_decoder
+
+# no need to add feature functions that are included already in xrs_info_decoder Jamfile
+alias pipeline
+  : /graehl
+    /RuleReader
+    /itg-binarizer
+    /sbmt_decoder
+    /utilities
+    # ./utilities/xrs_info_decoder
+    /xrsdb
+    ./ghkm/xrs-extract
+    ./mert
+  ;
+
+#alias check
+# : /sbmt_decoder//check
+#   /xrsdb//check
+#   /gusc//check
+# ;
+
+     # ./utilities/mini_decoder//install
+
+alias install-pipeline
+  : /xrsdb//install
+    /graehl//install
+    /RuleReader//install
+    /itg-binarizer//install
+    /sbmt_decoder//install
+    ./rule_head//install
+    /utilities//install
+    #./utilities/xrs_info_decoder//install
+    ./max_count_feature//install
+    ./rule_length//install
+    /gusc//install
+    ./pipelines//install
+    $(mpiinstall)
+    ./score//install
+    ./rule_decompose//install
+    ./vocabfilter//install
+    ./ghkm/xrs-extract//install
+    ./mert//install
+  ;
+
+alias test
+  : /source_structure//source_structure_test
+  ;
+
+explicit install-pipeline ;
+
+

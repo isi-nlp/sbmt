@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import os.path
+
+parser = argparse.ArgumentParser()
+args = cfg.parse_args(parser)
+hp = args.hadoop
+
+bindir = args.config['variables']['rhbin']
+params = args.config['rule-extraction']['features']['leaflm']
+paramstr = ' -r'
+if 'maxwidth' in params:
+    paramstr += ' -w%s' % params['maxwidth']
+if 'maxheight' in params:
+    paramstr += ' -h%s' % params['maxheight']
+
+hp.mapreduce( mapper = os.path.join(bindir, 'leaflm') + paramstr
+            , input = 'rules'
+            , output = 'part.leaflm'
+            )

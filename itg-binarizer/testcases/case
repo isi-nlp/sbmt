@@ -1,0 +1,1 @@
+ADJP(ADJP(ADVP(RBR("more")) JJ("important")) PP(IN("than") x0:NP-C)) -> "±È" x0 ### id=19860 root_prob=e^-14.3611 root_count=e^0 lhs_prob=e^0 lhs_count=e^0 count=4 lhscount=10 rootcount=1172644 fraccount=2.0833335 lhsfraccount=4 rootfraccount=1101281

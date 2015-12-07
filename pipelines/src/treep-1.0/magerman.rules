@@ -1,0 +1,110 @@
+# Head rules for English Treebank II for Magerman's SPATTER
+# system. D. Magerman, "Statistical decision-tree models for parsing,"
+# ACL '95. Source: http://www.research.att.com/~mcollins/papers/heads
+
+head := "-H";
+
+ADJP -> .* < (("%"|QP|JJ|VBN|VBG|ADJP|"$"|JJR|JJS|DT|FW
+               |"****" 		# what is this?
+               |RBR|RBS|RB)+head
+              > .*)
+      | .*;			# default no head
+
+ADVP -> (.* < (RBR|RB|RBS|FW|ADVP|CD
+               |"****" 		# what is this?
+               |JJR|JJS|JJ)+head)
+        > .*
+      | .*;
+
+CONJP -> (.* < (CC|RB|IN)+head) > .*
+       | .*;
+
+FRAG -> .* .+head;
+	    
+INTJ -> .+head .*;
+
+LST -> (.* < (LS|"+")+head) > .*
+       | .*;
+
+NAC -> .* < ((NN|NNS|NNP|NNPS|NP|NAC|EX|"$"|CD|QP
+              |PRP|VBG|JJ|JJS|JJR|ADJP|FW)+head
+             > .*)
+       | .*;
+
+NP -> .* > (NN,NNS,NNP,NNPS,NAC,NP,NX)+head > .*
+    | .* < ((EX|"$"|CD|QP|PRP|VBG|JJ|JJS|JJR|ADJP
+             |DT|FW|RB|SYM|"PRP$")+head
+            > .*)
+    | .*;
+
+"NP$" -> .* < ((NN|NNS|NNP|NNPS|NP|NAC|EX|"$"|CD|QP
+                |PRP|VBG|JJ|JJS|JJR|ADJP|FW)+head
+               > .*)
+       | .*;
+
+PNP -> .+head .*;
+
+PP -> (.* < ((IN|TO|FW)+head|.)) > .*
+       | .*;
+
+PRN -> .* .+head;
+
+PRT -> (.* < RP+head) > .*
+       | .*;
+
+QP -> .* < ((CD|NCD|"%"|QP|JJ|JJR|JJS|DT)+head > .*)
+       | .*;
+
+RRC -> (.* < (VP|NP|ADVP|ADJP|PP)+head) > .*
+       | .*;
+
+S -> .* < ((VP|SBAR|ADJP|UCP|NP)+head > .*)
+       | .*;
+
+SBAR -> .* < ((S|SQ|SINV|SBAR|FRAG|X)+head > .*)
+       | .*;
+
+SBARQ -> .* < ((SQ|S|SINV|SBARQ|FRAG|X)+head > .*)
+       | .*;
+
+SINV -> .* < ((S|VP|VBZ|VBD|VBP|VB|SINV|ADJP|NP)+head > .*)
+       | .*;
+
+SQ -> .* < ((VP|VBZ|VBD|VBP|VB|VB|MD|SQ)+head > .*)
+       | .*;
+
+UCP -> .* .+head;
+
+VP -> (.* < (VBD|VBN|MD|VBZ|TO|VB|VP|VBG|VBP|ADJP|NP)+head) > .*
+       | .*;
+
+WHADJP -> .* < ((JJ|ADJP)+head > .*)
+       | .*;
+
+WHADVP -> (.* < WRB+head) > .*
+       | .*;
+
+WHNP -> .* < ((WDT|WP|"WP$"|WHADJP|WHPP|WHNP)+head > .*)
+       | .*;
+
+WHPP -> (.* < (IN|TO|FW)+head) > .*
+       | .*;
+
+X -> .* .+head;
+
+# Not specified by Magerman
+
+NX -> .+head .*;
+
+# Top node
+TOP,"" -> .+head;
+
+# Parts of speech
+CC,CD,DT,EX,FW,IN,JJ,JJR,JJS,LS,MD,
+	NN,NNS,NNP,NNPS,PDT,POS,PRP,"PRP$",RB,RBR,
+	RBS,RP,SYM,TO,UH,VB,VBD,VBG,VBN,VBP,
+	VBZ,WDT,WP,"WP$",WRB,
+	":",",",".","+","$","#","-LRB-","-RRB-","``","''" -> .;
+
+# Empty nodes
+"-NONE-" -> .;

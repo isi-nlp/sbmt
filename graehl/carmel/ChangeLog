@@ -1,0 +1,327 @@
+2008-02-05  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/carmel.cc (CARMEL_VERSION): v3.6 // -: = cache em
+	derivations including reverse structure (uses more memory but
+	faster iterations) // -? = cache em derivations; currently limited
+	to memory; should change to use disk
+
+2007-12-13  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/carmel.cc (usageHelp): -= 2.0 (raise all weights by power of 2)
+
+2007-11-02  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/train.cc: print per-output-symbol ppx
+
+2007-11-01  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/fst.cc (reduce): fixed segfault when a self-epsilon loop arc
+	is eliminated by reduce (no -d), followed by conditional
+	normalization (-n)
+
+2007-09-10  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/wfstio.cc: % is the line-initial comment character (to agree
+	with tutorial).  if you use # before, sorry
+
+2007-07-24  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/train.cc (train_estimate): fixed training example multiplicity (was doubly scaled)
+
+2007-07-16  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/carmel.cc (CARMEL_VERSION): 3.3
+
+2007-07-12  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/carmel.cc: -+ 0: mean-field with alpha=0 (normalization: exp(digamma(alpha+w_i))/exp(digamma(alpha+sum w_j))
+
+2007-06-20  Jonathan Graehl  <graehl@isi.edu>
+
+	* fixed bugs (thanks, valgrind) all over: reading transducers with
+	locked arcs, -a (tied arc preserving, for training) composition,
+	-m (meaningful state names). decipherment (-a composition followed
+	by training) works again.
+
+2005-07-08  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/wfstio.cc: I changed nothing about the output of transducers
+	(keeping the new e^ default instead of "ln"), but carmel now can
+	properly identify e^-n weights in the presence of omitted input or
+	output symbols.  Also, the following formats are now accepted:
+
+(source dest weight)  (epsilon i/o)
+(source dest input weight) (fsa)
+(source dest input output weight) (fst)
+
+and also variants like:
+
+(source (dest weight) (dest input weight) (dest weight) (dest () (weight) (input weight)))
+
+although I'm not sure what the use is of such flexibility ;)
+
+
+2005-07-06  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/wfstio.cc: revamped wfst-reading code to handle ambiguity in
+	optional input/output symbol and weights in e^-1.3 form.  also
+	show error context when bad input is detected.
+
+2005-03-29  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/carmel.cc: 
+
+2004-09-23  Jonathan Graehl  <graehl@isi.edu>
+
+	* ../shared/ChangeLog SEE ALSO (split source files into
+	carmel-specific vs. general)
+	
+2004-08-27  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/fst.cc: changed kbest interface to visitor vs. returning
+	list of paths; included wfstio.cc and compose.cc since they'll
+	never be used without fst.cc (and to reduce the number of
+	compilation units due to a GNU Make bug with long eval lines
+
+	* Makefile: merged build system for tree transducer and Carmel
+	toolkits (../shared/graehl.mk)
+
+2004-07-16  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/dynarray.h: nonstd namespace for reimp of stuff that used to
+	be std (construct, uninitialized_copy)
+
+2004-07-15  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/list.h: two-phase name lookup gcc 3.4 problems also
+	everywhere, see C++ spec section 14.6.2 paragraph 3 and section
+	14.6.2.1. or
+	http://groups.google.com/groups?q=base+class+%22depend+on+a+template+parameter,+so%22&hl=en&lr=&ie=UTF-8&selm=MY3kc.28415%24Qc.1096675%40twister1.libero.it&rnum=2
+
+	> Replacing f() with A<T>::f() will fix it.
+
+	Sure, as the name is now qualified and dependent on T, it will be bound 
+	at the point of instantiation (phase two). In phase two, the compiler 
+	knows the exact type that replaces T and so it can select the right 
+	specialization of A<T> (specializing A<T> after this point makes the 
+	program ill-formed).
+
+	Another, more elegant, way to make the name dependent is by writing 
+	this->f().
+
+	
+	* src/2hash.h: isn't compiling in gcc 3.4 because
+	std::allocator::rebind isn't a template?
+
+	* Makefile: now requires checkout of the tt project in parent dir
+	(files should be in ../tt from here)
+
+2004-04-21  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/strhash.h: tidied up templatization of Alphabet and added
+	more tests
+
+	* src/compose.cc: removed incorrect double-usage of static_itoa
+	when naming composition of (unnamed) transducers, although that
+	could never happen from the command line
+
+2004-04-16  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/dynarray.h: optimization on push_back and end(): store vector 
+	end instead of size.  removeMarked uses memmove on larger blocks.
+	new Array class is base for DynamicArray.  unit test.
+
+2004-02-27  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/2hash.h: made find_second, add global template functions,
+	can use unordered_map (had to fix bugs in it though, and it takes
+	36 bytes for an empty table compared to 24 for mine) if you
+	#define UNORDERED_MAP in config.h.  My size goes down to 16 if you
+	define STATIC_HASHER and STATIC_HASH_EQUAL
+
+2004-02-12  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/finite.cc: finally hunted down problem with post-training
+	estimate/normalize in debug mode - total sum is the same, but
+	number of nonzero weight arcs is too low.  cause was eachParameter
+	being called before normalization to check for NaN; tied groups
+	get assigned to the value of whichever arc in that group is
+	visited first (ok after normalization, but not before)
+
+	* src/2hash.h: many changes (to all files) moving interface closer
+	to proposed STL standard unordered_map - new insert returns
+	whether key existed before as well as pointer to the new (or old)
+	entry.  ultimately will require a proxy object to use STL hash
+	(find_second)
+
+2003-12-12  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/finite.cc: fixed NaN training/normalization problem in debug mode
+
+2003-12-11  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/finite.cc: -! n = random training restarts
+
+2003-11-20  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/finite.cc: -1 = randomly scale weights (of unlocked arcs)
+	after composition uniformly by (0..1]
+
+Wed Nov  5 15:46:03 2003  Jonathan Graehl  <graehl@brahms.isi.edu>
+
+	* src/fst.cc: normalization fix for zero-count tied arcs - count
+ 	their competititors against their group and set them to their
+ 	teammates' value
+
+2003-10-16  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/wfstio.cc: fixed bug in one-arc per line output of
+	zero-weight arcs (showed up with -t)
+
+Mon Oct 13 15:40:05 2003  Jonathan Graehl  <graehl@brahms.isi.edu>
+
+	* src/train.cc: fixed scaling of relative log-likelihood convergence
+
+2003-09-10  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/compose.cc: fixed bug when -i and -m used together (referencing state names array when -i doesn't name states)
+
+2003-09-08  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/finite.cc: changed default to named-states and made -K
+	option enable integer-states
+
+Thu Aug 28 14:15:46 2003  Jonathan Graehl  <graehl@brahms.isi.edu>
+
+	* src/config.h (CONFIG_H): define DOUBLE_PRECISION to use doubles
+ 	instead of floats (probably 25% more memory would be used in a
+ 	transducer, and 70% more in training)
+
+Wed Aug 27 17:12:16 2003  Jonathan Graehl  <graehl@brahms.isi.edu>
+
+	* src/train.cc: -o 1.1 scales EM changes, new code to deal with anomoly that EM can worsen perplexity if tied arcs make normalization unstable/nonconvergent (e.g. span.spell.wfst).  related changes in several files.
+
+Tue May 20 17:14:36 2003  Jonathan Graehl  <graehl@enescu.isi.edu>
+
+	* marcu hide-the-transducer changes (if #define MARCU in finite.cc)
+
+2003-03-28  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/wfstio.cc: added option (-K) to force state names, otherwise
+	assume if finalstate is an integer, that states are unnamed
+	(non-sparse integer indices)
+
+	* src/strhash.h: fixed STRINGPOOL, added named_states flag
+	(stateName not thread-safe if unnamed states)
+
+2003-03-27  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/finite.cc: ownalphabet in compose chain - copies (rather
+	than transfers) alphabet ... performance ...  unify code for -l
+	and -r (loops have start, end, direction +1 or -1; or, reverse
+	list and use same loop (but switch order of arguments if you do))
+	-q = quiet (added some default logging)
+
+2002-12-17  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/wfstio.cc: ignore/strip CR char (so unix carmel can process
+	DOS-text output); added graphvis 8.5x11 landscape formatting
+
+2002-12-16  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/wfstio.cc: implemented -Y (GraphViz)
+
+	* src/2hash.h: moved static pool allocator stuff into #ifdef
+	CUSTOMNEW and tested with/without it defined
+
+	* src/finite.cc: added -Y option for output of GraphViz .dot files
+
+2002-12-13  Jonathan Graehl  <graehl@isi.edu>
+
+	removed leftover node.h (old homegrown list) from CVS
+
+	* src/slist.h: (and many other files) - when USE_SLIST defined in
+	config.h, use a singly linked list (memory efficient) in all
+	cases.  required some serious rework, but I was using a singly
+	linked list until Yaser tore it out in favor of STL list.  my
+	slist is largely STL compatible (not everything implemented) with
+	the addition of two types of iterators - one that uses an extra
+	level of indirection to allow insertion, and another that uses a
+	plain pointer for more efficiently examining values
+
+2002-12-10  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/wfstio.cc: allow zero-weight arcs on input - useful with -U prior counts
+
+	* src/train.cc: changed trainBegin to take parameters for -f and
+	-U.  new prior_counts attribute for each arc in training (Dirichlet prior)
+
+	* src/finite.cc: added -U option: initial weights as prior counts for training
+
+2002-11-22  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/graph.cc: changed mind.  split into two functions - one that
+	builds all-source->one dest tree, other does single-source
+	dijikstra and sets taken link pointers
+
+	* src/kbest.cc: changed mind.  moved kbest reverse code into
+	graph.cc function
+
+	* src/finite.cc: added command line description of -w, -z
+
+	* src/fst.h: added clear() and printArc()
+	
+	* src/config.h: added Config::debug() warn() and log() stream
+	fetchers.  new DEBUG options
+
+	* src/fst.cc: added prunePaths code.  tested.  changed reduce,
+	removing yaser's set-tie-group-to-zero for deleted arcs.  should
+	have no effect.
+
+	* src/kbest.cc: because of change in graph.cc, reverse graph
+	before bestPathsTree.
+
+	* src/graph.cc: changed bestPathsTree to do single-source all-dest
+	instead of single-dest.  
+
+	* src/finite.cc: added -w,-z max-state/path-cost-ratio pruning
+	options, restructured prune/minimize code (do not prune before
+	training/assigning weights)
+
+2002-11-21  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/weight.h: added pow, root, {set|Is}Infinity
+
+	* src/fst.h: added WFST::log, warn, debug output streams
+
+	* src/finite.cc: added -X option to set perplexity convergence ratio.  bumped version.
+
+	* src/graph.cc: reworked topological sort to detect cycles.  put state and code in TopoSort class.
+
+	* src/train.cc: changed perplexity measurement to per-symbol.  added ppx ratio convergence option
+
+
+2002-11-07  Jonathan Graehl  <graehl@isi.edu>
+
+	* src/train.cc: added perplexity measurement to training (-t)
+
+	* Makefile: changes ARCH to linux/solaris/cygwin/freebsd, set CC.$ARCH to point to gcc version 3
+
+	* src/weight.h: default output base is now e (and output is -30ln instead of -10log)
+
+	* src/wfstio.cc: lines beginning with # (that aren't part of a quoted symbol) are ignored as comments
+
+	* src/finite.cc: state names are no longer removed and replaced with numbers by default except in composition;
+	this should help people who are only using carmel for -k best paths and don't understand why their state numbers change
+
+	new options:
+	-g no longer bounds number of arcs taken between min and min+#states, nor requires normalization.
+	-G randomly chooses arcs according to joint normalization and lists them like -k
+	-u blocks normalization entirely during e.g. training; can be used with -tuM 1 to give forward-backward counts for arcs
+	-j performs joint rather than conditional normalization
+	-B, -Z, -D options for output format of weights, -H,-J transducer output options:
+	may make reading carmel output more palatable to programs
+
+	* README (installation): 
+	(usage): 
+

@@ -1,0 +1,36 @@
+#!/usr/bin/env perl
+#
+# Usage: $0 [V1 [V2 [..]]]
+#
+# Captures environment settings into a sourcable script.
+# Any variables Vn will *not* be propagated into output.
+#
+
+use constant COLS => 80; 
+
+sub escape {
+    local($_) = shift;
+    s/\\/\\\\/g;
+    s/\$/\\\$/g;
+    s/"/\\\"/g; #"
+    s/`/\\\`/g; #`
+    "$_"; 
+}
+
+my %exclude = map { $_ => 1 } ( '_', @ARGV ); 
+my @keys = sort grep { ! exists $exclude{$_} } keys %ENV; 
+
+foreach my $k ( @keys ) {
+    print escape($k), "=\"", escape($ENV{$k}), "\"\n";
+}
+
+my $l = COLS; 
+foreach my $k ( @keys ) {
+    if ( $l + length($k) + 1 > COLS ) {
+	print "\nexport"; 
+	$l = 7; 
+    }
+    print " $k";
+    $l += length($k)+1;    
+}
+print "\n";

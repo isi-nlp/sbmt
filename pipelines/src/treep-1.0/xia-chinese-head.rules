@@ -1,0 +1,100 @@
+# Head rules for the Penn Chinese Treebank from Xia's LexTract
+# system. Source: F. Xia, _Automatic grammar generation from two
+# different perspectives_. Ph.D. dissertation, Univ. of Pennsylvania,
+# 2001.
+
+ignore := PU,"-LRB-","-RRB-","-LCB-","-RCB-","-LSB-","-RSB-";
+head := "-H";
+
+ADJP -> .* > (ADJP|JJ)+head > .*
+	| .* > !ignore+head > .*;
+
+ADVP -> .* > (ADVP|AD)+head > .*
+	| .* > !ignore+head > .*;
+
+CP   -> .* > (CP|IP)+head > .*
+	| .* > !ignore+head > .*;
+
+DNP  -> .* > (DNP|DEG)+head > .*
+	| .* > !ignore+head > .*;
+
+DP   -> .* < (DP|DT)+head < .*
+	| .* < !ignore+head < .*;
+
+INTJ -> .* < (INTJ|IJ)+head < .*
+	| .* < !ignore+head < .*;
+
+IP   -> .* > (IP|VP)+head > .*
+	| .* > !ignore+head > .*;
+
+LCP  -> .* > (LCP|LC)+head > .*
+	| .* > !ignore+head > .*;
+
+NP   -> .* > (NP|NN|NT|NR|QP)+head > .*
+	| .* > !ignore+head > .*;
+
+PP   -> .* < (PP|P)+head < .*
+	| .* < !ignore+head < .*;
+
+QP   -> .* > (QP|CD|OD)+head > .*
+	| .* > !ignore+head > .*;
+
+VP   -> .* > (VP|VV|VA|VC|VE|BA|LB|VCD|VSB|VRD|VNV|VCP)+head > .*
+	| .* > !ignore+head > .*;
+
+VCD -> .* > (VCD|VV|VA|VC|VE)+head > .*
+	| .* > !ignore+head > .*;
+
+VRD -> .* > (VRD|VV|VA|VC|VE)+head > .*
+	| .* > !ignore+head > .*;
+
+VSB -> .* > (VSB|VV|VA|VC|VE)+head > .*
+	| .* > !ignore+head > .*;
+
+VCP -> .* > (VCP|VV|VA|VC|VE)+head > .*
+	| .* > !ignore+head > .*;
+
+VNV -> .* > (VNV|VV|VA|VC|VE)+head > .*
+	| .* > !ignore+head > .*;
+
+# These are from Xia's files rather than the thesis
+
+CLP -> .* > (CLP|M)+head > .*
+	| .* > !ignore+head > .*;
+
+DVP -> .* > (DVP|DEV)+head > .*
+	| .* > !ignore+head > .*;
+
+LST -> .* < (LST|CD|OD)+head < .*
+	| .* < !ignore+head < .*;
+
+PRN -> .* > PRN+head > .*
+	| .* > !ignore+head > .*;
+
+VPT -> .* > (VPT|VV|VA|VC|VE)+head > .*
+	| .* > !ignore+head > .*;
+
+UCP -> .* > UCP+head > .*
+	| .* > !ignore+head > .*;
+
+WHNP -> .* > (WHNP|NP|NN|NT|NR|QP)+head > .*
+	| .* > !ignore+head > .*;
+
+WHPP -> .* < (WHPP|PP|P)+head < .*
+	| .* < !ignore+head < .*;
+
+# This is not specified by Xia
+
+FRAG -> .* > !ignore+head > .*;
+
+# Top node
+"" -> .;
+
+# Parts of speech
+AD,AS,BA,CC,CD,CS,DEC,DEG,DER,DEV,
+	DT,ETC,FW,IJ,JJ,LB,LC,M,MSP,NN,
+	NR,NT,OD,ON,P,PN,PU,SB,SP,VA,
+	VC,VE,VV,X,"-LRB-","-RRB-","-LCB-","-RCB-","-LSB-","-RSB-" -> .;
+
+# Empty nodes
+"-NONE-" -> .;

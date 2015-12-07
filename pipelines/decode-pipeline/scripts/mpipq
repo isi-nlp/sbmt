@@ -1,0 +1,174 @@
+#!/usr/bin/env python
+
+import sys, os, threading, mpi, collections, heapq
+import Queue as queue
+def log(name,msg):
+    sys.stderr.write(name + ": " + msg)
+
+mpisize = mpi.size
+mpirank = mpi.rank
+
+# server globals
+class State:
+    def __init__(self,x=0):
+        self.jobs_in = queue.Queue(x)
+        self.jobs_out = {}
+        self.lock = threading.Condition()
+        self.jobs_in_finished = False
+
+        self.load = [[0,x] for x in xrange(1,mpisize)]
+        heapq.heapify(self.load)
+
+# client globals
+end_recv = False
+
+from_server = to_client = 1
+from_client = to_server = 2
+
+class SubprocessClient:
+    pass
+
+class Finish:
+    pass
+
+class Failure:
+    def __init__(self,attempt,message):
+        self.message = message
+        self.attempt = attempt
+
+def push_to_server(input,state):
+    #print >> sys.stderr, "push_to_server started"
+    for v,line in enumerate(input):
+        #print >> sys.stderr, "queue",(v,0,line),"in server"
+        state.jobs_in.put((v,0,line))
+    with state.lock:
+        state.jobs_in_finished = True
+        print >>sys.stderr, "finished",state.jobs_in_finished
+        state.lock.notify_all()
+
+def send_to_client(state):
+    #print >> sys.stderr, "send_to_client started"
+    while True:
+        #print >> sys.stderr, "wait to get job"
+        v,attempt,msg = state.jobs_in.get()
+        with state.lock:
+            state.jobs_out[v] = None
+            ld,id = heapq.heappop(state.load)
+            heapq.heappush(state.load,[ld+1,id])
+        #log('send_to_client','reheaped')
+        
+        mpi.world.send(value=(v,attempt+1,msg), dest=id, tag=to_client)
+
+def receive_from_server(proc,state):
+    while not end_recv:
+        v,attempt,msg = mpi.world.recv(tag=from_server)
+        #print >> sys.stderr, "client",mpi.rank,"received",v,attempt,msg
+        state.jobs_in.put((v,attempt,msg))
+        proc.send(msg)
+
+def send_to_server(proc,state):
+    for result in proc:
+        v,attempt,msg = state.jobs_in.get()
+        #print >> sys.stderr, "client",mpi.rank,"sent",v,result
+        mpi.world.send(dest=0,value=(v,result),tag=to_server)
+        state.jobs_in.task_done()
+
+def receive_from_client(state):
+    #print >> sys.stderr, "receive_from_client started"
+    while True:
+        #print >> sys.stderr, "wait to receive from client"
+        (v,result),status = mpi.world.recv(tag=from_client,return_status=True)
+        with state.lock:
+            for x in xrange(len(state.load)):
+                if state.load[x][1] == status.source:
+                    state.load[x][0] -= 1
+            heapq.heapify(state.load)
+        
+        #print >> sys.stderr, "received", (v,result),"from source", status.source
+        if isinstance(result,Failure) and result.attempt < max_attempts:
+            jobs_in.put((v,result.attempt,result.message))
+        else:
+            with state.lock:
+                #print >> sys.stderr, "placing result", result
+                state.jobs_out[v] = result
+                state.lock.notify_all()
+        state.jobs_in.task_done()
+
+def pull_from_server(state):
+    x = 0
+    while True:
+        res = None
+        with state.lock:
+            while (not state.jobs_in_finished) and (len(state.jobs_out) == 0 or state.jobs_out[x] is None):
+                print >> sys.stderr, (str(state.jobs_in_finished), str(len(state.jobs_out)))
+                state.lock.wait()
+            if len(state.jobs_out) == 0:
+                return
+            if state.jobs_out[x] == None:
+                continue
+            res = state.jobs_out[x]
+            del state.jobs_out[x]
+        if isinstance(res,Failure):
+            pass # implement some warning/error
+        else:
+            yield res
+        x += 1
+
+def run_server(state,input):
+    #print >> sys.stderr, "run_server started"
+    push = threading.Thread(target=push_to_server, args=(input,state))
+    send = threading.Thread(target=send_to_client, args=(state,))
+    recv = threading.Thread(target=receive_from_client, args=(state,))
+    #print >> sys.stderr, "server threads starting"
+    recv.start()
+    send.start()
+    push.start()
+    #print >> sys.stderr, "server threads started"
+    for result in pull_from_server(state):
+        yield result
+
+def run_client(state,proc):
+    while True:
+        end_send = False
+        recv = threading.Thread(target=receive_from_server, args=(proc,state))
+        send = threading.Thread(target=send_to_server, args=(proc,state))
+        send.start()
+        recv.start()
+        send.join()
+        end_recv = True
+        recv.join()
+        print >> sys.stderr, "client ended abruptly"
+        while not jobs_in.empty():
+            v,a,m = jobs_in.get()
+            mpi.world.send(value=Failure(a,m),tag=to_server)
+        
+
+class nbecho:
+    def __init__(self):
+        self.queue = queue.Queue(3)
+    def send(self,v):
+        self.queue.put(v)
+    def next(self):
+        return self.queue.get()
+    def __next__(self):
+        return self.next()
+    def __iter__(self):
+        return self
+
+def inc():
+    x = 0
+    while True:
+        yield x
+        x += 1
+
+if __name__ == '__main__':
+    
+    if mpirank == 0:
+        state = State()
+        for result in run_server(state,inc()):
+            print result
+        mpi.world.abort(0)
+    else:
+        state = State(1)
+        run_client(state,nbecho())
+

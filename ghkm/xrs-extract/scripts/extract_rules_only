@@ -1,0 +1,283 @@
+#!/usr/bin/perl
+
+######################################################
+# the_button.pl can generate all rules, counts, derivations,
+# and based on a given etree/cstring corpus.
+######################################################
+
+use strict;
+use File::Spec;
+use POSIX;
+use vars 
+  qw($BASEDIR $BINDIR $SCRDIR $LIMITS $OUTDIR $DBDIR $N_PAR $ARG_LIM $TMPDIR 
+     $START_DERIV $END_DERIV $STEP_EXTRACT_FROM_DATA $STEP_ADD_RULES_TO_DB
+     $STEP_INDEX_RULES $STEP_DERIVATIONS $STEP_PRINT_NORM $STEP_SAVERULES
+     $DATADIR $ARG_DAT $EXEC $ARG_FORMAT $FILE_SIZES $EXTRACT_ARGS $COUNT_IDS
+	  $LHS_NORMCOUNTS $EXTRACT_EXE );
+	  
+BEGIN {
+  my $trueloc = $0;
+  while (-l $trueloc) { $trueloc = readlink($trueloc); }
+  $BASEDIR = `dirname $trueloc`; chop $BASEDIR;
+  $BASEDIR = "$BASEDIR/..";
+  push @INC, "$BASEDIR/perl-src";
+}
+
+use xrs::env  qw($EXEC_SAFE);
+use xrs::exec qw(&runme);
+
+# this temp is also used for sorting. In places
+# other than hpcc, the /tmp space might be very
+# small. the user can use MY_TMP to customize.
+my $TMP_DIR = "/tmp";
+$TMP_DIR = $ENV{MY_TMP} if(defined $ENV{MY_TMP});
+
+unless ( -d $TMP_DIR) {
+	mkdir $TMP_DIR || die "cannot create dir $TMP_DIR:$!";
+}
+
+$EXTRACT_EXE = "extract";
+
+######################################################
+# Load configuration file:
+######################################################
+
+my $CONFIG = "$BASEDIR/configs/size4-u10.cfg.template";
+$CONFIG = $ARGV[0] if($#ARGV == 0);
+require $CONFIG;
+
+my $pwd = `pwd`; chop $pwd;
+$ENV{CONDOR_FILES_DIR} = File::Spec->catfile($pwd, "condor") 
+  if (not defined($ENV{CONDOR_FILES_DIR}) );
+# remove the condor dir first.
+`rm -rf $ENV{CONDOR_FILES_DIR}`;
+mkdir("$ENV{CONDOR_FILES_DIR}", 0755) || die "Cannot mkdir $ENV{CONDOR_FILES_DIR}: $!";
+
+######################################################
+# Check consistency of config file:
+######################################################
+
+$FILE_SIZES || die "Missing file sizes.\n";
+$COUNT_IDS || die "Missing count identifiers.\n";
+# Make sure these are defined values:
+$LHS_NORMCOUNTS ||= 0;
+$EXTRACT_ARGS ||= '';
+
+######################################################
+# Rule extraction in 6 steps. The following code just submits 
+# jobs to run on the cluster, then exits.
+######################################################
+
+my $DBROOT  = "extract";
+my $ARGS    = "-l $ARG_LIM -r $ARG_DAT $EXTRACT_ARGS";
+if($ARG_FORMAT) {
+  $ARGS    = "$ARGS -t $ARG_FORMAT";
+}
+my $NB_DERIV_PER_NODE = ceil(($END_DERIV-$START_DERIV+1)/$N_PAR);
+my $PREC;
+
+# Step 0: create necessary directories:
+if(-f "$DBDIR") {
+  print STDERR "WARNING: $DBDIR already exists.\n";
+}
+else {
+  system("mkdir -p $DBDIR");
+}
+print `mkdir $DBDIR/tmp 2> /dev/null`;
+
+# Step 1: rule extraction:
+if($STEP_EXTRACT_FROM_DATA) {
+  print "\nExtracting rules...\n";
+  $PREC = submit_extract($N_PAR);
+}
+
+# Step 2: DB creation:
+if($STEP_ADD_RULES_TO_DB) {
+  print "\nAdding rules to DB...\n";
+  my $command = "(time sort -S1G -T $TMP_DIR -m $DBDIR/tmp/$DBROOT.*.OUT.rules | uniq | ".
+                "$BINDIR/create_db -D $DBDIR/$DBROOT.db)";
+  #my $command = "TMPFILE=\`mktemp /tmp/GHKM.XXXXXX\`; ".
+  #              "time sort -m $DBDIR/tmp/$DBROOT.*.OUT.rules | uniq | ".
+  #              "$BINDIR/create_db -D \\\$TMPFILE; ".
+  #	        "$SCRDIR/safe_copy \\\$TMPFILE $DBDIR/$DBROOT.db";
+  $ENV{JOB_FILE_PREFIX} = "add-rules-to-db";
+  my $jobID = submit($command,10,$PREC);
+  $PREC = [ $jobID ];
+  print "submitted.\n";
+}
+    
+# Step 3: indexing rules:
+if($STEP_INDEX_RULES) {
+  print "\nIndexing rules...\n";
+  my $command = "time $BINDIR/index_db -f -D $DBDIR/$DBROOT.db";
+  $ENV{JOB_FILE_PREFIX} = "index-rules";
+  my $jobID = submit($command,5,$PREC);
+  $PREC = [ $jobID ];
+  print "submitted.\n";
+}
+
+# Step 4: generate derivations and collect counts:
+if($STEP_DERIVATIONS) {
+  print "\nGenerating derivations...\n";
+  my $jobIDs = submit_deriv_count($N_PAR,$PREC);
+  # merge derivations:
+  #my $jobID  =  submit("cat $DBDIR/tmp/$DBROOT*.OUT.deriv | ".
+  #              "$SCRDIR/filter_deriv_EM ".
+  #              "> $DBDIR/$DBROOT.deriv",10,$jobIDs);
+  #my $jobID  =  submit("$EXEC_SAFE $DBDIR/$DBROOT.deriv ".
+#		"'cat $DBDIR/tmp/$DBROOT*.OUT.deriv | ".
+#                "$SCRDIR/filter_deriv_EM'",10,$jobIDs);
+	$ENV{JOB_FILE_PREFIX} = "filter_deriv_EM";
+  my $jobID  =  submit("cat $DBDIR/tmp/$DBROOT*.OUT.deriv | ".
+                "$SCRDIR/filter_deriv_EM --lines-number $DBDIR/$DBROOT.lines > $DBDIR/$DBROOT.deriv",10,$jobIDs);
+  $PREC = [ $jobID ];
+  print "submitted.\n";
+}
+
+# Step 5: generating normalization groups:
+if($STEP_PRINT_NORM) {
+  $ENV{JOB_FILE_PREFIX} = "print-norm";
+  print "\nGenerating normalization classes...\n";
+  my $command = "time $BINDIR/print_norm_groups -D $DBDIR/$DBROOT.db ".
+                "-f $DBDIR/$DBROOT.deriv > $DBDIR/$DBROOT.lhs_norm ".
+                " 2> $DBDIR/$DBROOT.lhs_norm.LOG";
+  #my $command = "$EXEC_SAFE $DBDIR/$DBROOT.lhs_norm ".
+  #              "'time $BINDIR/print_norm_groups -D $DBDIR/$DBROOT.db ".
+  #              "-f $DBDIR/$DBROOT.deriv ".
+  #              " 2> $DBDIR/tmp/$DBROOT.lhs_norm.LOG'";
+  submit($command,0,$PREC);
+  $command = "time $BINDIR/print_norm_groups -D $DBDIR/$DBROOT.db ".
+             "-f $DBDIR/$DBROOT.deriv -r > $DBDIR/$DBROOT.root_norm".
+             " 2> $DBDIR/$DBROOT.root_norm.LOG";
+  #$command = "$EXEC_SAFE $DBDIR/$DBROOT.root_norm ".
+  #           "'time $BINDIR/print_norm_groups -D $DBDIR/$DBROOT.db ".
+  #           "-f $DBDIR/$DBROOT.deriv -r ".
+  #           " 2> $DBDIR/tmp/$DBROOT.root_norm.LOG'";
+  submit($command,0,$PREC);
+  print "submitted.\n";
+}
+
+# Step 6: save rules in DB order (includes counts)
+if($STEP_SAVERULES) {
+  $ENV{JOB_FILE_PREFIX} = "save-rules";
+  print "\nSaving rules...\n";
+  my $command = 
+    "time $SCRDIR/create_rule_file $CONFIG normal ".
+	 "2> $DBDIR/tmp/count.LOG";
+  submit($command,0,$PREC);
+  print "submitted.\n";
+}
+
+
+######################################################
+# Subroutines:
+######################################################
+
+# Submit 'extract' jobs on the cluster (rule extraction). 
+# Returns an array of job IDs.
+# Arguments: 
+# - $num_nodes : number of nodes used on the cluster
+# IMPORTANT NOTE: you need 'qsubrun.sh' (my version, not Ignacio's) 
+# to be able to properly run this code. See copy in 
+# current directory.
+sub submit_extract {  
+  my ($num_nodes) = @_;
+  my @jobIDs;
+  foreach my $i (1..$num_nodes) {
+	$ENV{JOB_FILE_PREFIX} = "extract-rules.$i";
+    my $start = $NB_DERIV_PER_NODE*($i-1)+$START_DERIV;
+    my $end = $NB_DERIV_PER_NODE*$i+$START_DERIV-1;
+    $end = $END_DERIV if $end > $END_DERIV;
+    print "mode: x ext: rules range: $start-$end\n";
+    #my $exec = "$EXEC \"(time $BINDIR/extract $ARGS ".
+    #           "-s $start -e $end -x - | sort -u ".
+    #           " > $DBDIR/tmp/$DBROOT.$i.$start-$end.OUT.rules) ".
+    #           "2> $DBDIR/tmp/$DBROOT.$i.$start-$end.LOG.rules\" 0";
+    my $exec = "CONDOR_FILES_DIR=$ENV{CONDOR_FILES_DIR} JOB_FILE_PREFIX=$ENV{JOB_FILE_PREFIX} $EXEC \"( ".
+               "time $BINDIR/$EXTRACT_EXE $ARGS ".
+               "-s $start -e $end -x - | sort > $DBDIR/tmp/$DBROOT.$i.$start-$end.OUT.rules ".
+               ") 2> $DBDIR/tmp/$DBROOT.$i.$start-$end.LOG.rules\" 0";
+	print STDERR "CC\n";
+    my $jobID = `$exec`;
+	print STDERR "BB\n";
+    print "executing: $exec\n";
+    chop $jobID;
+    push @jobIDs, $jobID;
+  }
+  return \@jobIDs;
+}
+
+# Submit 'extract' jobs on the cluster (count rule occurences and 
+# print derivations). Returns an array of job IDs.
+sub submit_deriv_count {  
+  my ($num_nodes,$prec) = @_;
+  my @jobIDs;
+  my $prec_str = "";
+  $prec_str = join(':',@{$prec}) if $prec;
+  foreach my $i (1..$num_nodes) {
+	$ENV{JOB_FILE_PREFIX} = "extract-deriv.$i";
+    my $start = $NB_DERIV_PER_NODE*($i-1)+$START_DERIV;
+    my $end = $NB_DERIV_PER_NODE*$i+$START_DERIV-1;
+    $end = $END_DERIV if $end > $END_DERIV;
+    # Make local copy of the DB (important!), and extract derivations
+    # and counts:
+    print "mode: d,c ext: deriv,count range: $start-$end\n";
+    # Version 1: 
+    # Copy the DB into /tmp then use the DB locally:
+  #my $command = "TMPFILE=\`mktemp /tmp/GHKM.XXXXXX\`; ".
+  #              "time sort -m $DBDIR/tmp/$DBROOT.*.OUT.rules | uniq | ".
+  #              "$BINDIR/create_db -D \\\$TMPFILE; ".
+  #	        "$SCRDIR/safe_copy \\\$TMPFILE $DBDIR/$DBROOT.db";
+    #my $exec1 = "$EXEC \"(time cp -f $DBDIR/$DBROOT.db /tmp; ".
+    #           "$BINDIR/extract $ARGS ".
+    #           "-s $start -e $end -D /tmp/$DBROOT.db ".
+    #           "-d $DBDIR/tmp/$DBROOT.$i.$start-$end.OUT.deriv ".
+    #           "-c $DBDIR/tmp/$DBROOT.$i.$start-$end.OUT.count; ".
+    #           "/bin/rm -f /tmp/$DBROOT.db ) ".
+    #           "2> $DBDIR/tmp/$DBROOT.$i.$start-$end.LOG\" 0 $prec_str";
+
+    my $exec1 = "$EXEC \"TMPFILE1=\`mktemp /tmp/GHKM.XXXXXX\`; ".
+		"TMPFILE2=\`mktemp /tmp/GHKM.XXXXXX\`; ".
+		"rm \\\$TMPFILE1 \\\$TMPFILE2; ".
+                "(time cp -f $DBDIR/$DBROOT.db /tmp; ".
+                "$BINDIR/$EXTRACT_EXE $ARGS ".
+                "-s $start -e $end -D /tmp/$DBROOT.db ".
+                "-d \\\$TMPFILE1 ".
+                "-c \\\$TMPFILE2; ".
+                "/bin/rm -f /tmp/$DBROOT.db ) ".
+		"2> $DBDIR/tmp/$DBROOT.$i.$start-$end.LOG.deriv; ".
+		"$SCRDIR/safe_copy \\\$TMPFILE1 $DBDIR/tmp/$DBROOT.$i.$start-$end.OUT.deriv; ".
+		"$SCRDIR/safe_copy \\\$TMPFILE2 $DBDIR/tmp/$DBROOT.$i.$start-$end.OUT.count ".
+                "\" 0 $prec_str";
+    # Version 2: 
+    # Use the DB over NFS:
+    # (Commented out because not fail-safe enabled.)
+    #my $exec2 = "$EXEC \"(time $BINDIR/extract $ARGS ".
+    #           "-s $start -e $end -D $DBDIR/$DBROOT.db ".
+    #           "-d $DBDIR/tmp/$DBROOT.$i.$start-$end.OUT.deriv ".
+    #           "-c $DBDIR/tmp/$DBROOT.$i.$start-$end.OUT.count) ".
+    #           "2> $DBDIR/tmp/$DBROOT.$i.$start-$end.LOG\" 0 $prec_str";
+    my $exec = $exec1;
+    print "executing: $exec\n";
+    my $jobID = `$exec`;
+    print "run on: $jobID\n";
+    chop $jobID;
+    push @jobIDs, $jobID;
+  }
+  return \@jobIDs;
+}
+
+# Submit a command ($command) on the cluster. If $prec is true,
+# then it is assumed to define a precedence (see submit_extract).
+# $wait is the time to wait (in sec.) before starting the job.
+sub submit {
+  my ($command,$wait,$prec) = @_;
+  my $prec_str = "";
+  $prec_str = join(':',@{$prec}) if($prec);
+  my $exec = "CONDOR_FILES_DIR=$ENV{CONDOR_FILES_DIR} JOB_FILE_PREFIX=$ENV{JOB_FILE_PREFIX} $EXEC \"$command\" $wait $prec_str";
+  print "executing: $exec\n";
+  my $jobID = `$exec`;
+  chop $jobID;
+  return $jobID;
+}
+

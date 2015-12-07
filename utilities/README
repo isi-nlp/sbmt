@@ -1,0 +1,42 @@
+mini-apps centered around new decoder library.
+
+todo:  actually write a makefile so folks can build these :-)
+
+for now do this:
+
+g++ -o mini_decoder mini_decoder.cpp -lsbmt -L<location-of-sbmt-lib> 
+-I<location-of-sbmt-headers>
+
+g++ -o archive_grammar archive_grammar.cpp -lsbmt -L<location-of-sbmt-lib> 
+-I<location-of-sbmt-headers>
+
+g++ -o new_decoder_weight_format new_decoder_weight_format.cpp -lboost_regex[-gcc] 
+-lRuleReader -L<location-of-libs> -I<location-of-headers> 
+
+note: RuleReader and sbmt are both "installable".  that is, you can configure them to install to 
+a specific location with ./configure --prefix=<my-install-base>, and then run "make install"
+
+mini_decoder:
+mini_decoder uses an archived file format for its grammar.  create it as follows:  beginning 
+with an xrs rule file, rules.xrs
+
+change weights to match new decoder expected input, and
+add weight-text-length feature
+$> new_decoder_weight_format rules.xrs rules.new_weights.xrs
+
+run itg-binarizer (must be the one in subversion)
+$> cat rules.new_weights.xrs | binal > rules.new_weights.brf
+
+archive the grammar
+$> archive_grammar rules.new_weights.brf rules.new_weight.archive
+
+mini_decoder usage:
+
+$> mini_decoder <sentence-file> <grammar-archive> <feature-weights-file> 
+                <translation-output-file>
+
+sentence-file: line-separated sentences.
+grammar-file: as above
+feature-weight-file: containing gt_prob:1,trivial_cond_prob:0.231804932735426, etc...
+translation-output-file: empty file
+

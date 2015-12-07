@@ -1,0 +1,23 @@
+#!/usr/bin/perl
+
+# Script that collects statistics regarding a rule file:
+#  - total # of unique rules
+#  - total # of rule instances
+#  - total # of singleton rules
+
+my $count=0;
+my $inst =0;
+my $singl=0;
+while(<STDIN>) {
+	next if /^\$\$\$/;
+	next if /^%/;
+	/\scount=(\d+)(\s|$)/;
+   my $c = $1;
+	$inst += $c;
+	++$singl if $c == 1;
+	++$count;
+}
+
+print "total rule counts: $inst\n";
+print "# of rules:        $count\n";
+print "# of unique rules: $singl\n"

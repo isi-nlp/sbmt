@@ -1,0 +1,33 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import os.path
+import sys
+
+parser = argparse.ArgumentParser()
+args = cfg.parse_args(parser)
+scriptdir = args.config['variables']['rhsdir']
+#dir = os.path.dirname(os.path.dirname(__file__))
+#scriptdir = os.path.abspath(os.path.join(dir,'scripts'))
+
+hp = args.hadoop
+
+#print >> sys.stderr, '****', args.config, '***'
+c = ''
+if args.config_files:
+    c = ' -c '+ args.config_files
+mp = { 'gt':os.path.join(scriptdir,'goodturing')
+     , 'prob':os.path.join(scriptdir,'prob.pl')
+     , 'tmpdir':args.tmpdir
+     , 'config':c }
+     
+cmd = '%(gt)s rules attr.gt_prob %(prob)s -t %(tmpdir)s %(config)s' % mp
+
+hp.syscall(cmd)
+hp.mapreduce( mapper= os.path.join(scriptdir,'name_attr') + ' gt_prob'
+            , reducer='NONE'
+            , input='attr.gt_prob'
+            , output='part.gt_prob' 
+            )
+hp.remove('attr.gt_prob')

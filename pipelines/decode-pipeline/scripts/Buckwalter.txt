@@ -1,0 +1,51 @@
+d8 a1 -> ' -> ARABIC LETTER HAMZA -> ء
+d8 a2 -> | -> ARABIC LETTER ALEF WITH MADDA ABOVE -> آ
+d8 a3 -> > -> ARABIC LETTER ALEF WITH HAMZA ABOVE -> أ
+d8 a4 -> & -> ARABIC LETTER WAW WITH HAMZA ABOVE -> ؤ
+d8 a5 -> < -> ARABIC LETTER ALEF WITH HAMZA BELOW -> إ
+d8 a6 -> } -> ARABIC LETTER YEH WITH HAMZA ABOVE -> ئ
+d8 a7 -> A -> ARABIC LETTER ALEF -> ا
+d8 a8 -> b -> ARABIC LETTER BEH -> ب
+d8 a9 -> p -> ARABIC LETTER TEH MARBUTA -> ة
+d8 aa -> t -> ARABIC LETTER TEH -> ت
+d8 ab -> v -> ARABIC LETTER THEH -> ث
+d8 ac -> j -> ARABIC LETTER JEEM -> ج
+d8 ad -> H -> ARABIC LETTER HAH -> ح
+d8 ae -> x -> ARABIC LETTER KHAH -> خ
+d8 af -> d -> ARABIC LETTER DAL -> د
+d8 b0 -> * -> ARABIC LETTER THAL -> ذ
+d8 b1 -> r -> ARABIC LETTER REH -> ر
+d8 b2 -> z -> ARABIC LETTER ZAIN -> ز
+d8 b3 -> s -> ARABIC LETTER SEEN -> س
+d8 b4 -> $ -> ARABIC LETTER SHEEN -> ش
+d8 b5 -> S -> ARABIC LETTER SAD -> ص
+d8 b6 -> D -> ARABIC LETTER DAD -> ض
+d8 b7 -> T -> ARABIC LETTER TAH -> ط
+d8 b8 -> Z -> ARABIC LETTER ZAH -> ظ
+d8 b9 -> E -> ARABIC LETTER AIN -> ع
+d8 ba -> g -> ARABIC LETTER GHAIN -> غ
+d9 80 -> _ -> ARABIC TATWEEL -> ـ
+d9 81 -> f -> ARABIC LETTER FEH -> ف
+d9 82 -> q -> ARABIC LETTER QAF -> ق
+d9 83 -> k -> ARABIC LETTER KAF -> ك
+d9 84 -> l -> ARABIC LETTER LAM -> ل
+d9 85 -> m -> ARABIC LETTER MEEM -> م
+d9 86 -> n -> ARABIC LETTER NOON -> ن
+d9 87 -> h -> ARABIC LETTER HEH -> ه
+d9 88 -> w -> ARABIC LETTER WAW -> و
+d9 89 -> Y -> ARABIC LETTER ALEF MAKSURA -> ى
+d9 8a -> y -> ARABIC LETTER YEH -> ي
+d9 8b -> F -> ARABIC FATHATAN -> ً
+d9 8c -> N -> ARABIC DAMMATAN -> ٌ
+d9 8d -> K -> ARABIC KASRATAN -> ٍ
+d9 8e -> a -> ARABIC FATHA -> َ
+d9 8f -> u -> ARABIC DAMMA -> ُ
+d9 90 -> i -> ARABIC KASRA -> ِ
+d9 91 -> ~ -> ARABIC SHADDA -> ّ
+d9 92 -> o -> ARABIC SUKUN -> ْ
+d9 b0 -> ` -> ARABIC LETTER SUPERSCRIPT ALEF -> ٰ
+d9 b1 -> { -> ARABIC LETTER ALEF WASLA -> ٱ
+d9 be -> P -> ARABIC LETTER PEH -> پ
+da 86 -> J -> ARABIC LETTER TCHEH -> چ
+da a4 -> V -> ARABIC LETTER VEH -> ڤ
+da af -> G -> ARABIC LETTER GAF -> گ

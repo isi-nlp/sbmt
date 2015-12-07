@@ -1,0 +1,332 @@
+#!/usr/bin/env python
+
+import sys, os, time, threading, collections, heapq, random, traceback
+import Queue as queue
+import itertools
+import rhproc
+
+class ArrayPipe(rhproc.Pipe):
+    def __iter__(self):
+        def tpl(inp):
+            for ln in inp:
+                v = ln.split('\t')
+                yield v[0],'\t'.join(v[1:])
+        def grp(inp):
+            for key,lines in itertools.groupby(inp,lambda x : x[0]):
+                lst = [line[1] for line in lines]
+                yield lst
+        return grp(tpl(rhproc.Pipe.__iter__(self)))
+
+import ctypes
+mpi = ctypes.CDLL('mpi.so',ctypes.RTLD_GLOBAL)
+import mpi
+
+
+import sys, ctypes
+mpi = ctypes.CDLL('mpi.so', ctypes.RTLD_GLOBAL)
+import mpi
+
+
+def log(name,msg):
+    sys.stderr.write(name + ": " + msg)
+
+# client globals
+end_recv = False
+
+from_server = to_client = 1
+from_client = to_server = 2
+load_msg = 3
+submitter = 0
+receiver = 1
+loadmax = 3
+max_attempts = 3
+
+class State:
+    def __init__(self):
+        self.jobs_in_max = loadmax
+        self.jobs_in = collections.deque()
+        self.jobs_in_finished = False
+        self.jobs_out = {}
+        self.messages = queue.Queue()
+        self.lock = threading.Condition()
+        self.clientload = dict((x,0) for x in xrange(2,mpi.size))
+
+class Crash:
+    pass
+
+class Finish:
+    pass
+
+class Flush:
+    pass
+
+class LoadRequest:
+    pass
+
+class Failure:
+    def __init__(self,attempt,message):
+        self.message = message
+        self.attempt = attempt
+
+def find_min(state):
+    lm = -1
+    while (lm == -1) or (lm >= loadmax):
+        client = 2
+        for c,x in state.clientload.iteritems():
+            if (x <= lm) or (lm == -1):
+                lm = x
+                client = c 
+        if lm >= loadmax:
+            mpi.world.send(tag=to_server,value=LoadRequest(),dest=receiver)
+            diff = mpi.world.recv(tag=load_msg,source=receiver)
+            for c,x in diff.iteritems():
+                state.clientload[c] -= x
+    return client
+
+def send_to_client(input,state):
+    count = 0
+    for v,line in enumerate(input):
+        line = line.rstrip('\n')
+        id = find_min(state)
+        mpi.world.send(value=(v,1,line), dest=id, tag=to_client)
+        state.clientload[id] += 1
+        count = v
+    for client in xrange(2,mpi.size):
+        mpi.world.send(tag=to_client,dest=client,value=Flush())
+    mpi.world.send(value=(count+1,Finish()),dest=receiver,tag=to_server)
+
+def unhandled(exc_type, exc_value, exc_traceback):
+    print >> sys.stderr, "".join(traceback.format_exception(exc_type,exc_value,exc_traceback))
+    mpi.world.abort(1)
+
+
+
+def receive_from_server(proc,state):
+    print >> sys.stderr, 'client %s recv online' % mpi.rank
+    while True:
+        with state.lock:
+            while len(state.jobs_in) >= loadmax and not state.jobs_in_finished:
+                print >> sys.stderr, "client %s recv waiting for lower load" % mpi.rank
+                state.lock.wait()
+            if not state.jobs_in_finished:
+                print >> sys.stderr, "client %s recv resuming" % mpi.rank
+                M = mpi.world.recv(tag=from_server)
+                if isinstance(M,Finish) or isinstance(M,Flush):
+                    state.messages.put(M)
+                    state.jobs_in_finished = True
+                    state.lock.notify_all()
+                    break
+            else:
+                return
+            v,attempt,msg = M
+            print >> sys.stderr, 'client %s recv %s' % (mpi.rank,(v,attempt,msg))
+            state.jobs_in.append((v,attempt,msg))
+            state.lock.notify_all()
+        try:
+            proc.send(msg)
+            print >> sys.stderr, 'client %s sent %s to proc' % (mpi.rank,(v,attempt,msg))
+        except Exception as e:
+            with state.lock:
+                state.messages.put(Crash())
+                print >> sys.stderr, 'exception msg: "%s". jobs_in=%s' % (e,state.jobs_in)
+                state.jobs_in_finished = True
+                state.lock.notify_all()
+    proc.close()
+    print >> sys.stderr, "client %s recv closed proc" % mpi.rank
+
+def send_to_server(proc,state):
+    print >> sys.stderr, 'client %s send online' % mpi.rank
+    proc.start()
+    for result in proc:
+        with state.lock:
+            assert len(state.jobs_in) != 0, "client %s should not be empty: %s" % (mpi.rank,result)
+            v,attempt,msg = state.jobs_in.popleft()
+            print >> sys.stderr, "client %s send %s -> %s to server" % (mpi.rank,(v,attempt),(v))
+            mpi.world.send(dest=receiver, value=(v,result), tag=to_server)
+            state.lock.notify_all()
+    with state.lock:
+        state.jobs_in_finished = True
+        state.messages.put(Flush())
+        state.lock.notify_all()
+    with state.lock:
+        print >> sys.stderr, "client %s has %s failed tasks" % (mpi.rank,len(state.jobs_in))
+        while len(state.jobs_in) > 0:
+            v,attempt,message = state.jobs_in.popleft()
+            print >> sys.stderr, "client %s returning %s" % (mpi.rank,(v,attempt))
+            mpi.world.send( value=(v,Failure(attempt,message))
+                          , tag=to_server
+                          , dest=receiver )
+        print >> sys.stderr, "client %s failures delivered" % mpi.rank
+
+class MPIThread(threading.Thread):
+    def run(self):
+        try:
+            threading.Thread.run(self)
+        except:
+            unhandled(*sys.exc_info())
+
+def run_client(cmd):
+    more = True
+    while more:
+        state = State()
+<<<<<<< .mine
+        proc = ArrayPipe(cmd)
+=======
+        print >> sys.stderr, "client %s starting proc" % mpi.rank
+        proc.start()
+>>>>>>> .r3245
+        print >> sys.stderr, "client %s new threads" % mpi.rank
+        recv = MPIThread(target=receive_from_server, args=(proc,state))
+        send = MPIThread(target=send_to_server, args=(proc,state))
+        print >> sys.stderr, "client %s threads starting" % mpi.rank
+        send.start()
+        recv.start()
+        while more:
+            msg = state.messages.get()
+            if isinstance(msg,Crash) or isinstance(msg,Flush):
+                print >> sys.stderr, "client %s joining" % mpi.rank
+                send.join()
+                recv.join()      
+                print >> sys.stderr, "client %s joined" % mpi.rank          
+                break
+            if isinstance(msg,Finish):
+                print >> sys.stderr, "client %s finish request" % mpi.rank
+                send.join()
+                recv.join()
+                print >> sys.stderr, "client %s finished" % mpi.rank
+                more = False
+                break
+
+def receive_from_client(state):
+    finished = False
+    def submit_load(cload):
+        mpi.world.send(tag=load_msg,dest=submitter,value=cload)
+        for c in xrange(2,mpi.size):
+            cload[c] = 0
+    minrecv = 0
+    recvreq = False
+    while True:
+        M,status = mpi.world.recv(tag=from_client,return_status=True)
+        if isinstance(M,LoadRequest):
+            recvreq = True
+            #print >> sys.stderr, '}', state.clientload, '{'
+            for c,v in state.clientload.iteritems():
+                if v > 0:
+                    recvreq = False
+                    submit_load(state.clientload)
+                    break
+        else:
+            v,result = M
+            if not isinstance(result,Finish):
+                state.clientload[status.source] += 1
+            if isinstance(result,Failure) and result.attempt < max_attempts:
+                ns = ((status.source - 2 + 1) % (mpi.size - 2)) + 2 # in [2,mpi.size)
+                print >> sys.stderr, 'reroute failure', v, 'from', status.source, 'to', ns
+                mpi.world.send( value=(v,result.attempt+1,result.message)
+                               , dest=ns
+                               , tag=to_client )
+                if finished:
+                    mpi.world.send(value=Flush(),dest=ns,tag=to_client)
+                state.clientload[ns] -= 1
+            else:
+                state.jobs_out[v] = status.source,result
+                if isinstance(result,Finish):
+                    finished = True
+                if minrecv not in state.jobs_out:
+                    print >> sys.stderr, 'receiver waiting on task %s'%minrecv
+                while minrecv in state.jobs_out:
+                    s,res = state.jobs_out[minrecv]
+                    del state.jobs_out[minrecv]
+                    if isinstance(res,Failure):
+                        yield minrecv,'*'
+                    elif isinstance(res,Finish):
+                        for child in xrange(2,mpi.size):
+                            mpi.world.send(value=Finish(), dest=child, tag=to_client)
+                        return
+                    else:
+                        yield res
+                    minrecv += 1
+            if recvreq:
+                recvreq = False
+                submit_load(state.clientload)
+
+class nbecho:
+    def __init__(self):
+        self.queue = collections.deque()
+        self.max = loadmax
+        self.lock = threading.Condition()
+        self.finished = True
+    def stop(self):
+        with self.lock:
+            self.finished = True
+            self.lock.notify_all()
+    def start(self):
+        with self.lock:
+            assert self.finished
+            self.finished = False
+            self.queue = collections.deque()
+            self.lock.notify_all()
+    def send(self,v):
+        with self.lock:
+            assert v is not None
+            if self.finished:
+                raise TypeError()
+            if random.random() >= 0.95:
+                print >> sys.stderr, 'client %s throws on send with unfinished %s' % (mpi.rank,self.queue)
+                self.finished = True
+                self.lock.notify_all()
+                raise Exception()
+            while len(self.queue) >= self.max and not self.finished:
+                self.lock.wait()
+            if not self.finished:
+                self.queue.append(v)
+                self.lock.notify_all()
+            else: 
+                raise TypeError()
+    def next(self):
+        time.sleep(random.uniform(0.0,0.5))
+        with self.lock: 
+            while len(self.queue) == 0 and not self.finished:
+                self.lock.wait()
+            if len(self.queue) == 0:
+                raise StopIteration()
+            if random.random() >= 0.95:
+                print >> sys.stderr, 'client %s throws on next with unfinished %s' % (mpi.rank,self.queue)
+                self.finished = True
+                self.lock.notify_all()
+                raise StopIteration()
+            k = self.queue.popleft()
+            self.lock.notify_all()
+        return k
+    def __next__(self):
+        return self.next()
+    def __iter__(self):
+        return self
+
+def inc():
+    x = 0
+    while x != int(sys.argv[1]):
+        yield str(x)
+        x += 1
+
+if __name__ == '__main__':
+    print >> sys.stderr, "# rank=%s size=%s host=%s" %(mpi.rank,mpi.size,os.uname())
+    sys.excepthook = unhandled
+    
+    if mpi.rank == receiver:
+        state = State()
+        for result in receive_from_client(state):
+            print result
+            #for r in result:
+            #    print r
+        print >> sys.stderr, "receiver complete"
+    elif mpi.rank == submitter:
+        state = State()
+        send_to_client(sys.stdin,state)
+        print >> sys.stderr, "sender complete"
+    else:
+        sys.stderr = open('mpiserv.%s.log' % mpi.rank,'w',0)
+        random.jumpahead(mpi.rank)
+        run_client(' '.join(sys.argv[1:]))
+        print >> sys.stderr, "client",mpi.rank,"complete"
+

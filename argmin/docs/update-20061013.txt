@@ -1,0 +1,49 @@
+I ran some experiments using an updated type of agenda cycling.
+Edges are grouped into equivalence classes based upon their *span* (not just
+their length, as I did last week) and if they are a virtual or not. There is
+one agenda per equivalence class, and they are all allocated equal effort.
+
+For your reference:
+	This is checked in to the SBMT trunk in sbmt/argmin, at revision
+	1314. Later revisions have the same code.
+	I am running my experiments out of bellini:/lfs/bellini/users/jturian
+
+There are two plots attached showing decoding times, for Arabic and Chinese.
+To compute the decoding time for argmin, I see how many usecs it took to find
+the final 1-best solution that it couldn't improve upon.
+NB we tell argmin to stop after 1000 usec per sentence, so its times will not
+exceed that cutoff.
+
+I also have a Chinese plot in which we compare the final totalcosts of
+the 1-best outputs from argmin and minidecoder. I show the comparison as we
+vary argmin's cutoff time, which is its current stopping condition.
+The minidecoder took, on average, 97 seconds per sentence. (This
+figure may be slightly off, because it was computed on more sentences than are
+paired.)
+
+Unfortunately, I have no Arabic plot, because I accidentally zeroed the logs
+files a few minutes ago. :(
+This is a pity, because the real promise of this technique is getting
+really fast, sub-cubic decoding on long sentences. From eyeballing the log
+files, it had seemed that argmin was frequently getting *LOWER* totalcosts
+than the minidecoder, and in less time.
+
+Lastly, please find attached textfiles containing the 1-best estrings for
+argmin (cutoff=50), argmin (cutoff=1000), and the minidecoder.
+
+Here is what I consider the most promising TODO items:
+* Plot the Arabic costs.
+* Optimize the Agenda inserts, which now take maybe 30% of processing time.
+* We currently have a limit of 5M edges in the Agenda and 600 virtual/100
+non-virtual edges per cell in the Chart. We should make an upper-bound on the
+number of scored edges kept around as 5M, and let the chart be those scored
+edges that are marked as "alive". This alive set should be monotonically
+increasing, and we should remove the pruning criteria (max 600 or 100 alive edges
+per cell). The benefits are:
+	* Unified control over memory usage.
+	* Removing the pruning criteria, which are no longer necessary
+	when using agenda cycling.
+* We may want to aggressively bubble up derivations that are within, say, the
+top 5 in their cell. These derivations would be put to the front of the
+agenda, and supercede cycling.
+* Plot, for argmin, usecs vs. BLEU score.

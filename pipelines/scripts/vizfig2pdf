@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+while read line; do
+    #ps2pdf - $line.pdf < $line
+    cp $line $line.ps
+done

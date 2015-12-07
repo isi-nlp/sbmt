@@ -1,0 +1,311 @@
+#!/usr/bin/env python
+
+import sys
+import itertools
+import collections
+import tree
+import re
+from argparse import ArgumentParser
+from hadoop import Hadoop
+import os.path
+import math
+import cfg
+
+
+def cross_map(lines):
+    linere = re.compile(r"""(.*) -> (.*) ###.* align={{{\[ #s=\d+ #t=\d+ (.*)\]}}}""")
+    ridrex = re.compile(r"""###.* id=(-?\d+)""")
+
+    for line in lines:
+        try:
+            ewords, fwords, align = linere.match(line).groups()
+            ruleid = ridrex.search(line).group(1)
+        except:
+            sys.stderr.write("couldn't unpack line: %s\n" % line.rstrip())
+            continue
+    
+        fwords = [int(f[1:]) if f.startswith("x") else f for f in fwords.split()]
+        align = [tuple(int(i) for i in a.split(",",1)) for a in align.split()]
+
+        cross = {}
+        for fi,ei in align:
+            if type(fwords[fi]) is int:
+                for ofi,oei in align:
+                    if ofi < fi and oei > ei or ofi > fi and oei < ei:
+                        cross[fwords[fi]] = 1
+                        break
+                else:
+                    cross[fwords[fi]] = 0
+
+        # output flags in English order
+        # but note that whenever there is a reordering of variables, all
+        # their flags will be 1. so French and English order are the same.
+   
+        cross = " ".join(str(cross[vi]) for vi in sorted(cross.keys()))
+
+        # slight change -- feature computation expects as output just the
+        # rule id, not the full rule. 
+        print "%s\tcross={{{ %s }}}" % (ruleid, cross)
+
+def flip_align(alignstr):
+    alignstr = alignstr.strip()
+    return re.sub(r'(\d+)-(\d+)',r'\2-\1',alignstr)
+
+def radu2ptb(estr):
+    estr = estr.strip()
+    def escape_terminal(grp):
+        estr = re.sub(r'\(','-LRB-',grp.group(1))
+        return re.sub(r'\)','-RRB-',estr).strip()+")"
+    estr = re.sub('^0$','',estr)
+    estr = re.sub(r'\(([^~]+)~(\d+)~(\d+)\s+([-\.\d]+)',r'(\1',estr)
+    return re.sub(r'(\S+)\)',escape_terminal,estr).strip()
+
+def index(node, i=0):
+    """add i and j fields"""
+
+    if len(node.children) > 0:
+        ci = i
+        for child in node.children:
+            ci = index(child, ci)
+        j = ci
+    else:
+        j = i + 1
+    node.i = i
+    node.j = j
+    return j
+
+def bottomup(node):
+    for child in node.children:
+        for desc in bottomup(child):
+            yield desc
+    yield node
+
+def frontier_or_phrase(node):
+    """iterate over of frontier of node, with any nodes s.t. node.phrase == True yielded untraversed"""
+    if len(node.children) == 0:
+        yield node
+    elif node.phrase:
+        yield node
+        return
+    else:
+        for child in node.children:
+            for desc in frontier_or_phrase(child):
+                yield desc
+
+def mark_phrases(etree, align, fn, en):
+    # the first French word aligned to each English word
+    emin = [fn] * en
+    # the last French word aligned to each English word
+    emax = [-1] * en
+
+    # the number of English words aligned to each French word
+    fcount = [0] * fn
+    # similarly for the other direction
+    ecount = [0] * en
+
+    for (fi,ei) in align:
+        emin[ei] = min(emin[ei],fi)
+        emax[ei] = max(emax[ei],fi)
+        fcount[fi] += 1
+        ecount[ei] += 1
+
+    # fcumul[fi] is the number of alignment points in fwords[:fi]
+    fcumul = [0]
+    s = 0
+    for c in fcount:
+        s += c
+        fcumul.append(s)
+
+    for node in bottomup(etree):
+        if len(node.children) == 0:
+            node.ecount = ecount[node.i]
+            node.emin = emin[node.i]
+            node.emax = emax[node.i]
+        else:
+            node.ecount = 0
+            node.emin = fn
+            node.emax = -1
+            for child in node.children:
+                node.emin = min(node.emin, child.emin)
+                node.emax = max(node.emax, child.emax)
+                node.ecount += child.ecount
+
+        # We know how many alignment points the English node has,
+        # and the number of alignment points that the corresponding 
+        # French span has. If those numbers are equal, then the
+        # two are exclusively aligned to each other and we have a phrase.
+
+        node.phrase = node.ecount > 0 and node.ecount == fcumul[node.emax+1]-fcumul[node.emin]
+
+def reduce(inp):
+    def input(inp):
+        for line in inp:
+            yield line.strip().split('\t')
+    
+    for key,sub in itertools.groupby(input(inp), lambda x : x[0]):
+        x = 0
+        for s in sub:
+            x += int(s[1])
+        print "%s %s" % (key,x)
+
+def map(inp):
+    def input(inp):
+        for line in inp:
+            try:
+                d = line.rstrip('\n').split('\t')
+                #print >> sys.stderr, d[0],'=>', radu2ptb(d[0])
+                P = radu2ptb(d[1]), d[2], flip_align(d[3])
+            except Exception as e:
+                print >> sys.stderr, "FAIL: %s" % d
+                raise e
+            yield P
+    
+    class SkipSentence(Exception):
+        pass
+
+    progress = 0
+    skipped = 0
+
+    ncount = collections.defaultdict(int)
+    dcount = collections.defaultdict(int)
+
+    
+    for (eline, fline, aline) in input(inp):
+        try:
+            fwords = fline.split()
+            fn = len(fwords)
+
+            if eline.strip() == "0":
+                raise SkipSentence
+            etree = tree.str_to_tree(eline)
+            if etree is None:
+                raise SkipSentence
+            index(etree)
+            en = etree.j
+
+            align = []
+            for pair in aline.split():
+                i,j = (int(x) for x in pair.split("-",1))
+                if i >= fn or j >= en:
+                    sys.stderr.write("warning, line %d: alignment point (%d,%d) out of bounds (%d,%d) \n" % (progress+1, i, j, fn, en))
+                    raise SkipSentence
+                align.append((i,j))
+
+            if len(align) == 0:
+                sys.stderr.write("warning, line %d: no alignments\n" % (progress+1))
+                raise SkipSentence
+
+            mark_phrases(etree, align, fn, en)
+
+            for node in bottomup(etree):
+                if node.phrase and len(node.children)>0:
+                    ei,ej = node.i, node.j
+                    fi,fj = node.emin, node.emax+1
+
+                    # Find the smallest enclosing phrase.
+                    # This means we are only doing the counting
+                    # on minimal (tight) rules. Is that bad?
+                    anc = node.parent
+                    while anc is not None and not anc.phrase:
+                        anc = anc.parent
+                    if anc is not None:
+                        aei,aej = anc.i, anc.j
+                        afi,afj = anc.emin, anc.emax+1
+                    else:
+                        aei,aej = 0, en
+                        afi,afj = 0, fn
+
+                    cross = 0
+                    for fk,ek in align:
+                        if afi <= fk < afj and aei <= ek < aej:
+                            if fk < fi and ek >= ej or fk >= fj and ek < ei:
+                                cross = 1
+                                break
+                    span = fj-fi
+                    ncount[span,node.label,cross] += 1
+                    dcount[span,node.label] += 1
+
+        except SkipSentence:
+            skipped += 1
+        except Exception as e:
+            print >> sys.stderr, 'fail:\n%s\n%s\n%s' % (eline,fline,aline)
+            raise e
+
+        progress += 1
+        if progress % 10000 == 0:
+            sys.stderr.write("%d sentences, %d skipped\n" % (progress, skipped))
+
+    sys.stderr.write("%d sentences, %d skipped\n" % (progress, skipped))
+    for span,label,cross in sorted(ncount.keys()):
+        print "%s %s %s\t%s" % (span, label, cross, ncount[span,label,cross])
+
+def smooth_map(inp):
+    for line in inp:
+        print "1\t%s" % line.strip()
+
+def smooth_reduce(inp):
+    def input(inp):
+        for line in inp:
+            yield line.strip().split('\t')[1]
+    
+    counts = collections.defaultdict(lambda: collections.defaultdict(int))
+    for line in input(inp):
+        span, label, cross, count = line.split()
+        counts[int(span),label][int(cross)] = int(count)
+
+    # default
+    counts[0,None][0] = 0
+    counts[0,None][1] = 0
+
+    probs = {}
+    for span,label in counts.iterkeys():
+        counts[span,label][0] += 9
+        counts[span,label][1] += 1
+        denom = float(counts[span,label][0]+counts[span,label][1])
+        probs[span,label,0] = counts[span,label][0]/denom
+        probs[span,label,1] = counts[span,label][1]/denom
+
+    for ((span,label,cross),p) in probs.iteritems():
+        print "%s %s %s\t%s" % (span,label,cross,p)
+    
+
+parser = ArgumentParser()
+parser.add_argument( '-H','--hadoop-step'
+                   , choices=['raw-map','raw-reduce','smooth-map','smooth-reduce','cross-map']
+                   , dest='step' )
+parser.add_argument( '-S','--stage', choices=['training','feature'])
+parser.add_argument( '-c','--config',default='')
+d = parser.parse_args()
+
+if d.step:
+    if d.step == 'raw-map':
+        map(sys.stdin)
+    elif d.step == 'raw-reduce':
+        reduce(sys.stdin)
+    elif d.step == 'smooth-map':
+        smooth_map(sys.stdin)
+    elif d.step == 'cross-map':
+        cross_map(sys.stdin)
+    else:
+        smooth_reduce(sys.stdin)
+elif d.stage:
+    config = cfg.load_config(d.config)
+    hp = cfg.make_hadoop(config)
+    executable = os.path.abspath(sys.argv[0])
+    if d.stage == 'training':
+        hp.mapreduce( mapper=executable + ' -H raw-map'
+                    , reducer=executable + ' -H raw-reduce'
+                    , input='training'
+                    , output='probs.raw' )
+        hp.mapreduce( mapper=executable + ' -H smooth-map'
+                    , reducer=executable + ' -H smooth-reduce'
+                    , input='probs.raw'
+                    , output='probs.label'
+                    , compress=False )
+        hp.remove('probs.raw')
+    elif d.stage == 'feature':
+        hp.mapreduce( mapper=executable + ' -H cross-map'
+                    , reducer='NONE'
+                    , input='rules'
+                    , output='part.cross' )
+    

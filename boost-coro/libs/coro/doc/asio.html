@@ -1,0 +1,114 @@
+<html><head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title> Events: Boost.Asio</title>
+<link rel="stylesheet" href="files/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.70.1">
+<link rel="start" href="index.html" title="Chapter&nbsp;1.&nbsp;Boost.Coroutine">
+<link rel="up" href="advanced.html" title=" Advanced concepts">
+<link rel="prev" href="events.html" title=" Events">
+<link rel="next" href="threads.html" title=" Coroutines and thread safety">
+</head><body link="#0000ff" alink="#0000ff" bgcolor="white" text="black" vlink="#840084">
+<table width="100%" cellpadding="2">
+<tbody><tr><td valign="top"><img alt="boost.png (6897 bytes)" src="files/boost.png" width="277" height="86"></td>
+<td align="center"><a href="http://www.boost.org/">Home</a></td>
+<td align="center"><a href="http://www.boost.org/doc/libs">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="http://www.boost.org/users/index.html">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="events.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="advanced.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="threads.html"><img src="files/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="coroutine.asio"></a> Events: Boost.Asio</h3></div></div></div>
+<a name="asio.introduction"></a><h4>
+<a name="id2627290"></a>Introduction</h4>
+<p>
+While Boost.Coroutine has grown up as general coroutine implementation,
+its original design goal was to help write asynchronous applications
+based on Boost.Asio.</p>
+<p>
+For a long time, threads have been considered a bad choice for
+building high concurrency servers capable of handling an high number
+of clients at the same time. Thread switching overhead, lock
+contention, system limits on the amount of threads, and the inherent
+difficulty of writing scalable highly threaded applications have been
+cited as the reasons to prefer event driven dispatch loop based
+model. This has been the main reason Boost.Asio has been written. See
+<a href="bibliography.html#why-threads-are-a-bad-idea">[Ousterhout95]</a> and <a href="bibliography.html#the-10k-problem">[Kegel99]</a> for reference.</p>
+<p>
+Many researchers believe today (see <a href="bibliography.html#cooperative-task-management">[Adya02]</a> and <a href="bibliography.html#why-events-are-a-bad-idea">[VonBehren03]</a> for
+the most known examples) that the best way to write high
+concurrency servers is to use a cooperative task model with an
+underlying scheduler that used asynchronous dispatching. This gives
+the performance of event driven designs without the need to divide the
+processing of a job in a myriad of related callbacks.</p>
+<p>
+Boost.Coroutine fits perfectly the role of the cooperative task model,
+while Boost.Asio can be used seamlessly as a coroutine scheduler.</p>
+<a name="asio.usage"></a><h4>
+<a name="id2627360"></a>Usage</h4>
+<p>
+A <a href="">coroutine</a> cannot currently be used as an <code class="computeroutput"><span class="identifier">asio</span><span class="special">::</span><span class="identifier">io_service</span></code> callback, because
+Asio requires all callback objects to be copyable. In the future Asio
+might relax this requirement and require only copyability. In the mean
+time <code class="computeroutput"><a href="">shared_coroutine</a></code> can be used as a workaround.</p>
+<p>
+Asynchronous operations can be waited using a <a href="">future</a> object. For
+example:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">void</span><span class="identifier"> foo</span><span class="special">(</span><span class="identifier">coro</span><span class="special">::</span><span class="identifier">coroutine</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">()&gt;::</span><span class="identifier">self</span><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+  typedef</span><span class="identifier"> boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">ip</span><span class="special">::</span><span class="identifier">tcp</span><span class="special">::</span><span class="identifier">socket</span><span class="identifier"> socket_type</span><span class="special">;</span><span class="keyword">
+  typedef</span><span class="identifier"> boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">error</span><span class="identifier"> error_type</span><span class="special">;</span><span class="keyword">
+
+  char</span><span class="identifier"> token</span><span class="special">[</span><span class="number">1024</span><span class="special">];</span><span class="identifier">
+  socket_type</span><span class="identifier"> source</span><span class="special">;</span><span class="identifier">
+  coro</span><span class="special">::</span><span class="identifier">future</span><span class="special">&lt;</span><span class="identifier">error_type</span><span class="special">,</span><span class="identifier"> std</span><span class="special">::</span><span class="identifier">size_t</span><span class="special">&gt;</span><span class="identifier"> read_result</span><span class="special">(</span><span class="identifier">self</span><span class="special">);</span><span class="special">
+  ...</span><span class="identifier">
+  boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">async_read</span><span class="special">(</span><span class="identifier">source</span><span class="special">,</span><span class="identifier"> 
+                          boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">buffer</span><span class="special">(</span><span class="identifier">token</span><span class="special">,</span><span class="number"> 1024</span><span class="special">),</span><span class="identifier">
+                          coro</span><span class="special">::</span><a href="">make_callback</a><span class="special">(</span><span class="identifier">read_error</span><span class="special">));</span><span class="special">
+  ...</span><span class="identifier">
+  coro</span><span class="special">::</span><a href="">wait</a><span class="special">(</span><span class="identifier">source</span><span class="special">);</span><span class="keyword">
+  if</span><span class="special">(</span><span class="identifier">source</span><span class="special">-&gt;</span><span class="identifier">get</span><span class="special">&lt;</span><span class="number">0</span><span class="special">&gt;())</span><span class="special"> {</span><span class="identifier">
+    std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="string">"Error\n!"</span><span class="special">;</span><span class="special">
+  }</span><span class="keyword"> else</span><span class="special"> {</span><span class="identifier">
+    std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="string">"Written "</span><span class="special">&lt;&lt;</span><span class="identifier">source</span><span class="special">-&gt;</span><span class="identifier">get</span><span class="special">&lt;</span><span class="number">1</span><span class="special">&gt;()&lt;&lt;</span><span class="string">" bytes"</span><span class="special">;</span><span class="special">
+  }</span><span class="special">
+}</span></code></pre>
+<p><code class="computeroutput"><a href="">wait</a></code> will appropriately cause the coroutine to be rescheduled in the
+<code class="computeroutput"><span class="identifier">asio</span><span class="special">::</span><span class="identifier">io_service</span></code> when the read will be completed.</p>
+<p>
+There is no function to simply yield the CPU and be executed at a
+latter time, but the following code may be equivalent. Let <code class="computeroutput"><span class="identifier">demux</span></code> be
+an instance of an <code class="computeroutput"><span class="identifier">asio</span><span class="special">::</span><span class="identifier">io_service</span></code>:</p>
+<pre class="programlisting"><code class="literal"><span class="identifier">coro</span><span class="special">::</span><a href="">future</a><span class="special">&lt;&gt;</span><span class="identifier"> dummy</span><span class="special">(</span><span class="identifier">self</span><span class="special">);</span><span class="identifier">
+demux</span><span class="special">.</span><span class="identifier">post</span><span class="special">(</span><span class="identifier">coro</span><span class="special">::</span><a href="">make_callback</a><span class="special">(</span><span class="identifier">dummy</span><span class="special">));</span><span class="identifier">
+coro</span><span class="special">::</span><span class="identifier">wait</span><span class="special">(</span><span class="identifier">dummy</span><span class="special">);</span><span class="comment"> // the current coroutine is rescheduled
+</span><span class="special">...</span></code></pre>
+<p>
+Will cause the current coroutine to be rescheduled by the
+<code class="computeroutput"><span class="identifier">io_service</span></code>. Notice that simply invoking <code class="computeroutput"><span class="identifier">self</span><span class="special">.</span><span class="identifier">yield</span></code> will not work,
+as <code class="computeroutput"><span class="identifier">io_service</span></code> will not automatically reschedule the coroutine. Also,
+it is not possible to yield if there are any pending operations.</p>
+<p>
+For a more complex example see <a href="http://www.crystalclearsoftware.com/lcoroutine/example/token_passing.cpp" target="_top">token_passing.cpp</a>.</p>
+<a name="asio.conclusions"></a><h4>
+<a name="id2628236"></a>Conclusions</h4>
+<p>
+Boost.Coroutine can potentially greatly simplify the design of event
+driven network applications when used in conjunction with
+Boost.Asio. If you plan to use multiple threads, be sure to read the
+about the <a href="threads.html" title=" Coroutines and thread safety">thread safety guarantees</a> of Boost.Coroutine.</p>
+</div>
+<table width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright © 2006 Giovanni P. Deretta</small></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="events.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="advanced.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="threads.html"><img src="files/next.png" alt="Next"></a>
+</div>
+</body></html>

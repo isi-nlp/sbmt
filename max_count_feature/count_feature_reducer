@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+
+import os, sys, re, itertools
+import argparse
+from decimal import *
+
+def keyval(input):
+    for line in input:
+        k,v = line.split('\t',1)
+        yield k.strip(), v.strip().split()
+
+def reducer(pairs, args):
+    for rule, rec in itertools.groupby(pairs, lambda x : x[0]):
+        totals = []
+        for rule,freq in rec:
+            for x in xrange(len(freq)):
+                if x >= len(totals):
+                    totals.append(Decimal(0))
+                increment = 1 if args.tokens else Decimal(freq[x])
+                totals[x] = totals[x] + increment
+        yield rule,totals
+
+def main():
+  parser = argparse.ArgumentParser(description="count fields and display results in custom formatted manner")
+  parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="input file")
+  parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
+  parser.add_argument("--format", "-f", default="%key\tcount=%count", help="format string; should include %key and %count fields")
+  parser.add_argument("--tokens", action='store_true', default=False, help="count tokens per key instead of sum")
+  # TODO (if needed) -- count types per key
+  # TODO (if needed) -- allow flexible key length
+
+
+  try:
+    args = parser.parse_args()
+  except IOError, msg:
+    parser.error(str(msg))
+
+  f = args.format
+  f = re.sub(r'%key\b','%(key)s',f)
+  f = re.sub(r'%count\b','%(count)s',f)
+  f = re.sub(r'\\t','\t',f)
+
+  for rule, val in reducer(keyval(args.infile), args):
+      args.outfile.write(f % {'key' : rule, 'count' : ' '.join(str(vv) for vv in val)}+"\n")
+
+if __name__ == '__main__':
+  main()
+

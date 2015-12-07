@@ -1,0 +1,20 @@
+#!/usr/bin/env python
+
+import itertools, sys, collections, heapq
+
+maxcount = 20
+
+for rule,records in itertools.groupby((k.rstrip('\n').split('\t') for k in sys.stdin), lambda x : x[0]):
+    mp = []
+    count = 0
+    rcount = 0
+    for (leng,lineno),ignore in itertools.groupby(records,lambda x : (x[1],x[2])):
+
+        for xx in ignore:
+            rcount += 1
+
+        count += 1 
+        if count <= maxcount:
+           mp.append(lineno)
+
+    print "%s\tsentids={{{%s}}} rawcount=%s" % (rule,' '.join(mp),rcount)

@@ -1,0 +1,25 @@
+\data\
+ngram 1=6
+ngram 2=5
+ngram 3=2
+
+\1-grams:
+-1.00000 people -16.0
+-2.00000 coming -32.0
+-4.00000 from -64.0
+-8.00000 France -128.0
+-5       to     -30
+-7 </s>
+
+\2-grams:
+-1.00 coming from -11.0
+-5.00 people coming -3.0
+-9.00 coming to -0.0
+-1.00 from France -0.0
+-2.00 France </s> -0.0
+
+\3-grams
+-4.00 people coming to
+-9 coming from France
+
+\end\

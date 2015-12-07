@@ -1,0 +1,111 @@
+#!/usr/bin/env python -u
+
+#!/usr/bin/env python
+
+import argparse
+import os.path
+import cfg
+import sys
+import subprocess
+import tempfile
+import string
+import re
+
+def esc(line):
+    line = re.sub(r'\\',r'\\',line)
+    line = re.sub(r'"',r'\"',line)
+    return line
+
+def repack(lst):
+    return ' '.join('"%s"' % escaped for escaped in (s.replace('\\','\\\\').replace('"',r'\"') for s in lst))
+
+parser = argparse.ArgumentParser()
+parser.add_argument('ruleset')
+parser.add_argument('decoder')
+
+args = cfg.parse_args(parser,sys.argv[1:])
+
+identitycmd = string.Template('$rootdir/scripts/extraspipe -- $rootdir/scripts/identity --do-numbers --do-punc --xrs-baseid -100000000 --separator').substitute(rootdir=args.rootdir)
+
+extras = subprocess.Popen( identitycmd
+                         , stdin=subprocess.PIPE
+                         , stdout=subprocess.PIPE
+                         , shell=True )
+
+unkwords = subprocess.Popen( '%s/xrsdb_unknown_filter %s/xsearchdb' % (args.config['variables']['rhbin'], args.ruleset)
+                           , stdin=subprocess.PIPE
+                           , stdout=subprocess.PIPE
+                           , shell=True )
+
+decoder = subprocess.Popen( args.decoder
+                          , stdin=subprocess.PIPE
+                          , stdout=subprocess.PIPE
+                          , shell=True )
+
+lattice = subprocess.Popen( '%s/scripts/sent_to_lattice' % args.rootdir
+                          , stdin=subprocess.PIPE
+                          , stdout=subprocess.PIPE
+                          , shell=True )
+
+def allextras(line):
+    allrules = tempfile.NamedTemporaryFile(delete=False)
+    extras.stdin.write(line + '\n')
+    unkwords.stdin.write(line + '\n')
+    extrasfile = extras.stdout.readline().strip()
+    candunks = unkwords.stdout.readline().strip()
+    unkrulecmd = os.path.join(args.config['variables']['rhbin'],'unknown_word_rules') + ' -c 1 --id-origin 600000000000 --xrs-rule-format --native-unk \'""UNK_F_HERE""\' -f- -r %s | %s/new_decoder_weight_format' % (extrasfile,args.config['variables']['rhbin'])
+    unkrule = subprocess.Popen( unkrulecmd
+                              , stdin=subprocess.PIPE
+                              , stdout=allrules
+                              , shell=True )
+    unkrule.stdin.write(candunks + '\n')
+    unkrule.stdin.close()
+    unkrule.wait()
+    return allrules
+
+def latline(line):
+    lattice.stdin.write(line + '\n')
+    return lattice.stdout.readline().strip()
+
+def mainrun():
+    allrules = None
+    while True:
+        fullline = sys.stdin.readline()
+        
+        if allrules is not None:
+           os.remove(allrules.name)
+        if fullline == '':
+            break
+        fullline = fullline.strip().split('\t')
+        line = fullline[0]
+        print >> sys.stderr, 'CALLING allextras(%s)' % line
+        allrules = allextras(line)
+        if len(fullline) > 1:
+            decoder.stdin.write('use-info force + ;\n')
+            decoder.stdin.write('set-info-option force force-constraint-type sentence ;\n')
+            decoder.stdin.write('set-info-option force force-constraint "%s" ;\n' % esc(fullline[1]))
+        decoder.stdin.write('push-grammar brf "%s" ;\n' % esc(allrules.name))
+        decoder.stdin.write(latline('<foreign-sentence> ' + line + ' </foreign-sentence>') + '\n')
+        decoder.stdin.write('pop-grammar ;\n')
+        if len(fullline) > 1:
+            decoder.stdin.write('use-info - force ;\n')
+        decoder.stdin.write('\n')
+        while True:
+            outline = decoder.stdout.readline()
+            sys.stdout.write(outline)
+            if outline == '\n':
+                break
+
+def cleanup(proc):
+    proc.stdin.close()
+    proc.stdout.close()
+    proc.terminate()
+
+
+mainrun()
+
+cleanup(decoder)
+cleanup(unkwords)
+cleanup(extras)
+cleanup(lattice)
+

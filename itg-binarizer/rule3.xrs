@@ -1,0 +1,1 @@
+PP(x0:IN NP-C(NPB(DT("the") NN("trade") NN("surplus")))) -> x0 "CTRADE" "CSURPLUS" ### id=2

@@ -1,0 +1,9 @@
+import sbmt-util ;
+import package ;
+
+
+project target_word_features ;
+
+exe target_word_features : target_word_features.cpp  ../../sbmt_decoder//sbmt ;
+
+sbmt-util.install install : : target_word_features ;

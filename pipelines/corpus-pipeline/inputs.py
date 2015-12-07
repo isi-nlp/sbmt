@@ -1,0 +1,128 @@
+#!/usr/bin/env python
+
+import cfg
+import hadoop
+import argparse
+import string
+import os, sys
+import itertools
+import yaml
+import errno
+
+def resolve(filename):
+    try:
+        target = os.readlink(filename)
+    except OSError as e:
+        if e.errno == errno.EINVAL:
+            return os.path.abspath(filename)
+        raise
+    return os.path.normpath(os.path.join(os.path.dirname(filename), target))
+
+
+def wrt(wd,relpath):
+    curr = os.path.dirname(os.path.abspath(wd))
+    return os.path.normpath(os.path.join(curr,relpath))
+
+class store_corpus(argparse.Action):
+    def place(self,namespace,field,attr,values,scfg):
+	if field in scfg:
+	    if not hasattr(namespace,field):
+                setattr(namespace,attr,wrt(values,scfg[field]))
+        else:
+            if not hasattr(namespace,field):
+                setattr(namespace,attr,None)
+    def placev(self,namespace,field,attr,values,scfg):
+        if field in scfg:
+            if not hasattr(namespace,field):
+               strv = ' '.join(wrt(values,f) for f in scfg[field])
+               setattr(namespace,attr,strv)
+        else:
+            if not hasattr(namespace,field):
+                setattr(namespace,attr,None)
+
+    def __call__(self,parser, namespace, values, option_string=None):
+        values = resolve(values)
+        scfg = cfg.load_config(values)
+        self.place(namespace,'corpus','corpus',values,scfg)
+        self.place(namespace,'byline-ne-corpus','necorpus',values,scfg)
+        self.place(namespace,'tstmaster','tstmaster',values,scfg)
+        self.placev(namespace,'lc-tok-refs','lctokrefs',values,scfg)
+        self.placev(namespace,'detok-refs','detokrefs',values,scfg)       
+parser = argparse.ArgumentParser()
+parser.add_argument('rules'
+                   , help='output directory of the rule creation pipeline'
+                   , action=cfg.store_abspath
+                   , nargs='?'
+                   , default=argparse.SUPPRESS
+                   )
+parser.add_argument('corpus'
+                   , help='plain corpus file, tokenized and cased consistent with training data'
+                   , action=cfg.store_abspath
+                   , nargs='?'
+                   , default=argparse.SUPPRESS
+                   )
+parser.add_argument( '-b','--byline-ne-corpus'
+                   , dest='necorpus'
+                   , help='if provided, will be used to split bylines'
+                   , default=argparse.SUPPRESS )
+parser.add_argument( '-s', '--corpus-config'
+                   , help='describes location of corpus, lc-tok-refs, detok-refs, byline-ne-corpus'
+                   , nargs='?'
+                   , default=argparse.SUPPRESS
+                   , action=store_corpus ) 
+
+if __name__ == '__main__':
+    d = cfg.parse_args( parser
+                      , default='$rules/rules.config'
+                      , modeldir=True
+                      , write='$outdir/corpus-prep.config' )
+    hp = d.hadoop
+
+    if 'necorpus' in d.config and d.config['necorpus'] is not None:
+        split = os.path.join(d.config['variables']['rhbin'],'split-byline.pl')
+        cmd = '$split --translated-to $output/bl-english' + \
+                    ' --untranslated-to $output/bl-corpus' + \
+                    ' --consumed-to $output/bl-foreign < ' + d.config['necorpus']
+        cfg.execute(d,cmd,split=split,output=d.outdir)
+    else:
+        split = os.path.join(d.scriptdir,'append_fs')
+        cmd = '$split --consumed-to $output/bl-foreign > $output/bl-corpus < ' + d.config['corpus']
+        cfg.execute(d,cmd,split=split,output=d.outdir)
+        cfg.execute(d,'cp $output/bl-foreign $output/bl-english',output=d.outdir) 
+
+    lines = 0;
+    for line in open(d.config['corpus']):
+        lines += 1
+    tolattice = os.path.join(d.scriptdir,'sent_to_lattice')
+    cmd = 'cat $outdir/bl-corpus | $tolattice > $tmpdir/lattices'
+    cfg.execute(d,cmd,outdir=d.outdir,tolattice=tolattice,tmpdir=d.tmpdir)
+
+    # TODO: extensible lattices
+    # WARNING: step can have multiple output filenames but only one allowed here
+    steps = cfg.steps(d)
+    for step in steps:
+        if step.stage == 'lattice':
+            cfg.execute(d,step.executable())
+            cfg.execute( d, 'mv $tmpdir/$output $tmpdir/lattices'
+                       , tmpdir=d.tmpdir
+                       , output=step.output_filename()[0] )
+
+    # unknown vocabulary
+    cmd = "export LC_ALL=C; cat $tmpdir/lattices | $bindir/lattice_words | $bindir/xrsdb_unknown_filter $rules/xsearchdb | tr ' ' '\\n' | sort -u | (grep -v '^$' || true) > $tmpdir/unknown_vocab"
+    cfg.execute(d,cmd,tmpdir=d.tmpdir, bindir=d.config['variables']['rhbin'], rules=d.config['rules'])
+    
+    cmd = "cat $tmpdir/lattices | tr '\\n' ' ' | " \
+        + "sed -e's/};/};\\\n/g' | " \
+        + "head -$lines > $tmpdir/lattices.final"
+    cfg.execute(d,cmd,tmpdir=d.tmpdir,outdir=d.outdir,lines=lines)
+    cfg.execute(d, 'paste $outdir/bl-corpus $tmpdir/lattices.final > $tmpdir/in.pre'
+               , tmpdir=d.tmpdir
+               , outdir=d.outdir )
+    lc = os.path.join(d.config['variables']['rhbin'],'lc')
+    cfg.execute(d,'$lc < $tmpdir/in.pre > $tmpdir/input',lc=lc, tmpdir=d.tmpdir)
+    cfg.execute( d
+               , 'export LC_ALL=C; cat $tmpdir/lattices | $rhbin/lattice_words | $rhbin/xrsdb_unknown_filter $rules/xsearchdb | tr \' \' \'\\n\' | sort -u | (grep -v \'^$\' || true) > $tmpdir/unkwords'
+               , tmpdir=d.tmpdir
+               , rhbin=d.config['variables']['rhbin']
+               , rules=d.config['rules'] )
+

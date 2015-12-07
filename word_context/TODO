@@ -1,0 +1,24 @@
+TODO:
+- escape the english vocabulary when creating the top-n most frequent words.
+- add how many links there are.
+- the lattice doesnt work for the case where there are multiple edges between the same 
+    two vertexes.
+
+NOTE:
+- always --keep-align true
+- the green rules and maroon rules dont have align={...} on the rules. DOES NOT MATTER
+
+
+TODOs:
+
+-- escape the punctuations.
+
+-- construct the word context info factory in the constructor.
+-- load the word alignments.
+-- make sure that every rule has word alignments.
+-- convert foreign word into asscii?
+-- combiner and feature map..
+-- pass the combiner reference into the factory.
+-- where to add the new feature name to pmap.
+-- boostized_lattice 
+-- what is the different between pmap and grammar.feature_names?

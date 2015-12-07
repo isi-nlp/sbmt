@@ -1,0 +1,62 @@
+import type ; 
+type.register-suffixes C : CPP ;
+
+import sbmt-util ;
+
+project xrs-extract 
+  : requirements 
+      <include>../treelib/include
+      <include>../gzstream
+      <include>.
+      <include>../nstring
+      <include>..
+  ;
+
+obj TreeNode : c++-src/TreeNode.C : <optimization>off ;
+obj Tree : c++-src/Tree.C ;
+obj MyErr : c++-src/MyErr.C ;
+
+exe fix_collins 
+  : c++-src/fix_collins.C 
+    TreeNode 
+    Tree 
+    MyErr
+    ../gzstream 
+    ../treelib
+    /boost/regex 
+  ;
+
+exe extract
+  : TreeNode
+    Tree
+    MyErr
+    c++-src/State.C
+    c++-src/RuleInst.C
+    c++-src/RuleNode.C
+    c++-src/RuleDescriptor.C
+    c++-src/RuleRHS.C
+    c++-src/RuleRHS_el.C
+    c++-src/RuleSet.C
+    c++-src/Derivation.C
+    c++-src/DerivationNode.C
+    c++-src/DerivationNodeDescriptor.C
+    c++-src/LabelSpan.C
+    c++-src/Alignment.C
+    c++-src/Variable.C
+    c++-src/ATS.C
+    c++-src/GenDer.C
+    c++-src/WeightF.C
+    c++-src/TreeProjector.C
+    c++-src/db_access.C
+    c++-src/extract.C
+    /boost/regex
+    /site-config//db
+    /site-config//db_cxx
+    ../gzstream
+    ../treelib
+  ;
+
+sbmt-util.install install
+  : 
+  : extract fix_collins 
+  ;

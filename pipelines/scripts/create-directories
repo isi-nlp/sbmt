@@ -1,0 +1,343 @@
+#!/usr/bin/env perl
+#
+# create directories for lattices and their helper files.
+#
+use 5.006;
+use strict;
+use POSIX qw(ceil);
+use File::Spec;
+use File::Basename;
+use Getopt::Long qw(:config bundling no_ignore_case);
+use Errno;
+use sort 'stable';
+
+use lib dirname($0);
+use NLPTools qw(debug footprint);
+use NLPRules qw(FOREIGN);	# <foreign-sentence> marker
+
+use constant DEFAULT_EPD => 100; # entries per directory
+use constant DEFAULT_MASK => 02777;
+use constant DEFAULT_LL => 40;
+use constant NUMBER_HASHMARKS => 32;
+use constant EPSILON => 1E-6;
+
+$main::verbose = 0;
+$main::pretend = 0;
+my $length_limit = DEFAULT_LL;
+
+sub usage {
+    my $prg = basename($0,'.pl');
+    print << "EOF";
+
+Usage: $prg [options] --corpus fn dir [dir [..]]
+
+Optional arguments:
+ -h|--help        print this help and exit
+ -v|--verbose     more debug output while running
+ -n|--pretend     do not make any directory, just the motions of it. 
+ -e|--epd n       entries per directory, default @{[DEFAULT_EPD]}
+ -w|--wide        use full-width directory names even for top-level directories
+ -s|--short       do not create the last level of directories. 
+ -l|--language    defaults to ara
+ --length-limit i syntax length limit, defaults to @{[DEFAULT_LL]}. 
+
+Mandatory arguments:
+ -m|--map fn      put mapping file into fn, default is stdout.
+ -f|--corpus fn   plain corpus input file
+ dir [dir [..]]   1+ directories to create hierarchies underneath
+
+EOF
+    exit 1;
+}
+
+sub max {
+    my $result = 0;
+    foreach ( @_ ) {
+        $result = $_ if $result < $_;
+    }
+    $result;
+}
+
+sub sum {
+    my $result = 0;
+    foreach ( @_ ) {
+        $result += $_;
+    }
+    $result;
+}
+
+sub mymkdir($) {
+    my $dir = shift;
+    unless ( mkdir($dir,DEFAULT_MASK) ) {
+	unless ( $!{EEXIST} ) {
+	    die "FATAL: mkdir $dir: $!\n";
+	} else {
+	    warn "Info: $dir already exists\n"
+		if $main::verbose;
+	}
+    }
+}
+
+sub myrootdir($) {
+    my $root = shift;
+    if ( -e $root ) {
+	die "FATAL: $root exists but is not a directory\n"
+	    unless -d _;
+    } else { 
+	mymkdir($root) unless $main::pretend;
+    }
+}
+
+sub ara_cost($) {
+    my $x = shift;              # word count in sentence
+    if ( $length_limit <= 0 ) {
+        # OLD settings GALE+NIST 2006:
+        0.037638 * ( $x ** 2.787134 );
+    } elsif ( $x < $length_limit ) {
+        0.041249 * ( $x ** 2.216993 );
+    } else {
+        0.396839 * ( $x ** 1.667996 );
+    }
+}
+
+sub chi_cost($) {
+    my $x = shift;              # word count in sentence
+    if ( $length_limit <= 0 ) {
+        # OLD settings GALE+NIST 2006:
+        0.040189 * ( $x ** 2.629986 );
+    } elsif ( $x < $length_limit ) {
+        0.141292 * ( $x ** 2.323495 );
+    } else {
+        0.942583 * ( $x ** 1.848860 );
+    }
+}
+
+sub any_cost($) {
+    my $x = shift;
+    0.1 * $x * $x;
+}
+
+#
+# --- main -------------------------------------------------
+#
+usage unless @ARGV;
+debug "$0 @ARGV";
+my $start = time();
+
+my ($outfile,$chunks,$language,$fplain);
+my $wide = 0;
+my $short = 0;
+my $epd = DEFAULT_EPD;
+GetOptions( 'help|h' => \&usage
+	  , 'epd|e=i' => \$epd
+	  , 'verbose|v+' => \$main::verbose
+	  , 'wide!' => \$wide
+	  , 'short!' => \$short
+	  , 'pretend|n' => \$main::pretend
+          , 'chunks=i' => \$chunks
+	  , 'corpus|f=s' => \$fplain
+	  , 'chunk-size=i' => sub {
+	      die "ERROR: Option $_[0] is no longer supported\n"; 
+	  }
+	  , 'sort|s:i' => sub {
+	      warn "Info: Option $_[0] is ignored\n";
+	  }
+	  , 'language|lang|l=s' => \$language
+	  , 'length-limit=i' => \$length_limit
+	  , 'mapfile|map|m=s' => \$outfile
+	  )
+    || die( "FATAL: Option processing failed due to an illegal option\n",
+            join(' ',$0,@ARGV), "\n" );
+
+usage() unless defined $fplain;
+usage() unless @ARGV;
+
+# slurp corpus to determine sentence size, an estimator of decoding
+# duration. Also counts total number of sentences. 
+#
+open( F, "<$fplain" ) || die "FATAL: open $fplain: $!\n";
+my @length = ( undef, 
+	       map { (grep( !/FOREIGN/, (split)))+0 } <F> );
+my $total = $.;
+close F;
+die "this should not happen" unless $#length == $total;
+#die "FATAL: Too many sentences in input. Please reduce corpus size\n"
+#    if ( $total > 1000000 );	# arbitrary choice; depends on total RAM
+
+# create length-sorted suggested ordering, because any cost function
+# f(w) = c * w ^ e  | c,e > 0
+# will still be keep the same ordering relationship as word length.  
+#
+my @order = ();
+@order[ sort { $length[$b] <=> $length[$a] } 1 .. $total ] = 1 .. $total;
+
+# estimate run-time *very* roughly
+#
+my @estim = ( undef );
+if ( defined $language ) {
+    if ( lc($language) eq 'ara' || lc($language) eq 'ar' ) {
+        push( @estim, map { ara_cost($_) } @length[1..$#length] );
+    } elsif ( lc($language) eq 'chi' || lc($language) eq 'zh' ) {
+        push( @estim, map { chi_cost($_) } @length[1..$#length] );
+    } else {
+        warn "Warning: Unknown language $language, using generic cost\n";
+        push( @estim, map { any_cost($_) } @length[1..$#length] );
+    }
+} else {
+    warn "Warning: No language specified, using generic cost\n";
+    push( @estim, map { any_cost($_) } @length[1..$#length] );
+}
+
+# determine priority queues to sort by length over chunks
+# 
+my @reverse;
+if ( defined $chunks && $chunks > 1 ) {
+    # initialize rank
+    my @tmp = sort {
+	my $result = $order[$b] <=> $order[$a];
+	$result = ( $b <=> $a ) unless $result;
+	$result; } 1 .. $total;
+
+    # initialize priority queue
+    my @pq = map { [ $_, 0.0 ] } 0 .. $chunks-1;
+
+    # order and distribute stuff
+    my $cursor;
+    my (@chunks,@sanity);
+    for ( my $source=1; defined ($cursor = pop(@tmp)); ++$source ) {
+	# sanity check
+	if ( defined $sanity[$cursor] ) {
+	    die "FATAL: Duplicate use of input line ($source vs $cursor)\n";
+	} else {
+	    $sanity[$cursor] = 1;
+	}
+
+	# computation
+	push( @{$chunks[ $pq[0][0] ]}, $cursor );
+	$pq[0][1] += $estim[$cursor];
+	@pq = sort { $a->[1] <=> $b->[1] } @pq;
+    }
+
+    # some debug info
+    if ( $main::verbose ) {
+	for ( my $i=0; $i < @chunks; ++$i ) {
+	    printf STDERR "## %*d [%.1f]: %s\n",
+	    length("$chunks"), $i,
+	    $pq[$i][1], join(",",@{$chunks[$i]});
+	}
+    }
+
+    # create reverse mapping incl. sanity checking
+    for ( my $i=0; $i < @chunks; ++$i ) {
+	for ( my $j=0; $j < @{$chunks[$i]}; ++$j ) {
+	    my $sentno = $chunks[$i][$j];
+	    if ( defined $reverse[$sentno] ) {
+		die "FATAL: Sanity check failed, sentence $sentno already exists\n";
+	    } else {
+		$reverse[$sentno] = [ $i+1, $j+1 ];
+	    }
+	}
+    }
+} else {
+    @reverse = map { [ 1, $_ ] } @order;
+}
+
+my $x = log($total) / log($epd);
+my $tld = int(ceil($epd ** ( $x - int($x) ) + EPSILON ));
+my $level = int(ceil($x + EPSILON));
+#die "FATAL: Are you crazy?\n" unless $level <= 3;
+my @width = map { length("@{[$epd-1]}") } 1..$level;
+$width[$#width] = length("$tld") unless $wide; 
+my $ffactor = NUMBER_HASHMARKS / max(@length);
+
+sub creator($$$);		# { }
+sub creator($$$) {
+    my $base = shift;
+    my $deep = shift();
+    my $t = shift;
+    my $tref = ref $t ? $t : \$t;
+
+    for ( my $i=($$tref==1 && $deep==0); $i < $epd; ++$i ) {
+	my $entry = sprintf( '%0*d', $width[$deep], $i );
+	my $dir = File::Spec->catdir( $base, $entry );
+	if ( $deep >= $short ) {
+	    mymkdir($dir) unless $main::pretend;
+	}
+
+	if ( $deep > 0 ) { 
+	    creator( $dir, $deep-1, $tref ); 
+	} else { 
+	    print( $$tref
+		 , "\t", $reverse[$$tref][0], ':', $reverse[$$tref][1]
+		 , "\t", ($short ? dirname($dir) : $dir)
+		 , "\t", $order[$$tref]
+		 , "\t", $length[$$tref]
+		 , "\t", sprintf( "%.1f", $estim[$$tref] )
+		 , "\t", ('#' x int($ffactor * $length[$$tref]))
+		 , "\n" 
+		 ) unless $main::noprint;
+	    $$tref++;
+	}
+
+	# early termination once we reach the end
+	return if $$tref > $total;
+    }
+}
+
+debug "total=$total, epd=$epd, f=$x, l=$level, tld=$tld, ff=$ffactor"
+    if $main::verbose;
+
+for ( my $n=0; $n < @ARGV; ++$n ) {
+    if ( $n == 0 ) {
+	if ( defined $outfile ) {
+	    open( OUT, ">$outfile" ) || die "FATAL: open $outfile: $!\n";
+	    select OUT;
+	}
+	while ( <DATA> ) { print "# $_"; }
+    }
+
+    $main::noprint = $n;
+    myrootdir( $ARGV[$n] );
+    creator( $ARGV[$n], $level-1, 1 );
+
+    if ( $n == 0 ) {
+	if ( defined $outfile ) {
+	    select STDOUT;
+	    close OUT;
+	}
+    }
+}
+
+footprint;
+debug "done after ", time()-$start, " s";
+
+__DATA__
+
+The corpus mapfile is written by the sorted bins method. It consists
+of these tab-separated columns with the following meaning:
+
+[1] The first column contains the 1-based original line (sentence)
+    number. It is used to restore the original ordering after decoding.
+
+[2] The second column denotes the 1-based chunk number and 1-based
+    line (sentence) within chunk number. If no chunks were selected,
+    the chunk number is always 1, and the within-chunk number reflects
+    the value from the fourth column.
+
+[3] The third column shows the directory where the sentence and things
+    pertaining to it can be found.
+
+[4] The fourth column contains the 1-based line (sentence) number in
+    the suggested processing order, if the whole corpus was to be
+    processed at once. 
+
+[5] The fifth column shows the width, in words, of the sentence from
+    the plain corpus. The width includes by-lines and punctuation, so
+    it may not be the most accurate one.
+
+[6] The sixth column shows the cost function in estimated raw decoding
+    seconds.
+
+Sorting by order: sort -n -k 4
+Sorting by chunk: sort -n -k 2 -k 4 
+

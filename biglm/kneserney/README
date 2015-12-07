@@ -1,0 +1,27 @@
+Note: please make sure your Python is version >= 2.5, e.g., by setting your PATH in your .bashrc to include /usr/usc/python/2.6.5/bin .
+
+Usage: kneserney.sh <input-file> <output-file> <order>
+
+<input-file> is the tokenized input file, with any lowercasing, mapping of digits, etc. already performed
+<output-file> is the file that will be generated in ARPA (SRI-LM) format
+<order> is the order of the language model
+
+Example PBS script:
+
+#!/bin/sh
+#PBS -l walltime=24:0:0
+#PBS -l nodes=10
+
+cd $PBS_O_WORKDIR
+E=core.e
+
+TMPDIR=${TMPDIR:-/tmp}
+
+export HADOOP_HOME=/home/nlg-01/chiangd/pkg/hadoop
+CLUSTER_DIR=$PBS_O_WORKDIR/cluster.kneserney
+/home/nlg-01/chiangd/hadoop/pbs_hadoop.py $CLUSTER_DIR
+export HADOOP_CONF_DIR=$CLUSTER_DIR/conf
+
+cat $E | tr '0-9' '@' > $TMPDIR/e
+/home/nlg-03/mt-apps/20100309/biglm/kneserney/hadoop/kneserney.sh $TMPDIR/e $E.arpa 5
+

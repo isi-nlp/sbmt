@@ -1,0 +1,11 @@
+-- the <foreign-sentence> needs to be considered when computing the spans.
+        spans need to be adjusted to reflect the <foreign-sentence> symbole.
+-- ? do I need to add some many times this type of features are firing. Not for now.
+
+
+
+
+-- X source structure: remove the splits!! 
+-- X put the constituent_list into the lattice tree,  a new method constituent_list() in lattice_tree
+-- X keep a list of <span, NT> pairs
+-- ignore special rules like TOP or GLUE, or maroon??: ignored except for maroon rules.

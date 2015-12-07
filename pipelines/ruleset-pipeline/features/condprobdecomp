@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import os.path
+
+parser = argparse.ArgumentParser()
+args = cfg.parse_args(parser)
+scriptdir = args.config['variables']['rhsdir']
+bindir = args.config['variables']['rhbin']
+counter = os.path.join(scriptdir,'count')
+joiner = os.path.join(scriptdir,'join')
+divide = "'"+os.path.join(scriptdir,'divide')+' -k0 --noexp'+"'"
+hp = args.hadoop
+
+# generate each kind of cond prob on minimal rules
+types = ['trivial_cond_prob', 'phrase_pef', 'phrase_pfe']
+for type in types:
+    script = os.path.join(scriptdir, "%s.pl" % type)
+    idcount = 'idcount.%s' % type
+    countxy = 'countxy.%s' % type
+    countx = 'countx.%s' % type
+    pyx = 'pyx.%s' % type
+    pid = 'pid.%s' % type
+    # id annotated table of critical info
+    hp.mapreduce( input='minrules' 
+                  , output=idcount
+                  , mapper=script
+                  , reducer='NONE' )
+
+    # numerator count
+    hp.mapreduce( input=idcount
+                  , output=countxy
+                  , mapper='/bin/cat'
+                  , reducer=counter + ' -k2'
+                  , options='-jobconf stream.num.map.output.key.fields=2' )
+
+    # denominator count
+    hp.mapreduce( input=countxy
+                  , output=countx
+                  , mapper='/bin/cat'
+                  , reducer=counter + ' -k1' 
+                  , options='-jobconf stream.num.map.output.key.fields=1' )
+
+    mp={ 'join':joiner
+         , 'idcount':idcount
+         , 'cxy':countxy
+         , 'cx':countx
+         , 'pyx':pyx
+         , 'pid':pid
+         , 'divide':divide
+         , 'cut': "'cut -f3,5'"
+         , 'config':args.config_files }
+    # join to form prob 
+    joincall=cfg.PTemplate('$join $cxy $cx -c $config -r $divide -o $pyx').substitute(mp)
+    hp.syscall(joincall)
+
+    # join to get id
+    joincall=cfg.PTemplate('$join $idcount $pyx -c $config -k2 -r $cut -o $pid').substitute(mp)
+    hp.syscall(joincall)
+    for x in [idcount, countxy, countx, pyx]:
+        hp.remove(x)
+
+# join condprobs and decomp map -- forms rule partialvec for each composed rule
+probs = ' '.join(map(lambda x: 'pid.%s' % x, types))
+joincmd = joiner+' idmap '+probs+' -c '+args.config_files+' -o id.min.probs'
+hp.start()
+hp.syscall(joincmd)
+
+# add e^, count last 3 fields, label with types
+probsum=counter+' -b e -c 3 -f '+' '.join(["%s_decomp" % t for t in types])
+# get rid of min id field, sum rules over comp id
+hp.mapreduce( input='id.min.probs'
+              , output='part.condprobdecomp'
+              , mapper='cut -f2-'
+              , reducer=probsum
+              , options='-jobconf stream.num.map.output.key.fields=1' )
+
+for x in ["pid.%s" % t for t in types]+["id.min.probs",]:
+    hp.remove(x)
+

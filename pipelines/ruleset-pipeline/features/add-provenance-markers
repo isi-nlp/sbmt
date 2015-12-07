@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+import sys, pickle
+from itertools import groupby
+
+auxmap = pickle.load(open(sys.argv[1]))
+lbls = sys.argv[2:]
+
+def data(lines):
+    for line in lines:
+        v = line.strip().split('\t')
+        yield (v[0], v[auxmap['provenance']].split(), v[-1])
+
+for k,datum in groupby(data(sys.stdin), lambda x : x[0]):
+    for d in datum:
+        ignore,t,r = d 
+        print "%s %s" % (r, ' '.join('%s=%s' % tt for tt in zip(lbls,t)))
+
+

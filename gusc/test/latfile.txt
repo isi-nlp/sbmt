@@ -1,0 +1,25 @@
+lattice id="10" {
+[0] "0" g="G" h="H";
+[1] "1" g="GG" h="HH";
+[2] "2" g="GGG" h="HHH"; 
+[0,1] "foo" a="A" b="B";
+[1,2] "foo2" a="A2" b="B2";
+};
+
+lattice id="11" {
+[0,1] "bar" a="A" b="B";
+[1,2] "bar2" a="A2" b="B2";
+};
+
+lattice id="11" {
+[0] "0" g="G" h="H";
+[1] "1" g="GG" h="HH";
+[2] "2" g="GGG" h="HHH";
+block k="K" {
+    [0,1] "bar" a="A" b="B";
+    block m="M" n="N" {
+        [1,2] "bar2" a="A2" b="B2";
+    };
+};
+};
+

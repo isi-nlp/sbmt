@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+
+import os, sys, re
+
+strre = re.compile(r'\([^ ]+ ([^ ]+)\) ')
+flipre = re.compile(r'(\d+)-(\d+)')
+
+def etree2estr(tree):
+    return [ m.group(1) for m in strre.finditer(tree) ]
+def flipalign(align):
+    return [ (int(m.group(2)),int(m.group(1))) for m in flipre.finditer(align) ]
+
+k = int(sys.argv[1])
+
+for line in sys.stdin:
+    v = line.rstrip('\n').split('\t')
+    f = v[2].split()
+    e = etree2estr(v[1])
+    a = flipalign(v[3])
+    F = len(f)
+    E = len(e)
+    FA = max(aa[0] for aa in a)
+    EA = max(aa[1] for aa in a)
+    if FA < F and EA < E:
+        print '\t'.join([' '.join(f), ' '.join(e), ' '.join('%s-%s' % aa for aa in a), v[k]])
+    #print '\t'.join([v[1],etree2estr(v[0]),flipalign(v[2]),v[k]])
+
+    

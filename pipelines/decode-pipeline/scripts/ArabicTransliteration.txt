@@ -1,0 +1,78 @@
+# Arabic-English transliteration list
+# Author: Ulf Hermjakob
+# Last changed: October 12, 2006
+# Line structure: Arabic::transliteration == English::type::other-info   (type and other-info are optional)
+
+# digits
+٠::0 == 0::cardinal digit::value:0
+١::1 == 1::cardinal digit::value:1
+٢::2 == 2::cardinal digit::value:2
+٣::3 == 3::cardinal digit::value:3
+٤::4 == 4::cardinal digit::value:4
+٥::5 == 5::cardinal digit::value:5
+٦::6 == 6::cardinal digit::value:6
+٧::7 == 7::cardinal digit::value:7
+٨::8 == 8::cardinal digit::value:8
+٩::9 == 9::cardinal digit::value:9
+
+# Arabic letters with hamza or madda
+ء::' == hamza::letter::buckwalter:'::en-equiv:a
+آ::ā == alef with madda above::letter::buckwalter:|
+أ::'a == alef with hamza above::letter::buckwalter:>::buckwalter-xml:O
+ؤ::'u == waw with hamza above::letter::buckwalter:&::buckwalter-xml:W::en-equiv:aw,ao,w,o
+إ::'i == alef with hamza below::letter::buckwalter:<::buckwalter-xml:I
+ئ::'y == yeh with hamza above::letter::buckwalter:}
+
+# regular Arabic letters
+ا::a == alef::letter::buckwalter:A::en-equiv:a,e,i
+ب::b == beh::letter::buckwalter:b::en-equiv:b,p,v
+ة::e == teh marbuta::letter::buckwalter:p::so-called closed t
+ت::t == teh::letter::buckwalter:t::en-equiv:tt,t
+ث::th == theh::letter::buckwalter:v
+ج::j == jeem::letter::buckwalter:j::en-equiv:j,dj,g
+ح::H == hah::letter::buckwalter:H::en-equiv:ch,h
+خ::kh == khal::letter::buckwalter:x::alternative transliteration:x::en-equiv:kh,ch
+د::d == dal::letter::buckwalter:d::en-equiv:dd,d
+ذ::dh == dhal::letter::buckwalter:*
+ر::r == reh::letter::buckwalter:r
+ز::z == zain::letter::buckwalter:z::en-equiv:z,s
+س::s == seen::letter::buckwalter:s::en-equiv:ss,s
+ش::sh == sheen::letter::buckwalter:$::en-equiv:sch,sh,ch,tio
+ص::S == sad::letter::buckwalter:S::en-equiv:ss,s
+ض::D == dad::letter::buckwalter:D
+ط::T == tah::letter::buckwalter:T::en-equiv:t
+ظ::Z == zah::letter::buckwalter:Z
+ع::` == ain::letter::buckwalter:E::en-equiv:a,e,i
+غ::G == ghain::letter::buckwalter:g::en-equiv:gh,g
+ف::f == feh::letter::buckwalter:f::en-equiv:ff,f,v,ph
+ق::q == qaf::letter::buckwalter:q
+ك::k == kaf::letter::buckwalter:k::en-equiv:ch,cc,c,kk,k
+ل::l == lam::letter::buckwalter:l::en-equiv:ll,l
+م::m == meem::letter::buckwalter:m::en-equiv:mm,m
+ن::n == noon::letter::buckwalter:n::en-equiv:nn,n
+ه::h == heh::letter::buckwalter:h
+و::u == waw::letter::buckwalter:w::en-equiv:oo,ou,o,u,ww,w,aww,aw
+ى::\'a == alef maksura::letter::buckwalter:Y::so-called broken a::en-equiv:i
+ي::y == yeh::letter::buckwalter:y::en-equiv:ea,ee,e,i,y,j
+
+# non part of Modern Standard Arabic, but used in dialects
+پ::p == peh::letter::buckwalter:P
+چ::ch == tcheh::letter::buckwalter:J
+ڤ::v == veh::letter::buckwalter:V
+گ::g == gaf::letter::buckwalter:G
+
+# diacritics
+ً::\:a == fathatan::diacritic::buckwalter:F
+ٌ::\:u == dammatan::diacritic::buckwalter:N
+ٍ::\:i == kasratan::diacritic::buckwalter:K
+َ::\d{a} == fatha::diacritic::buckwalter:a
+ُ::\d{u} == damma::diacritic::buckwalter:u
+ِ::\d{i} == kasra::diacritic::buckwalter:i
+ّ::\~{} == shadda::diacritic::buckwalter:~
+ْ::\d{o} == sukun::diacritic::buckwalter:o
+
+# miscellaneous
+ٱ::\~a == alef wasla::letter::buckwalter:{
+ٰ::\`a� == superscript alef::letter
+ﻻ::la == lam alif::combination letter
+ـ::\_ == tatweel::special character::buckwalter:_

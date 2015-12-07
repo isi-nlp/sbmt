@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+
+import itertools, rule_head, optparse, sys, math
+from itertools import islice, chain, izip, groupby
+
+def batch(iterable, size):
+    sourceiter = iter(iterable)
+    while True:
+        batchiter = islice(sourceiter, size)
+        yield chain([batchiter.next()], batchiter)
+
+def inner_prod_premapper(lines):
+    lineno = 1
+    for line in lines:
+        print >> sys.stderr, "line", lineno
+        tbl = rule_head.hw_table(line)
+        d = 1
+        for dist in tbl.rhs.itervalues():
+            lst = [ list(btch) for btch in batch(rule_head.unflatten_pairs(dist.distribution.split()[1:]),1000) ]
+            for little1 in lst:
+                str1 = ' '.join('%s %s' % p for p in little1)
+                for little2 in lst:
+                    str2 = ' '.join('%s %s' % p for p in little2)
+                    sys.stdout.write(str1)
+                    sys.stdout.write('\t')
+                    sys.stdout.write(str2)
+                    sys.stdout.write('\n')
+        lineno += 1
+
+def inner_prod_mapper(lines):
+    for str1,str2 in (line.strip().split('\t') for line in lines):
+        vec1 = [ p for p in rule_head.unflatten_pairs(str1.strip().split()) ]
+        vec2 = [ p for p in rule_head.unflatten_pairs(str2.strip().split()) ]
+        for w1,c1 in vec1:
+            dist = ' '.join('%s %s' % (w2,str(c1*c2)) for w2,c2 in vec2)
+            print '%s\t%s' % (w1,dist)
+
+
+def inner_prod_reducer(lines):
+    q = iter(line.split() for line in lines)
+    for w1,lsts in itertools.groupby(q,lambda x : (x[0])):
+        inner_prod = {}
+        for lst in lsts:
+            for w2,c in rule_head.unflatten_pairs(lst[1:]):
+                inner_prod.setdefault(w2,0)
+                inner_prod[w2] += c
+        sys.stdout.write(w1)
+        slst = [ p for p in inner_prod.iteritems() ]
+        slst.sort(lambda x,y : cmp(y[1],x[1]))
+        for w2,c in slst:
+            sys.stdout.write('\t%s %s' % (w2,str(c)))
+        sys.stdout.write('\n')
+        
+def norm_mapper(lines):
+    for lv in (line.strip().split() for line in lines):
+        word = lv[0]
+        for w,c in rule_head.unflatten_pairs(lv[1:]):
+            if w == word:
+                print '%s\t%s' % (word,str(math.sqrt(float(c))))
+                break
+
+def norm_map(lines):
+    m = {}
+    def entry(line):
+        w,n = line.strip().split()
+        return w,float(n)
+    for w,n in (entry(line) for line in lines):
+        m[w] = n
+    return m
+
+def similarity_mapper(lines,norms):
+    def entry(w1,w2,n1,n2,inner):
+        return w2,float(inner)/(n1*n2)
+    for lv in (line.strip().split() for line in lines):
+        w1 = lv[0]
+        n1 = norms[w1]
+        sim = [ entry(w1,w2,n1,norms[w2],ip) for w2,ip in rule_head.unflatten_pairs(lv[1:]) ]
+        sim.sort(lambda x,y : cmp(y[1],x[1]))
+        sys.stdout.write(w1)
+        for w2,s in sim:
+            sys.stdout.write('\t%s %s' % (w2,str(s)))
+        sys.stdout.write('\n')
+
+parser = optparse.OptionParser()
+parser.add_option('-r', '--reduce', dest='mapper', action='store_false', default=True)
+parser.add_option('-p', '--premap', dest='premapper', action='store_true', default=False)
+parser.add_option('-n', '--norm', dest='norm', action='store_true', default=False)
+parser.add_option('-s', '--similarity-mapper', dest='norm_map', default='')
+
+if __name__ == '__main__':
+    opts,_ = parser.parse_args()
+    if opts.premapper:
+        inner_prod_premapper(sys.stdin)
+    elif opts.norm:
+        norm_mapper(sys.stdin)
+    elif opts.norm_map:
+        similarity_mapper(sys.stdin,norm_map(open(opts.norm_map)))
+    elif opts.mapper:
+        inner_prod_mapper(sys.stdin)
+    else:
+        inner_prod_reducer(sys.stdin)
+
+

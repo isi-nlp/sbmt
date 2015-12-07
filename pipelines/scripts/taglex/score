@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+
+import sys
+import itertools
+import collections
+import math
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('feature')
+parser.add_argument('-w','--width', type=int, default=2)
+
+args = parser.parse_args()
+feat = args.feature
+wfmtstr = r"%s=10^%" + ".%sf" % args.width
+
+#feat, = sys.argv[1:]
+def unflatten_pairs(lst):
+    x = 0
+    p = ''
+    for n in lst:
+        x += 1
+        if x % 2 == 0:
+            yield p,[float(nn) for nn in n.split()]
+        else:
+            p = n
+
+def preinp():
+    for line in sys.stdin:
+        yield line.rstrip('\n').split('\t')
+
+def input():
+    for id,lsts in itertools.groupby(preinp(),lambda x : x[0]):
+        ttable = collections.defaultdict(list)
+        erhs = {}
+        ealign = collections.defaultdict(list)
+        tags = set()
+        for lst in lsts:
+            #print >> sys.stderr, lst
+            lst = lst[1:]
+            f,e,ei = lst[0:3]
+            if e != '*lambda*':
+                erhs[ei] = e
+                ealign[ei].append(f)
+            #print >> sys.stderr, lst
+            for tag,score in unflatten_pairs(lst[3:]):
+                tags.add(tag)
+                #print >> sys.stderr, "ttable[%s,%s,%s] = %s" % (tag,f,e,score)
+                ttable[tag,f,e] = score
+        yield id,erhs,ealign,ttable,tags
+
+def compute(tag, erhs, ealign,ttable):
+    #print >> sys.stderr, erhs
+    #print >> sys.stderr, ealign
+    #print >> sys.stderr, ttable
+    #print >> sys.stderr, tag
+    p = []
+    for ei,e in erhs.iteritems():
+        if not e: continue
+        if len(ealign[ei]) == 0:
+            fs = ["NULL"]
+        else:
+            fs = ealign[ei]
+        s = []
+        for f in fs:
+            if (tag,f,"*lambda*") not in ttable:
+                s = [ ss + tt for (ss,tt) in itertools.izip_longest(s,ttable["*",f,e],fillvalue=0.) ]
+
+            else:
+                if (tag,f,e) in ttable:
+                    assert(('*',f,e) in ttable)
+                lam = ttable[tag,f,"*lambda*"]
+                add = [ lm*ttt + (1-lm)*tts for (lm,ttt,tts) in itertools.izip_longest(lam,ttable[tag,f,e],ttable["*",f,e],fillvalue=0.) ]
+                s = [ ss + a for (ss,a) in itertools.izip_longest(s,add,fillvalue=0.0) ]
+
+        s = [ ss/len(fs) for ss in s ]
+        p = [ pp * ss for (pp,ss) in itertools.izip_longest(p,s,fillvalue=1.0) ]
+    #assert p >= 0. and p <= 1.
+    return [ min(1.,max(pp,1e-20)) for pp in p ]
+                    
+for id,erhs,ealign,ttable,tags in input():
+    v = {}
+    p_backoff = compute('*', erhs, ealign, ttable)
+    try:
+        v[feat] = -math.log10(p_backoff[0])
+        for x in xrange(1,len(p_backoff)):
+            v['%s.%s' % (feat,x-1)] = -math.log10(p_backoff[x])
+    except:
+        print >> sys.stderr, "couldn't compute lexical features for rule %s (p=%s), dropping" % (id, p_backoff)
+        continue
+
+    for tag in tags:
+        p = compute(tag, erhs, ealign, ttable)
+        r = [pp/pb for (pp,pb) in itertools.izip_longest(p,p_backoff,fillvalue=1.0)]
+        
+        
+        if r[0] <= 0.5 or r[0] >= 2.:
+            v["%s.%s" % (feat,tag)] = -math.log10(r[0])
+        for x in xrange(1,len(r)):
+            #print >> sys.stderr, "X = %s" % x
+            if r[x] <= 0.5 or r[x] >= 2.: 
+               # print >> sys.stderr, "%s.%s.%s" % (feat,tag,x-1)
+                v["%s.%s.%s" % (feat,tag,x-1)] = -math.log10(r[x])
+    vstr = " ".join(wfmtstr % (x,-y) for (x,y) in v.iteritems())
+    #print >> sys.stderr, "%s\t%s" % (id, vstr)
+    print "%s\t%s" % (id, vstr)

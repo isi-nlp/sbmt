@@ -1,0 +1,23 @@
+# SHOULD use byline:
+<seg>  <NEMATCH english="xinhua news agency , beijing , february 12    "  FEATURES="BYLINE " FORCEUSAGE=" 1 " PROB=" 0.340678  "> 新华社 北京 二月 十二日  </NEMATCH> 中国    </seg>
+
+# should NOT use byline (wrong feat):
+<seg>  <NEMATCH english="xinhua news agency , beijing , february 12    "  FEATURES="notBYLINE " FORCEUSAGE=" 1 " PROB=" 0.340678  "> 新华社 北京 二月 十二日  </NEMATCH> 中国    </seg>
+
+# should NOT use byline (no forceusage):
+<seg>  <NEMATCH english="xinhua news agency , beijing , february 12    "  FEATURES="BYLINE " FORCEUSAGE=" 0 " PROB=" 0.340678  "> 新华社 北京 二月 十二日  </NEMATCH> 中国    </seg>
+
+# should NOT use byline (foreign word asdf first)
+<seg> asdf <NEMATCH english="xinhua news agency , beijing , february 12    "  FEATURES="BYLINE " FORCEUSAGE=" 1 " PROB=" 0.340678  "> 新华社 北京 二月 十二日  </NEMATCH> 中国    </seg>
+
+# should NOT use byline with --paren (no closeparen)
+<seg> ( <NEMATCH english="xinhua news agency , beijing , february 12    "  FEATURES="BYLINE " FORCEUSAGE=" 1 " PROB=" 0.340678  "> 新华社 北京 二月 十二日  </NEMATCH> 中国    </seg>
+
+# SHOULD use with --paren
+<seg> ( <NEMATCH english="xinhua news agency , beijing , february 12    "  FEATURES="BYLINE " FORCEUSAGE=" 1 " PROB=" 0.340678  "> 新华社 北京 二月 十二日  </NEMATCH> ) 中国    </seg>
+
+# should NOT use with --paren
+<seg> asdf ( <NEMATCH english="xinhua news agency , beijing , february 12    "  FEATURES="BYLINE " FORCEUSAGE=" 1 " PROB=" 0.340678  "> 新华社 北京 二月 十二日  </NEMATCH> ) 中国    </seg>
+
+# should NOT use with --paren
+<seg> ( asdf <NEMATCH english="xinhua news agency , beijing , february 12    "  FEATURES="BYLINE " FORCEUSAGE=" 1 " PROB=" 0.340678  "> 新华社 北京 二月 十二日  </NEMATCH> ) 中国    </seg>

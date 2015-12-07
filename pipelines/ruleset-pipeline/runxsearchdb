@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+import cfg
+import string
+import postprocscript
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument( '-k', '--keeprules' \
+                   , help='keep pre-filtered rules in hdfs format' \
+                   , action='store_true'
+                   )
+parser.add_argument( '-n', '--nocleanup' \
+                   , help='do not toss the temporary $tmpdir'
+                   , action='store_false'
+                   , dest='cleanup'
+                   )
+
+d = cfg.parse_args(parser,config='$outdir/rules.config')
+tmpdir = d.tmpdir
+outdir = d.outdir
+hp = d.hadoop
+hp.start()
+scriptdir = d.config['variables']['rhsdir']
+rhdir = os.path.abspath(d.config['variables']['rhbin'])
+
+if not hp.file_exists('rules.filtered'):
+    hp.put(os.path.join(tmpdir,'rules.filtered'),'rules')
+else:
+    hp.move('rules.filtered','rules')
+
+extras_cmd = '($bindir/toprules --end-word "</foreign-sentence>" $rules/grammar.nt-root $rules/grammar.nt.symbols; ' + \
+             ' $bindir/glue_rules --add-headmarker --mira-features --foreign-end-token "</foreign-sentence>" < $rules/grammar.nt.symbols)' + \
+             '| $bindir/new_decoder_weight_format | $postproc > $tmpdir/topglue.rules'
+
+cfg.execute(d,"rm -f $tmpdir/topglue.rules", tmpdir=tmpdir)
+postproc=postprocscript.write_script(d)
+for s in cfg.steps(d):
+    if s.stage == 'global-extras':
+       cfg.execute(d,"$exe | $postproc >> $tmpdir/topglue.rules",exe=s.executable(), tmpdir=tmpdir, postproc=postproc)
+
+hp.put(os.path.join(tmpdir,'topglue.rules'),'topglue.rules')
+
+hp.mapreduce( input=['rules','topglue.rules']
+            , output='dict.rules'
+            , mapper=os.path.join(rhdir,'emitdict') )
+
+steps = cfg.steps(d)
+dicts = [ 'dict.rules' ]
+for s in steps:
+    if s.stage == 'dictionary':
+        s.run(hp)
+        dicts.extend(s.output_filename())
+
+hp.mapreduce( input=dicts
+            , output='counts'
+            , reducer=os.path.join(rhdir,'count_feature_reducer') + r" -f '%key\t%count'" 
+            , compress=False )
+
+hp.getmerge('counts', os.path.join(tmpdir,'counts'))
+
+header = os.path.join(tmpdir,'header')
+cfg.execute(d,'$bindir/xrsdb_makefreq -t $tmpdir/header < $tmpdir/counts',bindir=rhdir,tmpdir=tmpdir)
+cfg.execute(d,'$bindir/xrsdb_create -f $tmpdir/header -d $outdir/xsearchdb',bindir=rhdir,tmpdir=tmpdir,outdir=outdir)
+
+hp.start(mappers=4,reducers=2)
+
+hp.mapreduce( mapper=string.Template('$bindir/xrsdb_assignkeys -dnsf $outdir/xsearchdb/header').substitute(bindir=rhdir,outdir=outdir)
+            , reducer=string.Template('$bindir/xrsdb_populate2 $outdir/xsearchdb').substitute(bindir=rhdir,outdir=outdir)
+            , input=['rules','topglue.rules']
+            , output='index' 
+            , compress=False
+            , sortkeys=4
+            , partitionkeys=1
+            , options='-jobconf mapred.reduce.tasks.speculative.execution=false ' ) 
+
+hp.getmerge('index',os.path.join(tmpdir,'index'))
+cfg.execute(d,'$bindir/xrsdb_index -bd $outdir/xsearchdb < $tmpdir/index',tmpdir=tmpdir,bindir=rhdir,outdir=outdir)
+
+hp.remove('rules')
+
+if d.keeprules:
+    hp.syscall('mv ' + os.path.join(tmpdir,'rules.final') + ' ' + outdir)
+if d.cleanup:
+    hp.syscall('rm -rf ' + tmpdir)
+

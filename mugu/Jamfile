@@ -1,0 +1,12 @@
+import sbmt-util ;
+project mugu ;
+
+lib t2s : t2s.cpp /sbmt_decoder//sbmt ;
+
+exe mugudecompose : decompose.cpp /sbmt_decoder//sbmt t2s ;
+
+exe mugudeccode : deccode.cpp /sbmt_decoder//sbmt t2s /gusc//gusc ;
+
+exe mugudecode : decode.cpp /sbmt_decoder//sbmt t2s /gusc//gusc ;
+
+sbmt-util.install install : : mugudecompose mugudeccode mugudecode ;

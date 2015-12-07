@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+
+import re, sys
+leftparen = re.compile(r'\s*\(\s*')
+rightparen = re.compile(r'\s*\)\s*')
+sepkey = re.compile(r' -> .*$')
+statetok = re.compile(r'[^\.]+\.([^\.]+)')
+slottok = re.compile(r'x[0-9]+(:(\S*))?')
+def lat(str,idx):
+    x = 0
+    str = sepkey.sub('',str)
+    str = leftparen.sub('( ',str)
+    str = rightparen.sub(' ) ',str)
+    vec = str.split()
+    stk = []
+    key = []
+    print 'lattice id="%s" {' % idx
+    #print >> sys.stderr, vec
+    for tok in vec:
+        if tok[-1] == '(':
+            tok = tok[:-1]
+            stk.append((x+1,tok))
+            print '[%s,%s] "BEGINTAG(%s)" type="source";' % (x,x+1,tok)
+        elif tok[-1] == ')':
+            fr,tok = stk.pop()
+            print '[%s,%s] "1" type="virt";' % (fr,x)
+            print '[%s,%s] "ENDTAG(%s)" type="source";' % (x,x+1,tok)
+        else:
+            print '[%s,%s] "%s" type="source";' % (x,x+1,tok)
+        x = x + 1
+    print '};'
+
+
+idx = 1
+for line in sys.stdin:
+    line = line.strip()
+    lat(line,idx)
+    idx = idx + 1

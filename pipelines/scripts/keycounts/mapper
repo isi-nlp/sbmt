@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+SBMTHADOOP=$(dirname $(dirname $0))
+
+$SBMTHADOOP/precombine | $SBMTHADOOP/count

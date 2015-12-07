@@ -1,0 +1,14 @@
+VP:VL: VP(DT("a") NP(x0:CC DT("b") DT("c") x1:NN VB("d"))) -> V[V["A"_NN]_"B"] V[CC_"C"] ### foos=0.1 binprob=e^-2 id=1 virtual_label=no complete_subtree=yes lm_string={{{"a" 1 "b" "c" 0 "d"}}} sblm_string={{{1 0 }}} lm=yes sblm=yes rule_file_line_number=1 rhs={{{"A" x1 "B" x0 "C"}}}
+NP:VL: NP(x0:CC DT("b") x1:NN VB("d")) -> V[NN_"B"] V[CC_"C"] ### foos=0.8 binprob=e^-45 id=2 virtual_label=no complete_subtree=yes lm_string={{{1 "b" 0 "d"}}} sblm_string={{{1 0 }}} lm=yes sblm=yes rule_file_line_number=3 rhs={{{x1 "B" x0 "C"}}}
+XP:VL: XP(x0:CC DT("b") x1:NN VB("d")) -> V[CC_"B"] V[NN_"C"] ### foos=0.4 binprob=e^-22 id=3 virtual_label=no complete_subtree=yes lm_string={{{0 "b" 1 "d"}}} sblm_string={{{0 1 }}} lm=yes sblm=yes rule_file_line_number=5 rhs={{{x0 "B" x1 "C"}}}
+CC:VL: CC(VP("p") PP("q") NP("r")) -> V[V["P"_"Q"___"p"_"q"_"r"_]_"R"] "S" ### foos=0.09 binprob=e^-3 id=4 virtual_label=no complete_subtree=yes lm_string={{{0}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=7 rhs={{{"P" "Q" "R" "S"}}}
+CC:VL: CC(XP("p") RR("q")) -> "P" "Q" ### foos=0.08 binprob=e^-2 id=5 virtual_label=no complete_subtree=yes lm_string={{{"p" "q"}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=9 rhs={{{"P" "Q"}}}
+VB:VL: VB("t") -> "T" ### foos=0.1 binprob=e^0 id=6 virtual_label=no complete_subtree=yes lm_string={{{"t"}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=11 rhs={{{"T"}}}
+V["A"_NN]:VL: V["A"_NN](x0:NN) -> "A" x0 ### complete_subtree=no sblm=no lm=yes lm_string={{{0}}} sblm_string={{{}}} virtual_label=yes id={{{1}}}
+V[V["A"_NN]_"B"]:VL: V[V["A"_NN]_"B"](x0:V["A"_NN]) -> x0 "B" ### complete_subtree=no sblm=no lm=yes lm_string={{{0}}} sblm_string={{{}}} virtual_label=yes id={{{1}}}
+V[CC_"C"]:VL: V[CC_"C"](x0:CC) -> x0 "C" ### complete_subtree=no sblm=no lm=yes lm_string={{{0}}} sblm_string={{{}}} virtual_label=yes id={{{1 2}}}
+V[NN_"B"]:VL: V[NN_"B"](x0:NN) -> x0 "B" ### complete_subtree=no sblm=no lm=yes lm_string={{{0}}} sblm_string={{{}}} virtual_label=yes id={{{2}}}
+V[CC_"B"]:VL: V[CC_"B"](x0:CC) -> x0 "B" ### complete_subtree=no sblm=no lm=yes lm_string={{{0}}} sblm_string={{{}}} virtual_label=yes id={{{3}}}
+V[NN_"C"]:VL: V[NN_"C"](x0:NN) -> x0 "C" ### complete_subtree=no sblm=no lm=yes lm_string={{{0}}} sblm_string={{{}}} virtual_label=yes id={{{3}}}
+V["P"_"Q"___"p"_"q"_"r"_]:VL: V["P"_"Q"___"p"_"q"_"r"_](x0:NULL) -> "P" "Q" ### complete_subtree=no sblm=no lm=yes lm_string={{{"p" "q" "r"}}} sblm_string={{{}}} virtual_label=yes id={{{4}}}
+V[V["P"_"Q"___"p"_"q"_"r"_]_"R"]:VL: V[V["P"_"Q"___"p"_"q"_"r"_]_"R"](x0:V["P"_"Q"___"p"_"q"_"r"_]) -> x0 "R" ### complete_subtree=no sblm=no lm=yes lm_string={{{0}}} sblm_string={{{}}} virtual_label=yes id={{{4}}}

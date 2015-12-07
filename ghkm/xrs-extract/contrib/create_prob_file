@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+
+use strict;
+use POSIX;
+
+#my $IN = "normalized.merged";
+if($#ARGV != 1) {
+  print STDERR "Usage: $0 [COUNTTYPE] [NORMTYPE]\n";
+  print STDERR " where: COUNTTYPE: 0 if count, 1 if fraccount\n";
+  print STDERR "         NORMTYPE: 0 if lhs, 1 if root\n";
+  exit(1);
+}
+
+# Select the two right columns:
+# count,lhscount,rootcount,fraccount,lhsfraccount,rootfraccount 
+my $count  = $ARGV[0];
+my $lhs    = $ARGV[1];
+my $counti = $count ? 0 : 3;
+my $normi  = $counti + ($lhs ? 1 : 2);
+
+while(my $line = <STDIN>) {
+   chop $line;
+   next if $line =~ /^\s*\$\$\$/;
+   my @w = split(/,/,$line);
+   if($w[$normi] == 0) {
+      print STDERR "0/0 at: $line\n";
+      print "0\n";
+      next;
+   }
+   print $w[$counti]/$w[$normi],"\n";
+}

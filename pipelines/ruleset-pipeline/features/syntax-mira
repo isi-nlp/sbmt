@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import os.path
+
+parser = argparse.ArgumentParser()
+parser.add_argument( '-n', '--insertion-top-n'
+                   , default=30
+                   , type=int
+                   , dest='topn'
+                   )
+args = cfg.parse_args(parser)
+hp = args.hadoop
+topn = args.topn
+#dir = os.path.dirname(os.path.dirname(__file__))
+#scriptdir = os.path.abspath(os.path.join(dir,'scripts','syntax-mira'))
+scriptdir = args.config['variables']['rhsdir']
+scriptdir = os.path.join(scriptdir,'syntax-mira')
+tmpdir = os.path.abspath(args.tmpdir)
+
+hp.mapreduce( mapper = os.path.join(scriptdir, 'insertion', 'mapper')
+            , reducer = os.path.join(scriptdir, 'insertion', 'reducer') + " %s" % topn
+            , input = 'rules'
+            , output = 'insertion.topn.tbl'
+            , compress = False )
+
+ins = os.path.join(tmpdir,'insertions.topn.tbl')
+hp.getmerge('insertion.topn.tbl',ins)
+hp.remove('insertion.topn.tbl')
+
+
+hp.mapreduce( mapper = os.path.join(scriptdir, 'mira-features', 'syntax-mira-features.pl')  + ' -e ' + ins
+            , input = 'rules'
+            , output = 'part.syntax-mira'
+            )

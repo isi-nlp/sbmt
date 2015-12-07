@@ -1,0 +1,104 @@
+https://nlg0.isi.edu/projects/sbmt/wiki/DecoderUtilities
+
+Note: all versions prior to V6 should not be used with archive_grammar, *AT ALL*.
+
+HPC: 
+~/blobs/mini_decoder/v1/x86_64/mini_decoder,etc. for 64-bit
+~/blobs/mini_decoder/v1/mini_decoder etc. for 32-bit 
+
+   * V9
+
+correct heuristic for ngram items.  fixed bug when LM order different from --ngram-order.
+
+--higher-ngram-order 5.  use 5grams when rule permits, when using a lower --ngram-order for items
+
+   * V8
+
+improved sbtm-score.pl (validates dotproduct of features,weights), grammar_view
+
+   * V7:
+
+changed default back to pre-V6 behavior :)  don't use this release, please, without explicitly setting:
+
+new_decoder_weight_format --old-top-glue-rule 0
+
+   * V6:
+
+Important change: Michael's grammar archive bugfix (I wasn't clear on whether the old grammar archives created had any problems at all, or if they only came up when loading them.  Assume that you have to rearchive for now).
+
+changed default new_decoder_weight_format to not add wrong glue/deriv-size attributes to TOP(GLUE) rule
+
+sbtm-score.pl
+
+Less important changes: sbtm-score.pl and lw-lm-score.pl both verify the scores and feature totals output by the decoder.   sbtm-score.pl coincidentally may be used to produce a rules file of exactly the xrs rules appearing in the nbests.  this works even for unknown word rules that are added only to the brf (so we can play with the lmstring).  sbtm-score.pl can also output a modified version of the nbests with any disagreeing feature values replaced (even ones that have an implicit 0 cost (1 score) in the rule file)
+
+--show-spans 1 prints e/f span alignments on the etree (would still need shifting to account for removed unk words and bylines, to be used to supply bbn w/ xml)
+
+The following "implicit feature weights" that are still (have always been) added:
+
+       if (not combine.has_feature_named("unk-rule")) {
+           combine.set_feature_weight("unk-rule",20.0);
+       }
+       if (not combine.has_feature_named("glue-rule")) {
+           combine.set_feature_weight("glue-rule",20.0);
+       }
+       if (not combine.has_feature_named("text-length")) {
+           combine.rename_feature("weight-text-length","text-length");
+       }
+       if (not combine.has_feature_named("derivation-size")) {
+           combine.rename_feature("weight-derivation-size","derivation-size");
+       }
+
+
+   * V5:
+
+/home/hpc-22/dmarcu/nlg/blobs/mini_decoder/v5
+
+two new mini_decoder options:
+
+ --open-class-lm arg (=0)           use unigram p(<unk>) in your LM (which
+                                    must be trained accordingly).  disables
+                                    --unknown-word-penalty
+ --unknown-word-prob arg (=10-20)  lm probability assessed for each unknown
+                                    word (when not using --open-class-lm)
+
+
+I forgot to mention that the open-class-lm scores agree w/ both sri and lw lms :)   (it's at end of handout)
+
+So "--open-class-lm true" is available for immediate testing. 
+
+   * V4:
+
+Can translate blank foreign sentences without crashing!
+
+Print foreign tree.
+
+Print english tree [fspan][espan] alignment after each syntax-rule subtree, if --show-spans 1
+
+lw-lm-score.pl -lm-n lm.LW --sentence-output sents.01 from-jens/ctoe/decoder-01.log -score-out lmscored.01 
+
+http://twiki.isi.edu/NLP/OpenOrClosedClassLM
+
+   * V3:
+
+* infinite recombine max for TOP
+* rules sorted by partial lmcost for cube
+* cube uses comb or map for redundant edges (compile-switch) 
+
+fixed bugs in paste/split-byline.pl under various weird conditions.
+
+   * V2:
+
+--parens option to split-byline.pl
+
+configurable glue-rule/top-rule generation
+
+split-byline.pl accepts plain foreign text (not just XML), 
+
+retry decoding w/ tighter beams on memory exhaustion
+
+direct limit on number of items created before retrying (just limiting the memory from the outside w/ ulimit or similar will also trigger recovery, but in a less direct way)
+
+   * V1:
+
+initial release

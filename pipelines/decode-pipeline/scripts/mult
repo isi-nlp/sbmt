@@ -1,0 +1,26 @@
+#!/usr/bin/env python
+
+import sys , random
+
+def unbuffered(input):
+    while True:
+        line = input.readline()
+        if line == '':
+            break
+        yield line
+
+sys.stderr.write("mult has started. guard your women and children\n")
+random.seed()
+for v,line in enumerate(unbuffered(sys.stdin)):
+    
+    sys.stderr.write("got line %s. wooh carnage\n" % line)
+    #if random.random() >= 0.95:
+    if v == 5:
+        sys.stderr.write("mult will punk you now!\n")
+        sys.exit(1)
+    for x in xrange(10):
+        sys.stdout.write("%s\t%s\n" % (line.rstrip('\n'),line.rstrip('\n')))
+        if random.random() >= 0.995:
+            sys.stderr.write("mult will punk your output now!\n")
+            sys.exit(1)
+        sys.stdout.flush()

@@ -1,0 +1,41 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import os.path
+import sys
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--postag', '-p', action='store_true', default=False, help=' operate for head pos tags instead of head words')
+args = cfg.parse_args(parser)
+scriptdir = args.config['variables']['rhsdir']
+bindir = args.config['variables']['rhbin']
+
+extension = ""
+counts = "r_hw_counts"
+attr = "rwprob"
+if args.postag:
+    extension=" -p"
+    counts = "r_ht_counts"
+    attr = "rtprob"
+
+
+hp = args.hadoop
+
+hp.mapreduce( mapper = os.path.join(bindir,'root_hw_count'+extension)
+            , reducer = os.path.join(scriptdir,'count')
+            , input  = 'rules'
+            , output = counts
+            , compress = False 
+            )
+hp.getmerge(counts, os.path.join(args.tmpdir, counts +'.'+attr))
+
+hp.mapreduce( mapper = os.path.join(bindir,'root_hw_prob'+extension) + ' ' + os.path.join(args.tmpdir, counts +'.'+attr)
+            , input  = 'rules'
+            , output = 'attr.' + attr
+            )
+hp.mapreduce( mapper= os.path.join(scriptdir,'name_attr') + ' -s ' + attr
+            , input='attr.' + attr
+            , output='part.' + attr
+            )
+hp.remove('attr.' + attr)

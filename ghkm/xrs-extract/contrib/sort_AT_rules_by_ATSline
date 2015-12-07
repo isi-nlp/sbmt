@@ -1,0 +1,26 @@
+#!/usr/bin/perl
+
+# Reads ATS rules from STDIN (it assumes that the field 
+# ATSline exists), and prints counts of each ATS rule (STDERR), and
+# rules sorted by ATSline (STDOUT).
+
+use strict;
+
+my @ATS;
+while(<STDIN>) {
+  chop;
+  /ATSline=(\d+)/; 
+  my $ATSline = $1;
+  /count=(\d+)/;
+  my $count = $1;
+  push @{$ATS[$ATSline]}, [$count,$_];
+}
+
+foreach my $k (0..$#ATS) {
+  my $atsk = $ATS[$k];
+  print STDERR "$k\t", 1+$#{$atsk}, "\n";
+  foreach my $i (sort {$atsk->[$b] <=> $atsk->[$a]} 0..$#{$atsk}) {
+    my ($count,$rule) = @{$atsk->[$i]};
+	 print "$rule\n"; 
+  }
+}

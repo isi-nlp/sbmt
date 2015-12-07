@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import os.path
+
+parser = argparse.ArgumentParser()
+parser.add_argument('type', choices = ['mwff','swff','lef','lfe'])
+parser.add_argument('table')
+parser.add_argument('-s','--suffix',nargs='?')
+args = cfg.parse_args(parser)
+
+suffix = ''
+if args.suffix:
+    suffix = args.suffix
+
+#dir = os.path.dirname(os.path.dirname(__file__))
+#scriptdir = os.path.abspath(os.path.join(dir,'scripts'))
+scriptdir = args.config['variables']['rhsdir']
+
+
+ttable = os.path.abspath(args.table)
+type = args.type
+mapper = ''
+reducer = 'NONE'
+
+def lex(table,permute,hp):
+    bindir = args.config['variables']['rhbin']
+    
+    hp.put(table,'lextable')
+    hp.mapreduce( mapper=r"tr ' ' '\t'"
+                , input='lextable'
+                , output='lextable.m' )
+    hp.mapreduce( mapper=os.path.join(bindir,'lex_mapper1' + ' ' + permute)
+                , input='rules'
+                , output='lexrules.m' )
+    
+    
+    cmd = "%(join)s lextable.m lexrules.m -k2 -o lexalign -c %(config)s" % mp
+    hp.syscall(cmd)
+    
+
+if type == 'mwff':
+    mapper = os.path.join(scriptdir,'add_missingWord.pl') + ' -m ' + ttable + ' --label ' + type + suffix 
+elif type == 'swff':
+    mapper = os.path.join(scriptdir,'add_spuriousWord.pl') + ' -s ' + ttable + ' --split --label ' + type + suffix 
+elif type == 'lef':
+    mapper = os.path.join(scriptdir,'add_lef.pl') + ' -v --normal ' + ttable + ' --penalty -20 - --label ' + type + suffix 
+elif type == 'lfe':
+    mapper = os.path.join(scriptdir,'add_lfe.pl') + ' -v --invers ' + ttable + ' --penalty -20 - --label ' + type + suffix 
+
+hp = args.hadoop
+
+hp.start(mappers=4)
+hp.mapreduce( mapper=mapper
+            , reducer=reducer
+            , input='rules'
+            , output='part.%s' % type + suffix
+            )
+hp.start()

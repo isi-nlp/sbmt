@@ -1,0 +1,103 @@
+# This file was automatically generated. DO NOT EDIT!
+
+all: $(TOP_DIR)/Horse/build-linux/bin/libShared_Common.a
+	@ echo ++ Horse__Shared_Common is done.
+
+.obj/linux/Shared_Common/impl/MemAlloc.o: impl/MemAlloc.cpp
+	@ echo '+ [Shared_Common] compiling MemAlloc.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/impl 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/impl/MemAlloc.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT impl/MemAlloc.cpp > .obj/linux/Shared_Common/impl/MemAlloc.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/impl/MemAlloc.o -c impl/MemAlloc.cpp
+-include .obj/linux/Shared_Common/impl/MemAlloc.d
+
+.obj/linux/Shared_Common/impl/ParamParser.o: impl/ParamParser.cpp
+	@ echo '+ [Shared_Common] compiling ParamParser.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/impl 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/impl/ParamParser.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT impl/ParamParser.cpp > .obj/linux/Shared_Common/impl/ParamParser.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/impl/ParamParser.o -c impl/ParamParser.cpp
+-include .obj/linux/Shared_Common/impl/ParamParser.d
+
+.obj/linux/Shared_Common/impl/Platform.o: impl/Platform.cpp
+	@ echo '+ [Shared_Common] compiling Platform.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/impl 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/impl/Platform.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT impl/Platform.cpp > .obj/linux/Shared_Common/impl/Platform.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/impl/Platform.o -c impl/Platform.cpp
+-include .obj/linux/Shared_Common/impl/Platform.d
+
+.obj/linux/Shared_Common/impl/ConditionVariable.o: impl/ConditionVariable.cpp
+	@ echo '+ [Shared_Common] compiling ConditionVariable.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/impl 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/impl/ConditionVariable.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT impl/ConditionVariable.cpp > .obj/linux/Shared_Common/impl/ConditionVariable.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/impl/ConditionVariable.o -c impl/ConditionVariable.cpp
+-include .obj/linux/Shared_Common/impl/ConditionVariable.d
+
+.obj/linux/Shared_Common/impl/Trace.o: impl/Trace.cpp
+	@ echo '+ [Shared_Common] compiling Trace.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/impl 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/impl/Trace.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT impl/Trace.cpp > .obj/linux/Shared_Common/impl/Trace.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/impl/Trace.o -c impl/Trace.cpp
+-include .obj/linux/Shared_Common/impl/Trace.d
+
+.obj/linux/Shared_Common/impl/Assert.o: impl/Assert.cpp
+	@ echo '+ [Shared_Common] compiling Assert.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/impl 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/impl/Assert.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT impl/Assert.cpp > .obj/linux/Shared_Common/impl/Assert.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/impl/Assert.o -c impl/Assert.cpp
+-include .obj/linux/Shared_Common/impl/Assert.d
+
+.obj/linux/Shared_Common/impl/logprob.o: impl/logprob.cpp
+	@ echo '+ [Shared_Common] compiling logprob.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/impl 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/impl/logprob.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT impl/logprob.cpp > .obj/linux/Shared_Common/impl/logprob.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/impl/logprob.o -c impl/logprob.cpp
+-include .obj/linux/Shared_Common/impl/logprob.d
+
+.obj/linux/Shared_Common/impl/ErrorCode.o: impl/ErrorCode.cpp
+	@ echo '+ [Shared_Common] compiling ErrorCode.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/impl 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/impl/ErrorCode.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT impl/ErrorCode.cpp > .obj/linux/Shared_Common/impl/ErrorCode.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/impl/ErrorCode.o -c impl/ErrorCode.cpp
+-include .obj/linux/Shared_Common/impl/ErrorCode.d
+
+.obj/linux/Shared_Common/Vocab/impl/Vocab.o: Vocab/impl/Vocab.cpp
+	@ echo '+ [Shared_Common] compiling Vocab.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/Vocab/impl 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/Vocab/impl/Vocab.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT Vocab/impl/Vocab.cpp > .obj/linux/Shared_Common/Vocab/impl/Vocab.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/Vocab/impl/Vocab.o -c Vocab/impl/Vocab.cpp
+-include .obj/linux/Shared_Common/Vocab/impl/Vocab.d
+
+.obj/linux/Shared_Common/Vocab/impl/VocabFactory.o: Vocab/impl/VocabFactory.cpp
+	@ echo '+ [Shared_Common] compiling VocabFactory.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/Vocab/impl 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/Vocab/impl/VocabFactory.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT Vocab/impl/VocabFactory.cpp > .obj/linux/Shared_Common/Vocab/impl/VocabFactory.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/Vocab/impl/VocabFactory.o -c Vocab/impl/VocabFactory.cpp
+-include .obj/linux/Shared_Common/Vocab/impl/VocabFactory.d
+
+.obj/linux/Shared_Common/Serializer/SerializerBasicTypes.o: Serializer/SerializerBasicTypes.cpp
+	@ echo '+ [Shared_Common] compiling SerializerBasicTypes.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/Serializer 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/Serializer/SerializerBasicTypes.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT Serializer/SerializerBasicTypes.cpp > .obj/linux/Shared_Common/Serializer/SerializerBasicTypes.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/Serializer/SerializerBasicTypes.o -c Serializer/SerializerBasicTypes.cpp
+-include .obj/linux/Shared_Common/Serializer/SerializerBasicTypes.d
+
+.obj/linux/Shared_Common/Serializer/Serializer.o: Serializer/Serializer.cpp
+	@ echo '+ [Shared_Common] compiling Serializer.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/Serializer 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/Serializer/Serializer.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT Serializer/Serializer.cpp > .obj/linux/Shared_Common/Serializer/Serializer.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/Serializer/Serializer.o -c Serializer/Serializer.cpp
+-include .obj/linux/Shared_Common/Serializer/Serializer.d
+
+.obj/linux/Shared_Common/impl/Util.o: impl/Util.cpp
+	@ echo '+ [Shared_Common] compiling Util.cpp...'
+	@ mkdir -p .obj/linux/Shared_Common/impl 
+	@ c++ -fPIC -MM -MT .obj/linux/Shared_Common/impl/Util.o -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT impl/Util.cpp > .obj/linux/Shared_Common/impl/Util.d
+	@ c++ -fPIC -O3 -Wno-deprecated -I$(TOP_DIR)/Shared -I$(TOP_DIR)/Shared/Core -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/Horse/Lib -I$(TOP_DIR)/3rdParty/linux/db-4.3.29 -I$(TOP_DIR)/3rdParty/linux/gsoap-linux-2.7 -D__GCC3__ -DSLM_SWAP_BYTES -DQT_THREAD_SUPPORT -DLM_NO_BDB_LIB -DLM_NO_COMMON_LIB -DNO_QT -o .obj/linux/Shared_Common/impl/Util.o -c impl/Util.cpp
+-include .obj/linux/Shared_Common/impl/Util.d
+
+$(TOP_DIR)/Horse/build-linux/bin/libShared_Common.a:  .obj/linux/Shared_Common/impl/MemAlloc.o .obj/linux/Shared_Common/impl/ParamParser.o .obj/linux/Shared_Common/impl/Platform.o .obj/linux/Shared_Common/impl/ConditionVariable.o .obj/linux/Shared_Common/impl/Trace.o .obj/linux/Shared_Common/impl/Assert.o .obj/linux/Shared_Common/impl/logprob.o .obj/linux/Shared_Common/impl/ErrorCode.o .obj/linux/Shared_Common/Vocab/impl/Vocab.o .obj/linux/Shared_Common/Vocab/impl/VocabFactory.o .obj/linux/Shared_Common/Serializer/SerializerBasicTypes.o .obj/linux/Shared_Common/Serializer/Serializer.o .obj/linux/Shared_Common/impl/Util.o
+	@ echo '+ [Shared_Common] Linking library $(TOP_DIR)/Horse/build-linux/bin/libShared_Common.a...'
+	@ mkdir -p $(TOP_DIR)/Horse/build-linux/bin
+	@ ar cru $@ $^
+
+clean:
+	@ rm -f  .obj/linux/Shared_Common/impl/MemAlloc.o .obj/linux/Shared_Common/impl/MemAlloc.d .obj/linux/Shared_Common/impl/ParamParser.o .obj/linux/Shared_Common/impl/ParamParser.d .obj/linux/Shared_Common/impl/Platform.o .obj/linux/Shared_Common/impl/Platform.d .obj/linux/Shared_Common/impl/ConditionVariable.o .obj/linux/Shared_Common/impl/ConditionVariable.d .obj/linux/Shared_Common/impl/Trace.o .obj/linux/Shared_Common/impl/Trace.d .obj/linux/Shared_Common/impl/Assert.o .obj/linux/Shared_Common/impl/Assert.d .obj/linux/Shared_Common/impl/logprob.o .obj/linux/Shared_Common/impl/logprob.d .obj/linux/Shared_Common/impl/ErrorCode.o .obj/linux/Shared_Common/impl/ErrorCode.d .obj/linux/Shared_Common/Vocab/impl/Vocab.o .obj/linux/Shared_Common/Vocab/impl/Vocab.d .obj/linux/Shared_Common/Vocab/impl/VocabFactory.o .obj/linux/Shared_Common/Vocab/impl/VocabFactory.d .obj/linux/Shared_Common/Serializer/SerializerBasicTypes.o .obj/linux/Shared_Common/Serializer/SerializerBasicTypes.d .obj/linux/Shared_Common/Serializer/Serializer.o .obj/linux/Shared_Common/Serializer/Serializer.d .obj/linux/Shared_Common/impl/Util.o .obj/linux/Shared_Common/impl/Util.d $(TOP_DIR)/Horse/build-linux/bin/libShared_Common.a

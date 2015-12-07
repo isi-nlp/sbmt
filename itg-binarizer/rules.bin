@@ -1,0 +1,7 @@
+VP:VL: VP(DT("a") NP(x0:CC DT("b") DT("c") x1:NN VB("d"))) -> V[V[V[NN_"A"]_"B"]_"C"] x0 ### min-top-k=256 id=1 virtual_label=no complete_subtree=yes lm_string={{{"a" 1 "b" "c" 0 "d"}}} sblm_string={{{1 0 }}} lm=yes sblm=yes rule_file_line_number=1
+CC:VL: CC("k") -> V["K"_"B"___"k"_] "C" ### min-top-k=256 id=2 virtual_label=no complete_subtree=yes lm_string={{{0}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=3
+NN:VL: NN(P("f") N("g") DT("c")) -> "F" ### min-top-k=256 id=3 virtual_label=no complete_subtree=yes lm_string={{{"f" "g" "c"}}} sblm_string={{{}}} lm=yes sblm=yes rule_file_line_number=5
+V[NN_"A"]:VL: V[NN_"A"](x0:NN) -> x0 "A" ### complete_subtree=no sblm=no lm=yes lm_string={{{0}}} sblm_string={{{}}} virtual_label=yes rule_file_line_number={{{1}}}
+V[V[NN_"A"]_"B"]:VL: V[V[NN_"A"]_"B"](x0:V[NN_"A"]) -> x0 "B" ### complete_subtree=no sblm=no lm=yes lm_string={{{0}}} sblm_string={{{}}} virtual_label=yes rule_file_line_number={{{1}}}
+V[V[V[NN_"A"]_"B"]_"C"]:VL: V[V[V[NN_"A"]_"B"]_"C"](x0:V[V[NN_"A"]_"B"]) -> x0 "C" ### complete_subtree=no sblm=no lm=yes lm_string={{{0}}} sblm_string={{{}}} virtual_label=yes rule_file_line_number={{{1}}}
+V["K"_"B"___"k"_]:VL: V["K"_"B"___"k"_](x0:NULL) -> "K" "B" ### complete_subtree=no sblm=no lm=yes lm_string={{{"k"}}} sblm_string={{{}}} virtual_label=yes rule_file_line_number={{{3}}}

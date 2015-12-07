@@ -1,0 +1,4 @@
+   make INSTALL_PREFIX=/usr/local install -j 4
+   forest-em --help
+
+Note: you can also read forest-em.README before compiling.

@@ -1,0 +1,8 @@
+
+qA(NNP("e1")) -> "c2" ### id=128 gt_prob=e^-0.7 count=1
+qB(NN("presence")) -> "c3" ### id=124 gt_prob=e^-.012 count=1
+qA(VBD("e1")) -> "c1" "c2" ### id=133 gt_prob=e^-0.8 count=1
+qA(NP(x0:NNP)) -> x0 ### id=14 gt_prob=e^-.012 count=1
+qB(NP-C(NPB(PRP$("its") x0:qA) PP(TO("to") x1:qB))) -> x0 x1 ### id=131 gt_prob=e^-0.01 count=1
+qA(NP-C(NPB("its") NPB(x1:qA) (TO("to") x0:qA))) -> x0 "c2" x1 ### id=132 gt_prob=e^-0.01 count=1
+qA(NP-C(NPB(PRP$("its")) x1:qB PP(TO("to") x0:qB))) -> x0 x1 ### id=13 gt_prob=e^-0.01 count=1

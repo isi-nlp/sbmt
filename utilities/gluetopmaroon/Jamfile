@@ -1,0 +1,57 @@
+import sbmt-util ;
+import package ;
+
+project gluetopmaroon : requirements <library>../../xrsparse ;
+
+alias boost_program_options : ..//boost_program_options ;
+alias boost_regex : ..//boost_regex ;
+alias boost_filesystem : ..//boost_filesystem ;
+alias sbmt : ..//sbmt ;
+alias graehl : ..//graehl ;
+alias RuleReader : ..//RuleReader ;
+alias gusc : ..//gusc ;
+alias pthread : ..//pthread ;
+
+exe new_decoder_weight_format
+  : new_decoder_weight_format.cpp
+    extra_rules
+    sbmt
+    graehl
+    pthread
+    boost_program_options
+    boost_regex
+    RuleReader
+    ../../xrsparse
+  ;
+  
+exe glue_rules
+  : glue_rules.cpp
+    extra_rules
+    gusc
+    boost_program_options
+  ;
+  
+exe maroon_rules
+  : maroon_rules.cpp
+    extra_rules
+    gusc
+    boost_program_options
+  ;
+
+obj extra_rules
+  : extra_rules.cpp
+  : 
+  : 
+  : <library>boost_regex
+    <library>boost_filesystem
+  ;
+
+sbmt-util.install install
+  : 
+  : new_decoder_weight_format
+    glue_rules
+    maroon_rules
+  :
+  : 
+  : toprules
+  ;

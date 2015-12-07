@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+dir=.
+percent=0.1
+front=1
+
+while getopts "p:bd:" flag; do
+    if [ $flag = "p" ]; then percent=$OPTARG; fi
+    if [ $flag = "b" ]; then front=0; fi
+    if [ $flag = "d" ]; then dir=$OPTARG; fi
+done
+
+#echo "dir=$dir"
+#echo "percent=$percent"
+#echo "front=$front"
+
+IT=0
+R=""
+shift $(($OPTIND - 1))
+for var; do
+  if [ $IT = "0" ]; then nf=$var
+  elif [ $IT = "1" ]; then R=$var
+  else R="$R\n$var"
+  fi
+  IT=$(($IT + 1))
+done
+
+n=$(wc -l < $nf)
+h=$(echo "$n * $percent + 0.5"| bc)
+h=${h/.*}
+r=''
+tmp=$(mktemp -d)
+r=''
+for p in $(echo -e $R); do
+    if [ $front = "1" ]; then
+      head -$h $p > $tmp/$(basename $p)
+    else
+      tail -$h $p > $tmp/$(basename $p)
+    fi
+    r="$r $p"
+done
+
+out="#iter\theldout[lr]\tfull[lr]"
+if [ ! -e $dir/.epoch.scores.new ] ; then
+    echo -e $out > $dir/.epoch.scores.new
+fi
+cat $dir/.epoch.scores.new
+
+prev=$(wc -l < $dir/.epoch.scores.new)
+
+scorer=/home/nlg-03/wang11/sbmt-bin/v3.0/misc/syn-ats-compare/PickTheBest/scoreTranslation.out
+for x in $(seq $prev $(wc -l < $dir/trainer.weights)); do
+    if [ $front = "1" ]; then
+      hsl=$($scorer $tmp/* -hyp <((head -$(($n*$(($x - 1)) + $h)) | tail -$h) < $dir/mira.out) -bleu)
+    else
+      hsl=$($scorer $tmp/* -hyp <((head -$(($n*$x)) | tail -$h) < $dir/mira.out) -bleu)
+    fi
+    hscr=$(echo $hsl | grep -o '\[%\] [0-9\.]*' | sed -e's/\[%\] //')
+    hlr=$(echo $hsl | grep -o 'lengthRatio: [0-9\.]*' | sed -e's/lengthRatio: //')
+    fsl=$($scorer $r -hyp <((head -$(($n*$x)) | tail -$n) < $dir/mira.out) -bleu)
+    fscr=$(echo $fsl | grep -o '\[%\] [0-9\.]*' | sed -e's/\[%\] //')
+    flr=$(echo $fsl | grep -o 'lengthRatio: [0-9\.]*' | sed -e's/lengthRatio: //')
+    out="$x\t$hscr[$hlr]\t$fscr[$flr]"
+    echo -e $out
+    echo -e $out >> $dir/.epoch.scores.new
+    head -$x $dir/trainer.weights | tail -1 | tr ' =' ',:' > $dir/weights.$x
+done
+cp $dir/.epoch.scores.new $dir/epoch.scores

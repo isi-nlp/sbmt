@@ -1,0 +1,81 @@
+---+++ Open or Closed Class LMs in LW and SRI LMs
+
+In an "open class LM" there is an additional unigram p(&lt;unk>) in the SRI LM trie.  All known ngrams have their probabilities lowered somewhat.  Such an LM is trained using <code>ngram-count -unk</code>.  Surprisingly, there are no p(word|&lt;unk>) - only one line is added to the file.
+
+A "closed class LM" doesn't have any p(&lt;unk>) and instead reports the number of OOV words encountered.  We typically assign a very low floor probability to such words in our MT systems (namely, 1e-20, which is probably too low!).  A closed class LM can be trained by *not* using the <code>-unk> argument to ngram-count.
+
+If you use the SRI ngram program to score sentences, the "-unk" argument is automatically enabled if you load such an LM.  So if you want to compute closed class LM scores from an open class trained LM, you'll have to <code>fgrep -v '&lt;unk>'</code>
+
+---+++ Our MT decoders have used closed class so far.
+
+Our decoders have so far defaulted to using closed class LM computations, even when given an open-class trained LM.  They do this by detecting unknown words and avoiding ever passing them either in histories or words to be scored.
+
+Language Weaver's LM implementation also supports open-class LMs.  I'm not sure if it supports closed class in any way except the above (however, if you use SRI to train a closed LM and then convert it, mini_decoder should then compute the same scores as the old decoder in its closed-class mode).
+
+---+++ Validating decoder LM scores
+
+Here's what I discovered:
+
+There are some occasional disagreement on LM scores between the decoder and the LangModel tool (the LW equivalent of "ngram"), in the translations Jens has been producing for GALE:
+
+(note: [min/avg/max] over N occurrences)
+
+<verbatim>
+avg(N=281676): (LW LangModel) cost=[7.0814/52.698/110.085] for sentence
+avg(N=281676): (decoder) cost=[7.08141/52.202/110.085] for sentence
+avg(N=281676): LW/decoder lmcost ratio=[0.999990223873301/1.0213/1.4113921694787 
+</verbatim>
+
+Notice that the agreement is almost always exact, except for some outliers where mini_decoder gives a cheaper cost (by 40%!).  Since I didn't see any options to <code>LangModel -prob</code> to toggle open-class or not, I have to assume that the disagreements probably just involve different open vs. closed class, or different unknown word floor probs if both are closed.
+
+I trained my own SRI LM in both closed- and open-class mode, and ran on a small grammar with many unknown words.
+
+In closed-class, I see that mini_decoder is agreeing exactly (within reasonable associativity/commutativity numerical limits) with SRI's ngram tool:
+
+<verbatim>
+avg(N=7): (LW LangModel) cost=[28.2592/30.754/34.1411] for sentence
+avg(N=8): (SRI ngram) cost=[75.8359/137.32/549.269] for sentence
+avg(N=8): (SRI ngram): [3/5.25/21] OOV for sentence [0/3.5/7]
+avg(N=7): (decoder) cost=[75.8359/78.211/81.6867] for sentence
+avg(N=7): LW/decoder lmcost ratio=[0.372636178907351/0.39291/0.41795175958877]
+avg(N=7): SRI/decoder lmcost ratio=[1/1.0033/1.00462977304174]
+</verbatim>
+
+Note that so far mini_decoder has not exposed a command line option to use open-class LM scoring.  I've just added this and it will be in an imminent v5 release.  I had assumed the default was open-class, since that's, well, better.
+
+---+++ History
+
+The order in which I've presented this is somewhat backward.  The real story was:
+
+   1. A long time ago, I ran some scripts to validate the old decoder vs. mini_decoder's LM scores, vs. the SRI ngram tool.  This exposed a bug in the handling of the " word.
+   2. I regularly run with a small XRS grammar and large LM given to me (because I don't know how to build LW LMs yet) and see the scores haven't changed
+   3. The LW LM I symlinked to @ISI disappears, so I stop verifying LM scores for a while
+   4. I learn how to train an LM and find that the scores between LW LangModel and mini_decoder disagree violently
+   5. I worry about this and look for bugs
+   6. I add SRI ngram validation to the program I'm using to automatically compare.  SRI and LW agree nearly exactly on my open-class LM, so this seems like a horrible bug
+   7. I examine Jens' MT output and compare it against LangModel, and find almost no problems (now I think it's because of almost no LM-unknowns)
+   8. I find that SRI LM ignores the -unk option to ngram if the LM was trained unk, it's always turned on.
+   9. I finally learn that mini_decoder operates in closed-class mode always.  this seems dumb but explains everything.
+   10. I add an option --open-class-lm 1 to mini_decoder and all should be well in v5
+
+---+++ Demonstration of agreement between SRILM and LWLM on an open-class LM
+
+<verbatim>
+avg(N=7): (LW LangModel) cost=[28.2592/30.754/34.1411] for sentence
+avg(N=8): (SRI ngram) cost=[28.2592/53.819/215.275] for sentence
+avg(N=7): (decoder) cost=[75.8359/78.211/81.6869] for sentence
+avg(N=7): LW/decoder lmcost ratio=[0.372636178907351/0.39291/0.417950736286969]
+avg(N=7): SRI/decoder lmcost ratio=[0.372636178907351/0.39291/0.417950736286969]
+</verbatim>
+
+---+++ Demonstration of correctness of <code>--open-class 1</code> in decoder vs. LW/SRILM
+
+<verbatim>
+avg(N=11): (LW LangModel) cost=[28.2592/32.098/37.5759] for sentence
+avg(N=12): (SRI ngram) cost=[28.2592/58.847/353.081] for sentence
+avg(N=11): (decoder) cost=[28.2592/31.812/37.2255] for sentence
+avg(N=11): LW/decoder lmcost ratio=[1/1.0089/1.01175535180507]
+avg(N=11): SRI/decoder lmcost ratio=[1/1.0089/1.01175535180507]
+</verbatim>
+
+-- Main.JonathanGraehl - 29 Jun 2006

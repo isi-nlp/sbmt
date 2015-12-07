@@ -1,0 +1,166 @@
+import numbers ;
+import option ;
+import feature ;
+import sbmt-util ;
+
+project mini_decoder 
+  : requirements <include>. <include>..
+  ;
+
+local max_order = [ option.get mini-ngram-max-order : 7 ] ;
+local order = [ option.get mini-ngram-order : all ] ;
+local allocator = [ option.get allocator : off ] ;
+local min_order = 1 ;
+
+echo max_order=$(max_order) ;
+echo order=$(order) ;
+
+mini_target = "" ;
+if $(order) != all
+{
+    mini_target = <mini-ngram-order>$(order) ;
+    max_order = $(order) ;
+    min_order = $(order) ;
+} else 
+{
+    mini_target = <mini-ngram-order>$(order)
+                  <mini-ngram-max-order>$(max_order) ;
+}
+
+echo mini_target=$(mini_target) ;
+
+local orders = [ numbers.range $(min_order) $(max_order) ] ;
+feature.feature mini-ngram-order : all 0 $(orders) : optional composite ;
+feature.feature mini-ngram-max-order : $(max_order) : optional ;
+
+for n in $(orders)
+{
+    local def = MINI_NGRAM_ORDER ;
+    feature.compose <mini-ngram-order>$(n)
+                  : <define>MINI_MIN_NGRAM_ORDER=$(n)
+                    <define>MINI_MAX_NGRAM_ORDER=$(n)
+                    <define>MINI_NGRAM_ORDER=$(n)
+                    <define>MINI_ALL_NGRAMS=0 
+                  ;
+}
+
+feature.compose <mini-ngram-order>all 
+              : <define>MINI_ALL_NGRAMS=1 
+                <define>MINI_MIN_NGRAM_ORDER=1
+                <define>MINI_MAX_NGRAM_ORDER=$(max_order)
+              ;
+feature.compose <mini-ngram-order>0 
+              : <define>MINI_ALL_NGRAMS=0 
+                <define>MINI_MIN_NGRAM_ORDER=1
+                <define>MINI_MAX_NGRAM_ORDER=0
+              ;
+              
+##############################################################################
+#
+# files that dont depend on mini-ngram-order
+# declaring them as objects prevents them from 
+# being duplicated for different mini-ngram-order settings.  
+# just an optimization; not really necessary.
+#
+################################################################################
+  
+obj mini_decoder_null_info
+  : mini_decoder_null_info.cpp
+    sbmt
+  ;
+  
+for dlmo in [ numbers.range 3 4 ]
+{
+obj mini_decoder_tm_dlm_$(dlmo)
+  : mini_decoder_tm_dlm.cpp
+    sbmt
+  : <define>MINI_DLM_ORDER=$(dlmo)
+  ;
+}
+
+alias boost_iostreams : /boost/iostreams//boost_iostreams ;
+alias boost_program_options : /boost/program_options//boost_program_options ;
+alias boost_filesystem : /boost/filesystem//boost_filesystem ;
+alias boost_regex : /boost/regex//boost_regex ;
+alias boost_thread : /boost/thread//boost_thread ;
+alias boost_signals : /boost/signals//boost_signals ;
+alias boost_serialization : /boost/serialization//boost_serialization ;
+alias pthread : /world//pthread ;
+alias sbmt : /sbmt_decoder//sbmt ;
+alias graehl : /graehl//graehl ;
+alias RuleReader : /RuleReader//RuleReader ;
+alias gusc : /gusc//gusc ;
+
+##############################################################################
+
+local ngram_order_objs ;
+for ngo in $(orders)
+{
+    
+    obj mini_decoder_ngram_order$(ngo)
+      : mini_decoder_ngram_orderX.cpp
+        sbmt
+      : <define>MINI_NGRAM_ORDER=$(ngo)
+      ;
+    ngram_order_objs = $(ngram_order_objs) mini_decoder_ngram_order$(ngo) ;
+    
+    for dlmo in [ numbers.range 3 4 ] 
+    {
+    obj mini_decoder_ngram_dlm_order$(ngo)_$(dlmo)
+      : mini_decoder_ngram_dlm_orderX.cpp
+        sbmt
+      : <define>MINI_NGRAM_ORDER=$(ngo)
+        <define>MINI_DLM_ORDER=$(dlmo)
+      ;
+    ngram_order_objs = $(ngram_order_objs) mini_decoder_ngram_dlm_order$(ngo)_$(dlmo) ;
+    }
+}
+
+alias mini_decoder_ngram_dlm_orders
+  : $(ngram_order_objs)
+  : <mini-ngram-order>all
+  : $(mini_target)
+  ;
+  
+alias mini_decoder_ngram_dlm_orders
+  : 
+  : <mini-ngram-order>0
+  : $(mini_target)
+  ;
+  
+for n in $(orders)
+{
+alias mini_decoder_ngram_dlm_orders
+  : mini_decoder_ngram_order$(n)
+    mini_decoder_ngram_dlm_order$(n)_3
+    mini_decoder_ngram_dlm_order$(n)_4
+  : <mini-ngram-order>$(n)
+  : $(mini_target)
+  ;
+}
+
+exe mini_decoder
+  : mini_decoder.cpp
+    mini_decoder_tm_dlm_3
+    mini_decoder_tm_dlm_4
+    ../decoder_filters
+    mini_decoder_null_info
+    ..//grammar_args 
+    ..//lattice_tree_construct 
+    ..//decode_sequence_reader 
+    ..//numproc 
+    gusc
+    sbmt
+    boost_program_options
+    boost_filesystem
+    boost_thread
+    boost_signals
+    graehl
+    pthread
+    mini_decoder_ngram_dlm_orders/<mini-ngram-order>$(order)
+  : <allocator>$(allocator)
+  : <allocator>$(allocator)
+    $(mini_target)
+  ;
+
+sbmt-util.install install : : mini_decoder ;

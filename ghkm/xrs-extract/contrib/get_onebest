@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+
+################################################################
+# Extract the best derivation for each (e-tree/f-string/align)
+# tuple specified by the $start-$end range, given:
+#  - start, end: first and last line to extract
+#  - probf: compressed rule probability file (one p per line)
+# 
+# With the -l command-line parameter, the script only outputs
+# the log probability of the most probable derivation, 
+# instead of the dervation itself.
+# With -s, it doesn't output p=0 derivations.
+################################################################
+
+use strict;
+use POSIX;
+use vars 
+  qw($BINDIR $DBDIR $ARG_LOGP $ARG_DAT $ARG_DAT2 $ARG_SKIPZERO $ARG_LIM);
+
+######################################################
+# Determine here what configuration file to use.
+# There should be either 0 or one argument to $0.
+######################################################
+
+# Default parameters:
+$ARG_LOGP     = 0;
+$ARG_SKIPZERO = 0;
+scan_arguments();
+assert($#ARGV == 3);
+my $CONFIG  = $ARGV[0];
+require $CONFIG;
+my $start   = $ARGV[1];
+my $end     = $ARGV[2];
+my $probf   = $ARGV[3]; 
+$ARG_DAT2 = $ARG_DAT unless $ARG_DAT2; 
+#assert(-f $probf && $probf =~ /.gz$/);
+my $db      = "$DBDIR/extract.db";
+#my $args    = "-P -l $ARG_LIM -r $ARG_DAT2 -s $start -e $end -D $db";
+my $args    = "-P -1 -p $probf -l $ARG_LIM -r $ARG_DAT2 -s $start -e $end -D $db";
+
+my $exec = "$BINDIR/extract $args -d -"; 
+print STDERR "running: $exec\n";
+open(O,"$exec |");
+while(my $line = <O>) {
+   if($ARG_LOGP) {
+	  # Just output logp:
+	  chop;
+	  if($line =~ / logp=(\S+)/) {
+		 print "$1\n";
+	  } else {
+		 print "-inf\n";
+	  }
+	} else {
+	  # Output Viterbi derivation:
+	  if($line =~ / logp=(\S+)/ || !$ARG_SKIPZERO) {
+		 print "$line";
+	  }
+	}
+}
+close(O);
+
+exit 0;
+
+## Subroutines: ##
+sub scan_arguments {
+  while($ARGV[0] =~ /^-/) {
+    my $arg = shift(@ARGV);
+    if($arg eq '-l') {
+		$ARG_LOGP=1;
+    } elsif($arg eq '-s') {
+		$ARG_SKIPZERO=1;
+	 } elsif($arg eq '-r') {
+	   $ARG_DAT2=shift(@ARGV);
+	 }
+  }
+}

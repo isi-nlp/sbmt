@@ -1,0 +1,35 @@
+#!/usr/bin/env perl
+
+# faster: fast-lhs-sums-map | sort | count.py
+# warning: set high enough timeout! you will see no output until end.
+# TODO:
+# TODO: cause output to happen every N sec. instead, stderr progress
+
+# slower: lhs-sums-map | precombine.py | count.py | sort | count.py
+
+# input: LHS ... count
+# (any whitespace terminates LHS)
+
+# output: LHS\tSUM
+
+# could have made output repeat LHS (preserve original line incl. exact whitespace). but didn't.
+
+my %c;
+my $lil=1000;
+my $big=$lil*70;
+select STDERR;
+$|=1;
+select STDOUT;
+while(<>) {
+    print STDERR "." unless $. % $lil;
+    print STDERR "$.\n" unless $. % $big;
+#    my ($r,$rest)=split / /,$_,2;
+    /^(\S+).*\t(\S+)\s*$/ or die "expected lhs,...,TAB,count,NEWLINE in $_";
+    $c{$1}+=$2;
+}
+print STDERR "\nDONE.\n";
+for (keys %c) {
+#    &debug('event',$_,$c{$_});
+    print "$_\t$c{$_}\n";
+}
+

@@ -1,0 +1,7 @@
+cvs status: warning: directory CVS specified in argument
+cvs status: but CVS uses CVS for its own purposes; skipping CVS directory
+? cvs-status.log
+cvs status: Examining .
+cvs status: failed to create lock directory for `/home/graehl/isd/hpc-cvs/cvs-repository/wwang/sbmt-dev/ComplexRules/libs/treelib/src' (/home/graehl/isd/hpc-cvs/cvs-repository/wwang/sbmt-dev/ComplexRules/libs/treelib/src/#cvs.lock): No such file or directory
+cvs status: failed to obtain dir lock in repository `/home/graehl/isd/hpc-cvs/cvs-repository/wwang/sbmt-dev/ComplexRules/libs/treelib/src'
+cvs [status aborted]: read lock failed - giving up

@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+
+import sys, os, argparse, re, shutil
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-n','--ngram-order',dest='order',default=5)
+parser.add_argument('file',nargs='+')
+d = parser.parse_args()
+d.file=','.join(d.file)
+narg=[]
+tmpdir = os.getenv('TMPDIR','/tmp')
+sys.stdout.write('--taglm-ngram-order %s ' % d.order)
+sys.stdout.write('--taglm-dynamic-lm-ngram ')
+for n,f in enumerate(d.file.split(',')):
+    if re.search(r'\b(LW|lw)\b',f):
+        lbl = 'lw'
+    elif re.search(r'\b(nz|big|biglm)\b',f):
+        lbl = 'big'
+    else:
+        print >> sys.stderr, 'cannot determine type of language model:',sys.argv
+        sys.exit(1)
+    bname = os.path.basename(f)
+    newf = os.path.join(tmpdir,bname)
+    sys.stdout.write('$(cp -u %s %s) ' % (os.path.abspath(f),newf))
+    narg.append('taglm%s=%s[c][%s]' % (str(n+1),lbl,os.path.abspath(newf)))
+    
+sys.stdout.write('multi[@][%s]\n' % ','.join(narg))

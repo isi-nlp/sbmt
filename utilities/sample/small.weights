@@ -1,0 +1,11 @@
+lm1:1
+lm2:.5
+lm1-unk:2.0
+lm2-unk:4.0
+gt_prob:.1
+text-length:-0.2
+glue-rule:10.0
+unk-rule:15
+latp1:1.0
+latp2:2.0
+

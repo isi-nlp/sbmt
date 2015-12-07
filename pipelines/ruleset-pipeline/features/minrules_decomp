@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import os.path
+import sys
+
+parser = argparse.ArgumentParser()
+args = cfg.parse_args(parser)
+scriptdir = args.config['variables']['rhsdir']
+bindir = args.config['variables']['rhbin']
+
+hp = args.hadoop
+
+# decompose all rules
+
+hp.mapreduce( mapper = os.path.join(bindir,'justdecomp')
+            , input  = 'rules'
+            , output = 'decomp'
+            )
+
+# get minimal rules
+hp.mapreduce( mapper = os.path.join(bindir,'minfilter')
+            , input  = 'rules'
+            , output = 'minrules'
+            )
+hp.getmerge('minrules', os.path.join(args.tmpdir, 'minrules'))
+
+# reshape minimal rules for join
+hp.mapreduce( mapper = os.path.join(bindir,'rule_id_map')
+            , input  = 'minrules'
+            , output = 'minrules.id'
+            )
+
+# join decomposition to get minid id
+
+mp={ 'join':os.path.join(scriptdir,'join')
+   , 'decomp':'decomp'
+   , 'minid':'minrules.id'
+   , 'idmap':'idmap'
+   , 'config':args.config_files }
+joincall=cfg.PTemplate('$join $minid $decomp -c $config  -r \'cut -f2-\' -o $idmap').substitute(mp)
+
+hp.start()
+
+hp.syscall(joincall)
+
+hp.getmerge('idmap', os.path.join(args.tmpdir, 'idmap'))

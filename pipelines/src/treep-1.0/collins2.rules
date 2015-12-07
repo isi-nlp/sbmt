@@ -1,0 +1,52 @@
+# Argument and coordination rules for English Treebank II from
+# Collins' Models 2-3. Source: M. Collins, "Three generative,
+# lexicalised models for statistical parsing." Proceedings ACL '97.
+# M. J. Collins, _Head-driven statistical models for natural language
+# parsing_. Ph.D. dissertation, Univ. of Pennsylvania, 1999.
+
+punc := ".",",",":";
+pos := CC,CD,DT,EX,FW,IN,JJ,JJR,JJS,LS,MD,
+       NN,NNS,NNP,NNPS,PDT,POS,PRP,"PRP$",RB,RBR,
+       RBS,RP,SYM,TO,UH,VB,VBD,VBG,VBN,VBP,
+       VBZ,WDT,WP,"WP$",WRB,
+       punc,"$","#","-LRB-","-RRB-";
+adj := "-ADV","-VOC","-BNF","-DIR","-EXT","-LOC","-MNR","-TMP","-CLR","-PRP";
+head := "-H";
+arg := "-A";
+
+# Coordination rules
+
+# These rules take priority over the argument rules, because sisters
+# of coordination constructions can never be arguments.
+
+# Even a conjunction not immediately following the head is treated specially
+#  (what if there is more than one?)
+
+. -> .* head < .* < CC . .*
+   | .* .+head < punc* < CC head-head .*;
+
+# Argument rules
+
+# If the parent and head have the same category, no arguments are
+# marked.
+
+# First child after head which is neither PRN nor a preterminal is the argument
+
+PP -> .* < PP&head .*
+    | .* < head .* < !pos&!PRN+arg .*;
+
+# Look for arguments anywhere to the left or right
+
+S -> .* < S&head .*
+   | ((NP,SBAR,S)&!adj+arg|.)*;
+
+SBAR -> .* < SBAR&head .*
+   | (S&!adj+arg|.)>*;
+
+VP -> .* < VP&head .*
+   | ((NP,SBAR,S,VP)&!adj+arg|.)*;
+
+# Catch-all rule
+
+. -> .*;
+

@@ -1,0 +1,33 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+import cfg
+
+parser = argparse.ArgumentParser()
+d = cfg.parse_args(parser,config='$outdir/rules.config')
+tmpdir = d.tmpdir
+hp = d.hadoop
+scriptdir = d.config['variables']['rhsdir']
+bindir = d.config['variables']['rhbin']
+opts = d.config['rule-extraction']['filter-options']
+
+if not os.path.exists(os.path.join(tmpdir,'rules.filtered')):
+    hp.start()
+    if not hp.file_exists('rules.final'):
+        hp.put(os.path.join(d.tmpdir,'rules.final'),'rules')
+    else:
+        hp.move('rules.final','rules')
+    hp.mapreduce( mapper=os.path.join(scriptdir,'topk','mapper')
+                , reducer=os.path.join(scriptdir,'topk','reducer') + \
+                  ' --keep-min %(keep-min)s -k %(topk)s --non-lex-min %(non-lex-min)s' % opts
+                , input='rules'
+                , output='rules.ndwf' )
+    hp.remove('rules')
+    hp.mapreduce( mapper=os.path.join(bindir,'new_decoder_weight_format')
+                , input='rules.ndwf'
+                , output='rules.filtered' )
+    hp.remove('rules.ndwf')
+    hp.get('rules.filtered',os.path.join(tmpdir,'rules.filtered'))
+    
+    

@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+# produce prob of head given symbol, given external symbol counts file and symbol head count stream
+
+import sys, argparse, math
+from collections import defaultdict
+
+def keyval(input):
+    for line in input:
+        line = line.strip()
+        yield line.split('\t')
+
+def mapper(input, output, table):
+    # symbol in first field, count in last
+    for record in keyval(input):
+        denom = table[record[0]]
+        num = float(record[2])
+        prob = 0.0 if num <=0 or denom <= 0 else num/denom
+        output.write('\t'.join(record[:-1]+[str(prob),])+"\n")
+
+# TODO: read in table, call mapper
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="calculate symbol distro from symbol, head, count. mapper removes head, reducer sums")
+    parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="input file")
+    parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
+    parser.add_argument("--symbolfile", "-s", type=argparse.FileType('r'), help="file of symbol counts")
+    try:
+        args = parser.parse_args()
+    except IOError, msg:
+        parser.error(str(msg))
+    table = defaultdict(float)
+    for line in args.symbolfile:
+        fields = line.strip().split('\t')
+        table[fields[0]] = float(fields[1])
+    mapper(args.infile, args.outfile, table)
+

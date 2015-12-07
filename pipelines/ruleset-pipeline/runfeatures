@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+
+from argparse import ArgumentParser
+import os
+import cfg
+import sys
+
+dir = os.path.abspath(os.path.dirname(__file__))
+
+parser = ArgumentParser()
+d = cfg.parse_args(parser,config='$outdir/rules.config')
+hp = d.hadoop
+
+#print >> sys.stderr, d.config
+if not os.path.exists(os.path.join(d.tmpdir,'rules.final')):
+    
+    if not hp.file_exists('rules.extracted'):
+        hp.put(os.path.join(d.tmpdir,'rules.extracted'),'rules')
+    else:
+        hp.move('rules.extracted','rules')
+    steps = cfg.steps(d)
+    joins = [ 'part.rules' ]
+    # prefeature steps do not create data directly for features and must run
+    # before features
+    for s in steps:
+        if s.stage == 'prefeature':
+            s.run(hp)
+    for s in steps:
+        if s.stage == 'feature':
+            #print >> sys.stderr, s
+            s.run(hp)
+            joins.extend(s.output_filename())
+    scriptdir = d.config['variables']['rhsdir']
+    joiner = os.path.join(scriptdir,'join')
+    jm = os.path.join(scriptdir,'paste','mapper')
+    jr = os.path.join(scriptdir,'paste','reducer')
+    
+    hp.mapreduce( mapper=jm 
+                , reducer='NONE'
+                , input='rules'
+                , output='part.rules' )
+                
+    hp.remove('rules')
+    
+    hp.syscall(joiner + ' ' + ' '.join(joins) + ' -e -E -c ' + d.config_files + ' -o rules.paste' )
+    hp.mapreduce( mapper=jr
+                , input='rules.paste'
+                , output='rules.final'
+                )
+    hp.remove('rules.paste')
+    hp.mapreduce( mapper=os.path.join(scriptdir,'wc','mapper')
+                , reducer=os.path.join(scriptdir,'wc','reducer')
+                , input='rules.final'
+                , output='rules.final.wc' 
+                , options='-jobconf mapred.output.compress=false'
+                )
+    hp.getmerge('rules.final.wc', os.path.join(d.outdir,'rules.final.wc'))
+    hp.get('rules.final',os.path.join(d.tmpdir,'rules.final'))
+    
+    hp.remove('rules.final.wc')
+    for part in joins:
+        hp.remove(part)
+

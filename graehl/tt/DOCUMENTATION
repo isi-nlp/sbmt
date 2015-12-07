@@ -1,0 +1,71 @@
+if a # is seen, it and the rest of the line are ignored (commented) - NOT IMPLEMENTED YET
+
+otherwise, whitespace is interchangeable (only the sequence of characters matters, not the amount of whitespace between them)
+
+Tree:
+S(NP (DET (the)
+     NN(frog))
+       VP(VB(croaked))
+
+       trees are a root symbol followed by a string(written like a LISP list with optional interstitial commas) of child subtrees
+       e.g. "S(NP,VP)" or "S(NP VP)", and leaves can be written "the()" as well as "the"
+
+       empty trees - "" or "()" - are not allowed.  empty strings - "()" - are.
+
+       symbols in trees and strings are either quoted strings (e.g. "a") with quotes in the string, and backslashes, escaped with a preceding backslash, e.g. "a\"\\\"b" is the string:
+        a"\"b
+	or else they are sequences of characters except for space,tab,newline,comma,",`,(,),#,$,;,:,{,},^,=
+
+	states are always preceded in lhs/rhs with the backtick character (`), which is not actually part of the state name (unlike matched double quotes, which are part of their symbol)
+
+
+	here is a tree to string transducer; the whitespace is all optional except where it delimits number and symbol boundaries
+	{
+	nstates = 3
+	nrules = 2
+	states = (Q S R)
+	start = Q
+	rules = (
+	 Q 0.5 => ($1`S)
+	  Q ; "V \"A"($2:B(A(A,A)) $1:Q^2) => ("V A" $1`R)
+	  )
+	  }
+
+	  nstates, nrules, and states are all hints and may be omitted (or incorrect) with no harm.  start is required.  rules may be empty or omitted.  attributes may occur in any order (even more than once; multiple rules= will be appended rather than replaced).  multiple states= would be appended; the largest nstates= or nrules= would be used.  the hints, however, are useless if they occur after rules (and if start occurs before states, start will become state index 0).
+
+	  the only purpose of listing states= is so that the index for a given name can be fixed rather than in arbitrary (first occurence in rules) order.  A known mapping from names to indices allows other programs to process state-indexed vectors of data without needing a state-names-dictionary.
+
+	  giving the exact number of states or rules is not very important to my program; it would only save a little memory during input (and not after) and a little copying.  (at best, knowing in advance only saves half the work).  I output them always so other programs can use them to allocate space once before reading them.
+
+	  the enclosing {} brackets are to allow multiple transducers in a single file (instead of one file = one transducer as in carmel)
+
+	  tree to tree transducers are the same except with a different RHS (trees with the same label set, but variable/state labels can only occur in leaves)
+
+	  the weights are carmel style, e.g. -10ln = e^-10, -10log=10^-10 and assumed to be 1=0ln if omitted.
+
+	  rules are LHS [weight] => RHS
+	  variable/lookahead labels can occur in internal nodes in the LHS
+	  strings here are written as lists of symbols (commas are optional; rules also may have commas between them)
+	  about the LHS:= state [; tree-pattern] (, tree-pattern is also allowed instead of ; tree-pattern)
+	    if "; tree-pattern" is omitted, the tree-pattern is assumed to be just "$1"
+	      this is how RTG are written (omitting ", tree-pattern") - as transducers taking any tree as input, generating as the RTG on output.  
+	      LHS labels are either symbols, or start with a $, followed by a variable index, and an optional :symbol, for lookahead.  if there is lookahead, children are allowed.  if the :symbol is followed by a ^rank, only that rank is allowed, e.g. $2:VP^2 would capture only a binary VP into variable $2.  ^* means any rank and is the default.
+	      RHS labels are either normal symbols, or start with a $ (followed by variable index and then ` followed by statename)  or ` (followed by statename), e.g. $2`Q.  If the $var is omitted, $1 is the default.
+
+	      all these defaults and omissions would make scripts operating on the output of super-carmel need fairly hard to debug input parsing.  I intend to (later) provide an option to output in full, canonical easy-to-parse form (weights always ln, and nothing optional ever omitted, whitespace significant).
+
+	      i haven't allowed a LHS label of the form "$1^2" matching any rank 2 subtree because that doesn't seem interesting (if you care about the rank, i think you care about the label as well) and would require another bit of space.
+
+	      to illustrate:
+	      S .5=> A(`P,B(`S,A)) 
+	      means:
+	      S $1 .5 => A($1`P,B($1`S,A))
+	        ^^         ^^     ^^
+
+		and
+		S :A => A(`P)
+		means:
+		S $1:A^* 0ln => A($1`P)
+		  ^^  ^^ ^^^      ^^
+
+tree-tree and tree-string transducers are completely separate data types, although they differ only in the RHS.  therefore you have to know which kind you are reading.  An expression language could probably use a prefix tag like TT{...} or TS{...} but I haven't decided on that.

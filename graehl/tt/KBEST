@@ -1,0 +1,311 @@
+---+ Lazy k-best trees from a forest
+
+Problem: build from a weighted forest (with some cycles) its `k` best trees.  A node in
+these trees is called an "edge" in our decoder.  We'll allow child pointers for
+these trees to refer to common subtrees, rather than copying.
+
+A forest consists of OR and AND nodes (the AND nodes are at most binary in the
+decoder, but in general can be implicitly right-binarized and the resulting
+k-best trees transformed back to the original 3+-ary form).  Each node has a
+viterbi "inside" cost: that of the cheapest tree in it.  Tree cost is just the
+product of (nonnegative!) AND node costs, so to get the rule cost of an AND
+node, you could subtract from its inside the insides of its children.  In the
+decoder, we need to clamp the length bonus against other model costs, to ensure
+that no negative-cost cycles are possible.
+
+The old approach is based on a solution to the acyclic-forest k-best problem.
+Since there are no cycles, we can first build all the k-best-trees-lists of a
+node's children (which depend on the k-best for their children, and so on down
+to the leaves) and then derive from them the node's own k-best.  Top-down
+depth-first traversal starting from the root makes that easy (just before
+finishing a node, you've finished all the nodes it connects to).
+
+Cycles of `n` nodes are handled by recomputing `n` different versions of the k-best
+list for each node in the cycle, one version for each path from the root to the
+node.  This allows any k-best path that has no cycles to be found.  The code
+that does this is somewhat tricky/clever.  For nodes not in a cycle, of course,
+the k-best list is memoized so that when it is used by multiple parents, it is
+computed and built but once.
+
+Unfortunately, many entries are produced that are never used by any of the
+actual top-k trees for the root.  You have to keep around up to `k` entries for
+each node in the forest at all times, because you don't know that something
+that's been used once won't be used again (a length-1 span could be used at the
+TOP level!)  You could find out exactly how much you need to keep in memory
+concurrently by analyzing the dependency structure (treating OR and AND children
+identically) and producing a plan that knows when it can safely delete nodes'
+k-best-lists (and the unused trees in them), because the lists of all those
+nodes' parents has already been computed.  
+
+The actual computation of a node's k-best from its children depends on the
+node's type.  For OR-nodes, the k-best lists of its children are lazily merged,
+keeping the top `k` (we keep the k-best lists in sorted order, so this is easy).
+For AND-nodes, new tree nodes are built on top of its 0,1,or 2 children.  Leaves
+have only a singleton k-best list, of course.  Unary nodes have a k-best list is
+a copy of the child's k-best list, but with each node placed under a new unary
+AND node (we don't actually copy those trees, rather, the child pointer of the
+new trees shares them).  For binary nodes, the lazy cross-product of the left
+and right k-best trees is computed, keeping only the top `k` (again: the new
+binary AND node refers to the children by pointer).  Once we're done, we have
+for the top OR node a list of the `k` best trees (AND nodes with left/right
+pointers to other AND nodes all the way down to leaves) and their costs.
+
+A significant improvement to this algorithm is possible by observing that first,
+many of the nodes will only contribute a small number (even 0) of subtrees to
+the root's k-best trees, and second, it's not necessary to compute all `k` of the
+best trees for a node before computing the top `i` trees of its parent; in fact,
+only `i` *or possibly fewer* will be needed.  We want to generate the top `k` trees
+lazily - when someone asks for the `i^"th"` tree, we generate only up to the `i^"th"` tree
+(caching the trees so we don't duplicate work and structure).  It turns out we
+can keep a small amount of information around to implement a restartable
+incremental lazy k-best computation/cache/continuation for each node (that is,
+if we're asked for the 3rd best, we do some computation, and then when we're
+asked for the 4th best, we don't have to redo the computation for the 3rd best;
+we save enough state to pick up where we left off).  In fact, a node always be
+asked for its `i-1^"th"` best before being asked for its nth best.  
+
+So, the new scheme becomes: initialize every node with enough information to
+provide its 1st-best tree, and then query the root for its 1st, 2nd ... up to
+kth best trees and print them.  This forces evaluation of the terms that are
+actually used in the best trees; no extra work is done (except what's necessary
+to provide the "resume-where-you-left-off" state for every node).  In fact, it's
+no longer necessary to fix `k` in advance.  You can keep getting trees (in order
+of increasing cost) until there are no more, or you are satisfied.  The actual
+overhead per node of producing the k-best one at a time instead of all at once
+(with the lazy merge and cross product of sorted lists) is just a factor of log
+k for each of them - with the advantage that many fewer (node,kth best) items
+will need to be computed.  Another fringe benefit is that cycles are handled
+properly with no extra work; while a cycle of dependencies between `k` best lists
+as a whole is possible, if we ensure that there are no negative-cost cycles, a cycle of
+dependency for the `i^"th"` best trees of nodes is impossible (in that case, the
+resulting tree would not be a tree - it would contain a loop*).
+
+---++ Lazy K-Best Tree Algorithm: 
+
+Every node gets a vector saving all the 1st-nth trees built so far (they are, of
+course, built only on demand).  When a tree is generated, it is stored in the
+per-node memoization vector and returned to the caller.  The algorithm begins by
+asking for the 1st best tree for the root node, and continues to generate the
+2nd, 3rd ... and so on, until stopped.  Naturally, especially for leaf
+AND-nodes, there may only be a finite number (less than the request) of trees
+available.  That means you need to check for NULL responses (and at most one
+NULL needs be stored in the memo; if someone asks for your 4th best but you have
+only (1st-best,NULL) in your vector, you don't need to look in the vector,
+because `4>2+1`).
+
+We assume that each OR-node comes with a list of AND-node pointers sorted in
+increasing (best-first) inside viterbi cost order, and critically, that in case
+of 0 or negative weight cycles, that the ANDs-only-tree formed by following the
+first (viterbi) OR-node pointers is loopless (that is, it's a real tree), in
+case of ties.  In the decoder this is done for us (the head of a profile (OR)'s
+list is its prototype (AND), which was actually used to build the profile's
+viterbi inside parse.  For arbitrary forests, we can use Knuth77 to produce
+those lists for every OR-node even in the presence of cycles.
+
+How we find the `i^"th"` best tree for a node depends on its type:
+
+---+++ OR nodes (of size N):
+
+(In the decoder, these are profiles - things that recombine to have equivalent
+future costs for all models).  We need the state to list off the first X
+elements in increasing-cost order from an `N`-way merge of the (lazy)
+increasing-cost-sorted k-best lists of the `N` children.  State is just an N-tuple
+of list-positions used so far.  Incremental computation is made more efficient
+by maintaining a priority queue with elements (list#,cost) indicating which
+element of the tuple to increment (pulling the tree off that list).  You can
+peek at the minimum entry from the heap, increment that counter, and worsen the
+cost to that of the next element on that list (this can be done directly in most
+heaps, rather than popping then pushing).  Note that the size of the priority
+queue is always N, until one of the child lists is exhausted - then you really
+pop off that key.  Perhaps other `N`-way-merge algorithms can be made incremental
+as well.  For small enough `N`, you wouldn't need to use a priority queue but
+could just iterate over all `N` lists and choose the cheapest based on the
+consumed-tuple.
+
+The next-vector is initially `1^N`, i.e. `(1,...,1)`, and the priority queue
+contains the `N` entries `{1,...,N}`, where of course the priority (lower=better)
+of an element `i` is just the cost of the used-vector[i]th-best list of the `i^"th"`
+child of the OR-node.  Actually, to handle non-positive forest cycles without
+erroneously allowing pointer-looping pseudo-trees, just initialize OR-nodes in
+pre-evaluated (for i=1) state, by starting next-vector at `(2,1,1,...,1)`before
+enqueing `{1,...,N}` or `{2,...,N}` if there is no 2nd-best of the viterbi
+OR-child.  We are assuming WLOG that the first OR-child is the known viterbi
+choice - we have this in decoding: by construction, the profile's prototype is
+at the head of its alternatives-list.
+
+Trees are generated by copying the pointer off the appropriate child list.
+
+---+++ Leaf(introductory) AND nodes
+
+By definition, these have a singleton k-best list.  These form the leaves of any extracted tree.
+
+---+++ Unary AND nodes: 
+
+These are trivial as in the old approach.  When asked for your `i^"th"`-best, get the
+ith-best of your child and store/return your AND-rule with a pointer to that
+ith-best child under it (or you return NULL if your child doesn't have an `i^"th"`-best).
+
+---+++ Binary AND nodes:
+
+Your `i^"th"`-best will be based on the jth best of your left child and kth best of
+your right child.  A priority queue holds unused `(j,k)` tuples and their costs.
+To generate the `i^"th"`-best, you simply take the queue resulting from the i-1 first
+generations, and pop the cheapest off, building your AND-rule with left pointer
+to the jth best of your left node, and right pointer to the kth best of your
+right node.  The successors to `(j,k)` are generated according to a rule that
+ensures each (j,k) is used exactly once as you generate infinitely many: always
+generate `(j,k+1)`, but in addition generate `(j+1,k)` iff k=1 - this guarantees
+that there is a single path to generate `(j,k)` - the first coordinate is
+increased from `1...j`, and then the second coordinate is increased from `1...k` -
+you can never alternate between increasing the two coordinates.  
+
+The queue is initialized with the value `(1,1)`, and of course, an element `(j,k)`
+is given a priority (lower=better) equal to the sum of the costs of the jth-best
+of the AND node's left child, and the kth-best of the right child.
+
+For example (the queue is shown as a sorted list for simplicity, with the first
+being the cheapest; the state of the queue after the `i^"th"`-best can be seen in the
+state of the queue before the `(i+1)^"th"`-best, and the result is just the first entry
+of the queue, and new elements are <nop>_emphasized_):
+
+| *i* | *sorted-queue-before* | *comment* |
+| 1 | {_(1,1)_} | initial value.  since head k=1, two successors |
+| 2 | {_(2,1),(1,2)_} | since head k=1, two successors |
+| 3 | {(1,2),_(3,1),(2,2)_} | since the head k=2, only generate one successor|
+| 4 | {(3,1),(2,2),_(1,3)_} |  head k=1, so generate two |
+| 5 | {(2,2),(1,3),_(3,2),(4,1)_} | ... |
+
+The size of the queue grows very slowly on average, but equal to `i` in the worst
+case (the worst case is when you have the first entry in the right child much
+cheaper than the second, but a bunch of nearly-identical entries in the left
+child k-best lists).  That's not a big deal, because you store the `i` already
+computed entries anyway, so it's just double the space - but there is the
+logarithmic time factor.  Naturally, if the k-best list of a child is exhausted,
+you stop generating successors in that direction.
+
+----------
+
+* but to prove that this can't happen by construction: if there's a cycle where
+the `i^"th"` best of every node uses the `i^"th"` best of (one of) its child(ren), then
+its `i-1^"th"` best must use the `i-1^"th"` best of that child as well (lemma: if the
+`kth` best tree uses an `i^"th"` best subtree, then i-1 copies of the same tree but
+with each of the `i-1`-best subtrees in place of the `i^"th"`will be better and
+will occur in a subsequence of the `k-1`-best list), leading to the conclusion
+that the 1-best for each is based on the cycle ... which is a contradiction,
+because we started with viterbi costs and pointers that eventually fan out to
+forest leaves - in the decoder, be based on some source span).  In fact, you
+could just ensure that there are no 0-cost cycles or else the 1 best of A could
+use the 1 best of B, which uses the 1 best of A ... or detect such cycles, and
+ensure that among two same cost possibilities, you rank the non-looping one
+higher.  The easiest way to ensure that there are no cycles of cost below some
+`epsilon` > 0 is to clamp the minimum per-AND-node additional (rule) cost at
+`epsilon-min_"children"{"inside-cost(child)"}` for binary nodes and at `epsilon`
+for unary nodes.  Obviously leaf AND nodes can be as negative as you like
+without causing any cycles :)
+
+---++ More about handling cycles
+
+The difficulty with cycles arises in properly computing the viterbi (first-best)
+trees.  This doesn't just happen with unary AND-nodes; an AND node may also be
+involved in a cycle if its inside is less than the inside of any one of its
+children.  Cycles can be detected by marking memoized `i^"th"`-best computations as
+begun before you record the final answer, but handling them in general requires
+either a bottom up Knuth77/Dijkstra-like approach, or else repeatedly
+propagating relaxations from the top down (for significantly worse time
+complexity).
+
+Supposing you know for every OR node which of its children is in the real
+first-best subtree under it, then that can safely be used as the first best for
+that node.  All we need to do in the context of our algorithm is ensure that we
+return that viterbi edge as the 1st-best.  Consider the viterbi child's 1st-best
+before any other child's same-cost 1st-best.  The easiest way to do this is to
+use a lexicographic order on costs then on viterbi-child-ness.  Without such an
+ordering, an n-way tie could arise, and you'd want to ensure that the viterbi
+child is either the first or last to be enqueued to the priority queue,
+depending on algorithm internals (for a binary heap, it's most common to insert
+at the end of the vector and swap with parent until the heap invariant is
+preserved, so inserting the cheapest first would leave the root element
+unchanged, assuming swapping isn't needlessly done when `"parent"="child"`).
+Another possibility would be to specially pre-evaluate and cache the 1-best
+result for every OR-node, before it's asked for (no matter what, the lazy
+algorithm will evaluate every connected node's 1-best anyway) - obviously, this
+means you should store for the 1st-best the known viterbi OR-child, and enqueue
+normally the 1st best from the other children and the 2nd best of the viterbi
+child.
+
+Nothing should be done for AND nodes; by construction the 1st best is based on
+the 1st bests of the AND-child(ren).
+
+Instead of clamping all AND nodes to have positive incremental cost (viterbi
+inside strictly > than sum of insides of children), we can compute the
+first-best path using an algorithm that handles (nonnegative) cycles first
+e.g. Knuth77, and use from it the viterbi OR (back)pointers (the profile's
+prototype edge in the decoder) and ensure that in case of ties in cost, it's
+considered the least/best.  Then we can even allow negative cost cycles with the
+LazyKBestTrees algorithm, with the caveat that this may give errors the order of
+the 2nd,3rd... best.
+
+---++ Properly updating successors
+
+We've glossed over a major issue: after popping a new `i^"th"`-best off the
+priority queues of either binary-AND or 2+-ary-OR nodes, we need to adjust the
+next-state information, which can in the extreme case depend on the
+`(i+1)^"th"`-best of a child (the extreme case happens when for every `i` so
+far, the `i^"th"`-best has been based off the `i^"th"`-best of the same child.
+But at this point we probably don't even have the `i^"th"`-best trees for all
+nodes, let alone the `(i+1)^"th"`.  So, do we allow the `(i+1)^"th"` computation
+to begin before we've finished all the `i^"th"`?  Keep in mind that anything
+that is depended on will be computed on demand, so we could end up computing the
+5th best of a node before we've even done the 2nd best of some others - this is
+exactly what we wanted in the first place; we just need to be assured that the
+evil CYCLES don't mess us up.  My feeling is that if we follow the cycle-proof
+Knuth77/decoder viterbi for the 1st best, everything may magically fall into
+place, because of the impossibility of later building an all-`i^"th"`-best cycle
+as proved earlier.*
+
+Essentially, it's not the selection of an entry for a caller that causes it to
+be computed, but the generation of its successors.  You could imagine a cascade
+even for a simple unary-chain-of-ORs forest, where extracting the 1st best
+causes the weight of the 2nd best to be computed for the
+N-ary-merge-priority-queue, which causes the weight of the 3rd best to be
+extracted for its children ... and so on.  Since the caller only needs the
+next-best, and doesn't need to know the succesors (yet, until the next-next-best
+is requested :), the queuing of successors (namely, the part that requires their
+cost to be known) should be postponed until just before you need to compute the
+`(i+1)^"th"`-best - if you never extract anything further, you don't generate
+and score the last best's successors.  So, each node should have a
+pending-succesor-seed that must be updated before popping the best of the queue.
+To do that, it's simplest to initialize both OR and AND nodes with their
+1st-best already filled in, and the corresponding initial-queue-item saved in
+pending-succesor-seed (we already decided to do this to enforce selection of
+known viterbi OR-children as the 1st-best in case of 0-cost cycles).
+
+For OR-nodes: adjust the heap cost to reflect the incremented next-vector
+component for the previously-used OR-child.  e.g. when you go to get the 2nd
+best, *then* you get the cost of the 2nd best of the viterbi OR-child, and
+adjust the root heap entry's cost to find the next minimum.
+
+For AND-nodes: actually generate successors, which can of course depend on the
+next best of either (or both) children.  Notice we only listed the
+*sorted-queue-before* column once in the example - that's what the queue should
+hold before you list off the next minimum ... rather than pop-min and
+generate-succesors right after selecting the min, you do it just before you
+select the next min.
+
+--------
+
+* Proof: The possible successors needed for your `i^"th"`-best can depend on at
+most one of the `i^"th"`-best of any of your children, and this can only happen
+when that child is a viterbi child (no `i^"th"`-best tree can use a subtree that
+is the `(i+1)^"th"`-best or worse).  If that holds for `i`, it holds for all `j<
+i` by an earlier argument (because all the other choices must be the 1st best to
+allow an `(n,i) => (m,i)` dependency), and thus also for `i=1`.  Thus, for any
+node `n` we begin a computation for the `i^"th"`-best on, if there's an
+`i^"th"`-best computation for another node `m` invoked by it, `m` is reachable
+from `n` using only viterbi edges.  So, given no cycles in the viterbi pointers
+(impossible if all productions are >0 cost, and prevented explicitly by Knuth77
+regardless), there can be no circular dependencies between `(n,i)` items
+(meaning the `i^"th"`-best of node `n`).
+
+
+-- Main.JonathanGraehl - 13 Jan 2005

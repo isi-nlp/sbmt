@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+
+import sys
+
+id = 11235800000000
+
+mapstr = "abcdefghij"
+def mapdigi(x):
+    return mapstr[x]
+
+
+punc = [(':','colon'), (';','semicolon'), ('.','period'), ('?', 'question'), ('!','exclamation')]
+xsym = []
+if len(sys.argv) > 1:
+    for f in open(sys.argv[1]):
+        if f[0] == 'X':
+            xsym.append(f.strip())
+else:
+    xsym.append('X')
+
+for sym in xsym:
+  print 'TOP(x0:%s) -> "<foreign-sentence>" x0 "</foreign-sentence>" ### top-rule=10^-1 id=%s lm_string={{{"<s>" 0 "</s>"}}} headmarker={{{R(H)}}}' % (sym,id)
+  id += 1
+
+for sym in xsym:
+  for s,p in punc:
+    print 'GLUE1(Sentity("/multi-sentence") Csntb(":sntb") x0:%s) -> "<foreign-sentence>" x0 "%s" ### glue-rule=10^-1 glue-rule-%s=10^-1 id=%s lm_string={{{"<s>" 0}}} headmarker={{{R(HDD)}}}' % (sym,s,p,id)
+    id += 1
+  print 'GLUE1(Sentity("/multi-sentence") Csntb(":sntb") x0:%s) -> "<foreign-sentence>" x0 ### glue-rule=10^-1 glue-rule-none=10^-1 id=%s lm_string={{{"<s>" 0}}} headmarker={{{R(HDD)}}}' % (sym,id)
+  id += 1
+for x in xrange(1,9):
+    for sym in xsym:
+      for s,p in punc:
+    	print 'GLUE%s(x0:GLUE%s Csnt%s(":snt%s") x1:%s) -> x0 x1 "%s" ### glue-rule=10^-1 glue-rule-%s=10^-1 glue-rule-%s=10^-1 id=%s headmarker={{{R(HDD)}}}' % (x+1,x,mapstr[x+1],mapstr[x+1],sym,s,x+1,p,id)
+        id += 1
+      print 'GLUE%s(x0:GLUE%s Csnt%s(":snt%s") x1:%s) -> x0 x1 ### glue-rule=10^-1 glue-rule-%s=10^-1 glue-rule-none=10^-1 id=%s headmarker={{{R(HDD)}}}' % (x+1,x,mapstr[x+1],mapstr[x+1],sym,x+1,id)
+      id += 1
+    print 'TOP(x0:GLUE%s) -> x0 "</foreign-sentence>" ### top-glue-rule=10^-1 id=%s lm_string={{{0 "</s>"}}} headmarker={{{R(H)}}}' % (x+1,id)
+    id += 1

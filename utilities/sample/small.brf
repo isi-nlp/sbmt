@@ -1,0 +1,100 @@
+BRF version 2
+X: NNP("77") -> "c1" ### id=1 
+V: NNP -> "c1" ### count=10^-1 textf=ab id=1 gt_prob=e^-0.7 end=10^-1 derivation-size=10^-1 align={{{[#s=1 #t=1 0,0]}}} textf2={{{cd ef}}} foreign-length=10^-1 lm_string={{{ "77" }}} text-length=1  
+X: VBD("reiterated") -> "c2" ### id=2 
+V: VBD -> "c2" ### count=10^-1 id=2 gt_prob=e^-0.8 end=10^-2 start=10^-1 derivation-size=10^-1 align={{{[#s=1 #t=1 0,0]}}} foreign-length=10^-1 rvd_root={{{0:.9,1:.1}}} lm_string={{{ "reiterated" }}} text-length=1  
+X: NN("opposition") -> "c3" ### id=3 
+V: NN -> "c3" ### count=10^-1 id=3 gt_prob=e^-0.7 end=10^-3 start=10^-2 derivation-size=10^-1 align={{{[#s=1 #t=1 0,0]}}} foreign-length=10^-1 rvd_root={{{1:.8,0:.2}}} lm_string={{{ "opposition" }}} text-length=1  
+X: NN("acceptance") -> "c3" ### id=4 
+V: NN -> "c3" ### count=10^-1 id=4 gt_prob=e^-0.31 end=10^-3 start=10^-2 derivation-size=10^-1 align={{{[#s=1 #t=1 0,0]}}} foreign-length=10^-1 rvd_root={{{0:.7,1:.3}}} lm_string={{{ "acceptance" }}} text-length=1  
+X: NPB(JJ("foreign") JJ("military") NNS("forces")) -> "c4" "c5" ### id=5 
+V: NPB -> "c4" "c5" ### count=10^-1 id=5 gt_prob=e^-0.8 end=10^-5 start=10^-3 derivation-size=10^-1 align={{{[#s=2 #t=3 0,0 1,1 1,2]}}} foreign-length=10^-2 rvd_root={{{1:1}}} lm_string={{{ "foreign" "military" "forces" }}} text-length=3  
+X: NPB(JJ("freaky") JJ("eucalyptus") NNS("trees")) -> "c4" "c5" ### id=6 
+V: NPB -> "c4" "c5" ### count=10^-1 id=6 gt_prob=e^-.019 end=10^-5 start=10^-3 derivation-size=10^-1 align={{{[#s=2 #t=3 0,0 1,1 1,2]}}} foreign-length=10^-2 rvd_root={{{0:1}}} lm_string={{{ "freaky" "eucalyptus" "trees" }}} text-length=3  
+X: NN("69") -> "c6" ### id=7 
+V: NN -> "c6" ### count=10^-1 id=7 gt_prob=e^-.012 end=10^-6 start=10^-5 derivation-size=10^-1 align={{{[#s=1 #t=1 0,0]}}} foreign-length=10^-1 lm_string={{{ "69" }}} text-length=1  
+X: NPB(DT("the") x0:NN) -> x0 ### id=8 
+V: NPB -> NN ### rvd_var_indicators={{{1}}} count=10^-1 id=8 gt_prob=e^-0.8 end=10^-6 start=10^-5 derivation-size=10^-1 rvd_vars={{{0:0.3,1:0.7}}} align={{{[#s=1 #t=2 0,1]}}} rvd_root={{{0:1}}} lm_string={{{ "the" 0 }}} text-length=1  
+X: NP-C(x0:NPB PP(IN("of") x1:NP-C)) -> x1 x0 ### id=9 
+V: NP-C -> NP-C NPB ### rvd_var_indicators={{{1 1}}} count=10^-1 id=9 gt_prob=e^-0.7 end=10^-6 start=10^-3 derivation-size=10^-1 rvd_vars={{{0:0.4,1:0.6 0:0.2,1:0.8}}} align={{{[#s=2 #t=3 0,2 1,0]}}} rvd_root={{{1:1}}} lm_string={{{ 1 "of" 0 }}} text-length=1  
+X: NNP(x0:NP-C) -> x0 ### id=10 
+V: NNP -> NP-C ### count=10^-1 id=10 gt_prob=e^-0.87 end=10^-1 derivation-size=10^-1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{1:1}}} lm_string={{{ 0 }}} 
+X: NNP(x0:NPB) -> x0 ### id=11 
+V: NNP -> NPB ### count=10^-1 id=11 gt_prob=e^-.019 end=10^-1 derivation-size=10^-1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{0:1}}} lm_string={{{ 0 }}} 
+X: NP-C(NPB(x0:NNP)) -> x0 ### id=12 
+V: NP-C -> NNP ### count=10^-1 id=12 gt_prob=e^-5 end=10^-1 derivation-size=10^-1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{1:1}}} lm_string={{{ 0 }}} 
+X: NP-C(NPB(PRP$("its") x0:NN) PP(TO("to") x1:NP-C)) -> x0 x1 ### id=13 
+V: NP-C -> NN NP-C ### count=10^-1 id=13 gt_prob=e^-0.01 end=10^-6 start=10^-2 derivation-size=10^-1 align={{{[#s=2 #t=4 0,1 1,3]}}} lm_string={{{ "its" 0 "to" 1 }}} text-length=2  
+X: S(x0:NP-C VP(x1:VBD x2:NP-C)) -> x0 x1 x2 ### id=14 
+V: S -> V[NP-C{0}___VBD{1}_] NP-C ### rvd_var_indicators={{{0}}} count=10^-1 id=14 gt_prob=e^-0.18 end=10^-6 derivation-size=10^-1 rvd_vars={{{0:0.1,1:0.9}}} align={{{[#s=3 #t=3 0,0 1,1 2,2]}}} rvd_root={{{1:1}}} lm_string={{{ 0 1 }}} 
+X: S(S(x0:NP-C VP(x1:VBD x2:NP-C))) -> x0 x1 x2 ### id=15 
+V: S -> V[NP-C{0}___VBD{0}_] NP-C ### rvd_var_indicators={{{1}}} count=10^-1 id=15 gt_prob=e^-0.1 end=10^-6 derivation-size=10^-1 rvd_vars={{{0:0.1,1:0.9}}} align={{{[#s=3 #t=3 0,0 1,1 2,2]}}} rvd_root={{{1:1}}} lm_string={{{ 0 1 }}} 
+X: S(x0:NP-C ADVP("conversely") VP(x1:VBD x2:NP-C)) -> x2 x1 x0 ### id=16 
+V: S -> V<NP-C{0}___"conversely"_VBD{0}_> NP-C ### rvd_var_indicators={{{1}}} count=10^-1 id=16 gt_prob=e^-0.2 end=10^-6 derivation-size=10^-1 rvd_vars={{{0:0.1,1:0.9}}} align={{{[#s=3 #t=4 0,3 1,2 2,0]}}} rvd_root={{{0:1}}} lm_string={{{ 1 0 }}} 
+X: S(x0:NP-C ADVP("really") VP(x1:VBD x2:NP-C)) -> x0 x1 x2 ### id=17 
+V: S -> V[NP-C{0}_"really"___VBD{1}_] NP-C ### rvd_var_indicators={{{0}}} count=10^-1 id=17 gt_prob=e^-0.1 end=10^-6 derivation-size=10^-1 rvd_vars={{{0:0.1,1:0.9}}} align={{{[#s=3 #t=4 0,0 1,2 2,3]}}} rvd_root={{{1:1}}} lm_string={{{ 0 1 }}} 
+X: VP(x0:VBD x1:NP-C) -> x0 x1 ### id=18 
+V: VP -> VBD NP-C ### rvd_var_indicators={{{1 1}}} count=10^-1 id=18 gt_prob=e^-0.37 end=10^-6 derivation-size=10^-1 rvd_vars={{{0:0.05,1:0.95 0:0.5,1:0.5}}} align={{{[#s=2 #t=2 0,0 1,1]}}} rvd_root={{{1:1}}} lm_string={{{ 0 1 }}} 
+X: S(x0:NP-C x1:VP) -> x0 x1 ### id=19 
+V: S -> NP-C VP ### rvd_var_indicators={{{1 1}}} count=10^-1 id=19 gt_prob=e^-.118 end=10^-6 derivation-size=10^-1 rvd_vars={{{1:0.05,0:0.95 0:0.85,1:0.15}}} align={{{[#s=2 #t=2 0,0 1,1]}}} rvd_root={{{1:1}}} lm_string={{{ 0 1 }}} 
+X: NNP(x0:VP) -> x0 ### id=20 
+V: NNP -> VP ### id=20 gt_prob=e^-.0199 derivation-size=10^-1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{1:1}}} lm_string={{{ 0 }}} 
+X: NNP(x0:S) -> x0 ### id=21 
+V: NNP -> S ### rvd_var_indicators={{{0}}} id=21 gt_prob=e^-.01 derivation-size=10^-1 rvd_vars={{{}}} align={{{[#s=1 #t=1 0,0]}}} lm_string={{{ 0 }}} 
+X: S(x0:NP-C) -> x0 ### id=22 
+V: S -> NP-C ### rvd_var_indicators={{{0}}} count=10^-1 id=22 gt_prob=e^-0.5 end=10^-6 derivation-size=10^-1 rvd_vars={{{}}} align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{0:1}}} lm_string={{{ 0 }}} 
+X: NP-C(x0:NPB) -> x0 ### id=23 
+V: NP-C -> NPB ### rvd_var_indicators={{{0}}} count=10^-1 id=23 gt_prob=e^-.01 end=10^-5 start=10^-3 derivation-size=10^-1 rvd_vars={{{}}} align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{1:1}}} lm_string={{{ 0 }}} 
+X: CD("99") -> "c5" ### id=24 
+V: CD -> "c5" ### count=10^-1 id=24 gt_prob=e^0 end=10^-4 start=10^-3 derivation-size=10^-1 align={{{[#s=1 #t=1 0,0]}}} foreign-length=10^-1 rvd_root={{{1:1}}} lm_string={{{ "99" }}} text-length=1  
+X: NPB(x0:VBD x1:CD x2:NNP x3:NN) -> x0 x2 x3 "c4" x1 ### id=26 
+V: NPB -> VBD V<V[NNP{0}___V[NN{1}_"c4"]_]___CD{0}_> ### rvd_var_indicators={{{0}}} count=10^-1 id=26 gt_prob=e^-.11 end=10^-4 derivation-size=10^-1 rvd_vars={{{0:0.1,1:0.9}}} align={{{[#s=5 #t=4 0,2 1,0 2,3 4,1]}}} foreign-length=10^-1 lm_string={{{ 0 1 }}} 
+X: NPB(x0:NNP x1:CD x2:VBD x3:NN) -> x0 x2 x3 x1 ### id=28 
+V: NPB -> NNP V<V[VBD{0}___NN{1}_]___CD{0}_> ### rvd_var_indicators={{{0}}} count=10^-1 id=28 gt_prob=e^-.11 end=10^-4 derivation-size=10^-1 rvd_vars={{{0:0.1,1:0.9}}} align={{{[#s=4 #t=4 0,0 1,2 2,3 3,1]}}} rvd_root={{{1:1}}} lm_string={{{ 0 1 }}} 
+X: NPB(x0:VBD x1:NN x2:NNP x3:CD) -> x2 x0 x1 x3 ### id=29 
+V: NPB -> V<NNP{0}___V[VBD{0}___NN{1}_]_> CD ### rvd_var_indicators={{{0}}} count=10^-1 id=29 gt_prob=e^-.11 end=10^-4 derivation-size=10^-1 rvd_vars={{{0:0.1,1:0.9}}} align={{{[#s=4 #t=4 0,2 1,0 2,1 3,3]}}} rvd_root={{{1:1}}} lm_string={{{ 0 1 }}} 
+X: NPB(x0:NNP x1:NN x2:VBD x3:CD) -> x0 x2 x1 x3 ### id=30 
+V: NPB -> V[NNP{0}___V<VBD{0}___NN{1}_>_] CD ### rvd_var_indicators={{{0}}} count=10^-1 id=30 gt_prob=e^-.11 end=10^-4 derivation-size=10^-1 rvd_vars={{{0:0.1,1:0.9}}} align={{{[#s=4 #t=4 0,0 1,2 2,1 3,3]}}} rvd_root={{{0:1}}} lm_string={{{ 0 1 }}} 
+X: NPB(x0:VBD x1:CD x2:NNP x3:NN) -> x3 x0 x2 x1 ### id=31 
+V: NPB -> NN V[VBD{0}___V<NNP{1}___CD{0}_>_] ### rvd_var_indicators={{{0}}} count=10^-1 id=31 gt_prob=e^-.11 end=10^-4 derivation-size=10^-1 rvd_vars={{{0:0.1,1:0.9}}} align={{{[#s=4 #t=4 0,3 1,0 2,2 3,1]}}} rvd_root={{{1:1}}} lm_string={{{ 1 0 }}} 
+X: NP-C(JJ("fake") x0:NPB) -> "c1" "c2" x0 "c4" ### id=32 
+V: NP-C -> V["c1"_V["c2"_NPB{}]] "c4" ### count=10^-1 id=32 gt_prob=e^-.01 end=10^-5 start=10^-3 derivation-size=10^-1 align={{{[#s=4 #t=2 0,0 3,0 2,1]}}} foreign-length=10^-3 rvd_root={{{1:1}}} lm_string={{{ "fake" 0 }}} text-length=1  
+X: S(x0:NP-C VP(x1:VBD x2:NP-C)) -> x0 x1 x2 ### id=35 
+V: S -> V[NP-C{0}___VBD{1}_] NP-C ### rvd_var_indicators={{{1}}} count=10^-1 id=35 gt_prob=e^-0.1 end=10^-6 derivation-size=10^-1 rvd_vars={{{1:0.1,0:0.9 0:0.35,1:.65}}} align={{{[#s=3 #t=3 0,0 1,1 2,2]}}} rvd_root={{{0:1}}} lm_string={{{ 0 1 }}} 
+X: S(NP-C(x0:NPB PP(x1:NP-C)) VP(x2:VBD x3:NP-C)) -> x1 x0 x2 x3 ### id=36 
+V: S -> V[V<NP-C{}___NPB{}_>___VBD{}_] NP-C ### count=10^-1 id=36 gt_prob=e^-0.1 end=10^-6 derivation-size=10^-1 align={{{[#s=4 #t=4 0,1 1,0 2,3 3,3]}}} rvd_root={{{1:1}}} lm_string={{{ 0 1 }}} 
+X: S(NP-C(NPB(x0:NNP)) VP(x1:VBD NP-C(x2:NPB PP(x3:NP-C)))) -> x0 x1 x2 x3 ### id=37 
+V: S -> V[V[NNP{0}___VBD{0}_]___NPB{1}_] NP-C ### rvd_var_indicators={{{0}}} count=10^-1 id=37 gt_prob=e^-0.1 end=10^-6 derivation-size=10^-1 rvd_vars={{{0:0.11,1:0.89}}} align={{{[#s=4 #t=4 0,0 1,1 2,2 3,3]}}} lm_string={{{ 0 1 }}} 
+X: S(NP-C(NPB(x0:VBD)) VP(x1:NNP NP-C(x2:NPB PP(x3:NP-C)))) -> x1 x0 x2 x3 ### id=38 
+V: S -> V[V<NNP{0}___VBD{0}_>___NPB{1}_] NP-C ### rvd_var_indicators={{{0}}} count=10^-1 id=38 gt_prob=e^-0.1 end=10^-6 derivation-size=10^-1 rvd_vars={{{0:0.12,1:0.88}}} align={{{[#s=4 #t=4 0,1 1,0 2,2 3,3]}}} lm_string={{{ 0 1 }}} 
+X: S(NP-C(NPB(x0:NPB)) VP(x1:NNP NP-C(x2:VBD PP(x3:NP-C)))) -> x1 x2 x0 x3 ### id=39 
+V: S -> V<V[NNP{0}___VBD{0}_]___NPB{1}_> NP-C ### rvd_var_indicators={{{0}}} count=10^-1 id=39 gt_prob=e^-0.1 end=10^-6 derivation-size=10^-1 rvd_vars={{{0:0.13,1:0.87}}} align={{{[#s=4 #t=4 0,1 1,2 2,0 3,3]}}} rvd_root={{{0:1}}} lm_string={{{ 0 1 }}} 
+X: S(NP-C(NPB(x0:NP-C)) VP(x1:VBD NP-C(x2:NPB PP(x3:NNP)))) -> x3 x1 x2 x0 ### id=40 
+V: S -> V<NNP{0}___V[VBD{0}___NPB{1}_]_> NP-C ### rvd_var_indicators={{{0}}} count=10^-1 id=40 gt_prob=e^-0.1 end=10^-6 derivation-size=10^-1 rvd_vars={{{0:0.1,1:0.9}}} align={{{[#s=4 #t=4 0,3 1,1 2,2 3,0]}}} lm_string={{{ 1 0 }}} 
+X: TOP(x0:S) -> "<foreign-sentence>" x0 ### id=41 
+V: TOP -> "<foreign-sentence>" S ### headmarker={{{ R(D) }}} id=41 derivation-size=10^-1 align={{{[#s=2 #t=1 1,0]}}} lm_string={{{ 0 }}} 
+V: V[NP-C{0}___VBD{1}_] -> NP-C VBD ### rvd_var_indicators={{{0 1}}} lm_string={{{ 0 1 }}} 
+V: V[NP-C{0}___VBD{0}_] -> NP-C VBD ### rvd_var_indicators={{{0 0}}} lm_string={{{ 0 1 }}} 
+V: V<NP-C{0}___"conversely"_VBD{0}_> -> NP-C VBD ### rvd_var_indicators={{{0 0}}} lm_string={{{ "conversely" 1 0 }}} text-length=1  
+V: V[NP-C{0}_"really"___VBD{1}_] -> NP-C VBD ### rvd_var_indicators={{{0 1}}} lm_string={{{ 0 "really" 1 }}} text-length=1  
+V: V[NN{1}_"c4"] -> NN "c4" ### rvd_var_indicators={{{1}}} lm_string={{{ 0 }}} 
+V: V[NNP{0}___V[NN{1}_"c4"]_] -> NNP V[NN{1}_"c4"] ### rvd_var_indicators={{{0}}} lm_string={{{ 0 1 }}} 
+V: V<V[NNP{0}___V[NN{1}_"c4"]_]___CD{0}_> -> V[NNP{0}___V[NN{1}_"c4"]_] CD ### rvd_var_indicators={{{0}}} lm_string={{{ 1 0 }}} 
+V: V[VBD{0}___NN{1}_] -> VBD NN ### rvd_var_indicators={{{0 1}}} lm_string={{{ 0 1 }}} 
+V: V<V[VBD{0}___NN{1}_]___CD{0}_> -> V[VBD{0}___NN{1}_] CD ### rvd_var_indicators={{{0}}} lm_string={{{ 1 0 }}} 
+V: V<NNP{0}___V[VBD{0}___NN{1}_]_> -> NNP V[VBD{0}___NN{1}_] ### rvd_var_indicators={{{0}}} lm_string={{{ 1 0 }}} 
+V: V<VBD{0}___NN{1}_> -> VBD NN ### rvd_var_indicators={{{0 1}}} lm_string={{{ 1 0 }}} 
+V: V[NNP{0}___V<VBD{0}___NN{1}_>_] -> NNP V<VBD{0}___NN{1}_> ### rvd_var_indicators={{{0}}} lm_string={{{ 0 1 }}} 
+V: V<NNP{1}___CD{0}_> -> NNP CD ### rvd_var_indicators={{{1 0}}} lm_string={{{ 1 0 }}} 
+V: V[VBD{0}___V<NNP{1}___CD{0}_>_] -> VBD V<NNP{1}___CD{0}_> ### rvd_var_indicators={{{0}}} lm_string={{{ 0 1 }}} 
+V: V["c2"_NPB{}] -> "c2" NPB ### lm_string={{{ 0 }}} 
+V: V["c1"_V["c2"_NPB{}]] -> "c1" V["c2"_NPB{}] ### lm_string={{{ 0 }}} 
+V: V<NP-C{}___NPB{}_> -> NP-C NPB ### lm_string={{{ 1 0 }}} 
+V: V[V<NP-C{}___NPB{}_>___VBD{}_] -> V<NP-C{}___NPB{}_> VBD ### lm_string={{{ 0 1 }}} 
+V: V[NNP{0}___VBD{0}_] -> NNP VBD ### rvd_var_indicators={{{0 0}}} lm_string={{{ 0 1 }}} 
+V: V[V[NNP{0}___VBD{0}_]___NPB{1}_] -> V[NNP{0}___VBD{0}_] NPB ### rvd_var_indicators={{{1}}} lm_string={{{ 0 1 }}} 
+V: V<NNP{0}___VBD{0}_> -> NNP VBD ### rvd_var_indicators={{{0 0}}} lm_string={{{ 1 0 }}} 
+V: V[V<NNP{0}___VBD{0}_>___NPB{1}_] -> V<NNP{0}___VBD{0}_> NPB ### rvd_var_indicators={{{1}}} lm_string={{{ 0 1 }}} 
+V: V<V[NNP{0}___VBD{0}_]___NPB{1}_> -> V[NNP{0}___VBD{0}_] NPB ### rvd_var_indicators={{{1}}} lm_string={{{ 1 0 }}} 
+V: V[VBD{0}___NPB{1}_] -> VBD NPB ### rvd_var_indicators={{{0 1}}} lm_string={{{ 0 1 }}} 
+V: V<NNP{0}___V[VBD{0}___NPB{1}_]_> -> NNP V[VBD{0}___NPB{1}_] ### rvd_var_indicators={{{0}}} lm_string={{{ 1 0 }}} 

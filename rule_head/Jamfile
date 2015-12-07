@@ -1,0 +1,84 @@
+import sbmt-util ;
+
+project rule_head 
+  :
+  : usage-requirements <include>. <include>collins <library>../ghkm/treelib
+  : requirements <include>. <include>collins <library>../ghkm/treelib
+  ;
+
+obj at_replace : at_replace.cpp /boost/regex : : : <library>/boost/regex ;
+
+exe headvec : collins/apps/headvec.cpp /gusc /sbmt_decoder//sbmt collins ;
+
+exe rule_head_mapper 
+  : rule_head_mapper.cpp 
+    at_replace
+    /xrsparse 
+    /boost/program_options
+  ;
+
+exe nt_head_mapper
+  : nt_head_mapper.cpp
+    at_replace
+    ../ghkm/treelib
+  ;
+
+exe child_head_mapper 
+  : child_head_mapper.cpp 
+    at_replace
+    /xrsparse 
+    /boost/program_options
+
+  ;
+
+lib collins : collins/lib/collins.cpp /gusc /boost/regex /sbmt_decoder//sbmt ;
+
+exe collinsmapper : collins/apps/collinsmapper.cpp /boost/program_options collins ;
+exe collinsm1mapper : collins/apps/collinsm1mapper.cpp /boost/program_options /boost/regex collins ;
+
+exe mkcollinslm : collins/apps/mkcollinslm.cpp collins /gusc /boost/program_options ;
+
+exe scoretrees : collins/apps/scoretrees.cpp collins ../ghkm/treelib ;
+
+exe headtag : collins/apps/headtag.cpp collins /boost/regex ;
+
+exe rule_head_feature_mapper
+  : rule_head_feature_mapper.cpp
+    at_replace
+    /xrsparse
+    /boost/program_options
+  ;
+
+lib rule_head_info 
+  : rule_head_info2.cpp 
+    /sbmt_decoder//sbmt
+    /site-config//tbb
+  ;
+
+sbmt-util.install install
+    :
+    : rule_head_mapper
+      child_head_mapper
+      rule_head_info
+      rule_head_feature_mapper
+      collinsmapper
+#      collinsm1mapper
+      mkcollinslm
+      scoretrees
+      nt_head_mapper
+#      headvec
+#      headtag
+    :
+    :
+    : rule_head_reducer
+      constants_hpp.py # polyglot that is readable by cpp and python
+      child_head_reducer
+      child_head_symbol_mapred
+      child_head_symbol_prob_mapper
+      rule_head_sum_mapred
+      rule_head_join_reducer
+      rule_head_nonlex_filter
+      rule_head_add_command
+      headtables2dict
+      collins/apps/mkamrlm.sh
+    ;

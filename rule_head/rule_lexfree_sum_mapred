@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+
+import sys, itertools, optparse, re
+
+# reduce-input:  nt\tid\theadword\tcount
+
+lhsre = re.compile(r'^([^()]*)')
+
+def unflatten_pairs(lst):
+    x = 0
+    p = ''
+    for n in lst:
+        x += 1
+        if x % 2 == 0:
+            yield p,float(n)
+        else:
+            p = n
+
+def map_input(input):
+    for line in input:
+        v = line.strip().split('\t')
+        nt = lhsre.match(v[0]).group(1)
+        n = 0
+        try:
+            n = int(v[3])
+        except:
+            print v
+            raise
+        yield nt,n
+        
+
+def reduce_input(inp):
+    for line in inp:
+        nt,n = line.split()
+        yield nt,int(n)
+
+def reducer(inp):
+    for nt,sub in itertools.groupby(reduce_input(inp),lambda x : x[0]):
+        s = 0
+        for _,n in sub:
+            s += n
+        yield nt,s
+
+def reduce(inp,outp):
+    for nt,sum in reducer(inp):
+        print >> outp, "%s\t%s" % (nt,sum)
+        
+def map(inp,outp):
+    for p in map_input(inp):
+        print >> outp, '\t'.join(str(pp) for pp in p)
+
+parser = optparse.OptionParser()
+parser.add_option('-r','--reduce', dest='mapper', action='store_false', default=True)
+
+if __name__ == '__main__':
+    opts,_ = parser.parse_args()
+    if opts.mapper:
+        map(sys.stdin,sys.stdout)
+    else:
+        reduce(sys.stdin,sys.stdout)
+
+        

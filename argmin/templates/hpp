@@ -1,0 +1,25 @@
+/*  $Id: hpp 1247 2006-09-15 20:08:35Z jturian $
+ *  Copyright (c) 2006, Information Sciences Institute. All rights reserved. */
+/*!
+ *  \file tmpl.hpp
+ *  $LastChangedDate: 2006-09-15 13:08:35 -0700 (Fri, 15 Sep 2006) $
+ *  $Revision: 1247 $
+ */
+/*!
+ *  \class tmpl
+ *  \brief WRITEME
+ *
+ *  WRITEME
+ *
+ */
+
+#ifndef __ARGMIN_tmpl_HPP__
+#define __ARGMIN_tmpl_HPP__
+
+namespace argmin {
+
+
+
+}	// namespace argmin
+
+#endif	// __ARGMIN_tmpl_HPP__

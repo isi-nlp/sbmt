@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+
+from optparse import OptionParser
+import sys, math
+import fileinput
+import collections
+
+def parse_options(args):
+    parser = OptionParser("usage: %prog [options] [ntfile]")
+    parser.add_option( "--feature-name"
+                     , dest="feature"
+                     , help="feature is label for p(TOP|X) [default: %default]"
+                     , default="top-prob" ) 
+    parser.add_option( "--indicator-name"
+                     , help="indicator is constant TOP -> X indicator feature [default: %default]"
+                     , dest="indicator"
+                     , default="top-rule" )
+    parser.add_option( "-i"
+                     , "--id-start"
+                     , dest="id_start"
+                     , help="id field begins with ID [default: %default]"
+                     , metavar="ID"
+                     , default=500000000000 ) # 500B
+    parser.add_option( "-f"
+                     , "--start-word"
+                     , dest="fs"
+                     , default="<foreign-sentence>"
+                     , help="start of sentence marker [default: %default]" )
+    parser.add_option( "-e"
+                     , "--end-word"
+                     , dest="fe"
+                     , default=""
+                     , help="optional end of sentence marker [default: %default]" )
+    options, argvec = parser.parse_args(args)
+    if len(argvec) == 0:
+        options.ntfile = "-"
+        options.ntsupp = None
+    elif len(argvec) == 1:
+        options.ntfile = argvec[0]
+        options.ntsupp = None
+    elif len(argvec) == 2:
+        options.ntfile = argvec[0]
+        options.ntsupp = argvec[1]
+    else:
+        parser.error("too many arguments")
+    return options
+
+def readtable(fh):
+    for line in fh:
+        fields = line.rstrip().split()
+        if len(fields) <= 2:
+            yield tuple(fields)
+        else:
+            raise RuntimeException("invalid file format")
+
+# witten-bell smooth the unseen roots 
+def addsupp(file,table):
+    K = len(table)
+    allnts = [line.rstrip() for line in open(file)]
+    for x in allnts:
+        table[x] += 0
+    N = sum(int(v) for k,v in table.iteritems())
+    KP = len(table)
+    assert KP == len(allnts)
+    rp = float(K)/float(KP)
+    newtable = list((k,float(v+rp)/float(N+K)) for k,v in table.iteritems())
+    return newtable
+
+def writerules(table,opts):
+    i = opts.id_start
+
+    totalscore = sum(float(ls[1]) if len(ls) == 2 else 0. for ls in table)
+    
+    if opts.fe != "":
+        opts.fe = '"%s" ' % opts.fe
+    
+    for ls in table:
+        if len(ls) == 2:
+            (nt,score) = ls
+            rstr = 'TOP(x0:%s) -> "%s" x0 %s### id=%d derivation-size=10^-1 ' + \
+                   '%s=10^%s %s=10^-1 lm_string={{{ "<s>" 0 "</s>" }}}'
+            print rstr % (nt, opts.fs, opts.fe, i, opts.feature, math.log10(float(score)/totalscore), opts.indicator)
+        else:
+            nt = ls[0]
+            rstr = 'TOP(x0:%s) -> "%s" x0 %s### id=%d derivation-size=10^-1 %s=10^-1 ' + \
+                   'lm_string={{{ "<s>" 0 "</s>" }}}'
+            print rstr % (nt, opts.fs, opts.fe, i, opts.indicator)
+        i += 1
+
+def main(args):
+    opts = parse_options(args)
+    table = list(readtable(fileinput.input(opts.ntfile)))
+    if opts.ntsupp:
+        table = collections.defaultdict(int, ((k,int(v)) for k,v in table))
+        table = addsupp(opts.ntsupp,table)
+    writerules(table,opts)
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

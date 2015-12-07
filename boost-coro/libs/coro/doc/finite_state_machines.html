@@ -1,0 +1,320 @@
+<html><head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title> Finite state machines</title>
+<link rel="stylesheet" href="files/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.70.1">
+<link rel="start" href="index.html" title="Chapter&nbsp;1.&nbsp;Boost.Coroutine">
+<link rel="up" href="advanced.html" title=" Advanced concepts">
+<link rel="prev" href="symmetric_coroutines.html" title=" Symmetric coroutines">
+<link rel="next" href="events.html" title=" Events">
+</head><body link="#0000ff" alink="#0000ff" bgcolor="white" text="black" vlink="#840084">
+<table width="100%" cellpadding="2">
+<tbody><tr><td valign="top"><img alt="boost.png (6897 bytes)" src="files/boost.png" width="277" height="86"></td>
+<td align="center"><a href="http://www.boost.org/">Home</a></td>
+<td align="center"><a href="http://www.boost.org/doc/libs">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="http://www.boost.org/users/index.html">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="symmetric_coroutines.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="advanced.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="events.html"><img src="files/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="coroutine.finite_state_machines"></a> Finite state machines</h3></div></div></div>
+<a name="finite_state_machines.introduction"></a><h4>
+<a name="id2620290"></a>Introduction</h4>
+<p>
+Finite state machines are a model of computation that consist in a set of
+states, a set of input symbols, a function that maps every tuple
+<code class="computeroutput"><span class="special">(</span><span class="identifier">input</span><span class="special">,</span><span class="identifier"> state</span><span class="special">)</span></code> to new state  and the actions performed at each
+state. A complete exposition of the concept is beyond the scope of this
+documentation. Here we will show how coroutines are a straightforward
+implementation of this model.</p>
+<a name="finite_state_machines.sequence_recognizer"></a><h4>
+<a name="id2620337"></a>Sequence recognizer</h4>
+<p>
+Consider a state machine that implements this behavior:</p>
+<div class="blockquote"><blockquote class="blockquote"><p>For every input, output '1' if the last three inputs where <code class="computeroutput"><span class="number">110</span></code>, <code class="computeroutput"><span class="number">0</span></code> otherwise .</p></blockquote></div>
+<p>
+In practice it is a sequence recognizer.</p>
+<p>
+The formal description of this state machine is the following:</p>
+<div class="variablelist">
+<p class="title"><b>States:</b></p>
+<dl>
+<dt><span class="term">A:</span></dt>
+<dd> if input == <code class="computeroutput"><span class="number">1</span></code> then { output <code class="computeroutput"><span class="number">0</span></code>, state = B} else { output
+<code class="computeroutput"><span class="number">0</span></code>,  state = A}</dd>
+<dt><span class="term">B:</span></dt>
+<dd> if input == <code class="computeroutput"><span class="number">1</span></code> then { output <code class="computeroutput"><span class="number">0</span></code>, state = C} else { output
+<code class="computeroutput"><span class="number">0</span></code>, state = A}</dd>
+<dt><span class="term">C:</span></dt>
+<dd> if input == <code class="computeroutput"><span class="number">1</span></code> then { output <code class="computeroutput"><span class="number">0</span></code>, state = C} else { output
+<code class="computeroutput"><span class="number">1</span></code>, state = A}</dd>
+</dl>
+</div>
+<p>
+The initial state is <code class="computeroutput"><span class="identifier">A</span></code>. This FSM can be represented by the following
+Meley model:</p>
+<p><span class="inlinemediaobject"><img src="files/meley.png"></span></p>
+<p>
+For example, given the input:</p>
+<pre class="programlisting"><code class="literal"><span class="number">0110100010010001101001000111110010011001</span></code></pre>
+<p>
+The output will be:</p>
+<pre class="programlisting"><code class="literal"><span class="number">0001000000000000010000000000001000000100</span></code></pre>
+<p>
+This state machine can be implemented in <code class="computeroutput"><span class="identifier">C</span><span class="special">++</span></code> directly from it
+definition, using a <code class="computeroutput"><span class="keyword">switch</span></code> statement inside a stateful function
+object:</p>
+<a name="fsm1"></a><p></p>
+<pre class="programlisting"><code class="literal"><span class="keyword">struct</span><span class="identifier"> fsm</span><span class="special"> {</span><span class="keyword">
+  void</span><span class="keyword"> operator</span><span class="special">()</span><span class="special"> (</span><span class="keyword">char</span><span class="identifier"> input_</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+    bool</span><span class="identifier"> input</span><span class="special"> =</span><span class="identifier"> input_</span><span class="special"> !=</span><span class="char"> '0'</span><span class="special">;</span><span class="keyword">
+    switch</span><span class="special">(</span><span class="identifier">m_state</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+    case</span><span class="identifier"> A</span><span class="special">:</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="string">"A"</span><span class="special">;</span><span class="identifier">
+      m_state</span><span class="special"> =</span><span class="identifier"> input</span><span class="special">?</span><span class="identifier"> B</span><span class="special"> :</span><span class="identifier"> C</span><span class="special">;</span><span class="keyword">
+      break</span><span class="special">;</span><span class="keyword">
+    case</span><span class="identifier"> B</span><span class="special">:</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="string">"B"</span><span class="special">;</span><span class="identifier">
+      m_state</span><span class="special"> =</span><span class="identifier"> input</span><span class="special">?</span><span class="identifier"> C</span><span class="special"> :</span><span class="identifier"> D</span><span class="special">;</span><span class="keyword">
+      break</span><span class="special">;</span><span class="keyword">
+    case</span><span class="identifier"> C</span><span class="special">:</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="string">"C"</span><span class="special">;</span><span class="identifier">
+      m_state</span><span class="special"> =</span><span class="identifier"> input</span><span class="special">?</span><span class="identifier"> B</span><span class="special"> :</span><span class="identifier"> A</span><span class="special">;</span><span class="keyword">
+      break</span><span class="special">;</span><span class="keyword">
+    case</span><span class="identifier"> D</span><span class="special">:</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="string">"D"</span><span class="special">;</span><span class="identifier">
+      m_state</span><span class="special"> =</span><span class="identifier"> input</span><span class="special">?</span><span class="identifier"> A</span><span class="special"> :</span><span class="identifier"> C</span><span class="special">;</span><span class="keyword">
+      break</span><span class="special">;</span><span class="special">
+    };</span><span class="special">
+  }</span><span class="identifier">
+
+  fsm</span><span class="special">()</span><span class="special"> :</span><span class="identifier">
+    m_state</span><span class="special">(</span><span class="identifier">A</span><span class="special">)</span><span class="special"> {}</span><span class="keyword">
+
+  enum</span><span class="identifier"> state</span><span class="special"> {</span><span class="identifier"> A</span><span class="special">,</span><span class="identifier"> B</span><span class="special">,</span><span class="identifier"> C</span><span class="special">,</span><span class="identifier"> D</span><span class="special">};</span><span class="identifier">
+  state</span><span class="identifier"> m_state</span><span class="special">;</span><span class="special">
+};</span></code></pre>
+<p>
+Each <code class="computeroutput"><span class="keyword">case</span></code> block directly implements its corresponding state.
+While the transformation is straightforward, it doesn't make the code
+very readable. The simplicity of the informal description is
+lost. While this code might be acceptable for machine generated and
+maintained <span class="bold"><strong>FSM</strong></span>, it is does not scale to large finite state machines
+that must be maintained by humans.</p>
+<p>
+With coroutines the straight forward transformation is:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">typedef</span><span class="identifier"> coro</span><span class="special">::</span><a href="">coroutine</a><span class="special">&lt;</span><span class="keyword">void</span><span class="special">(</span><span class="keyword">char</span><span class="special">)&gt;</span><span class="identifier"> coroutine_type</span><span class="special">;</span><span class="keyword">
+
+enum</span><span class="identifier"> state</span><span class="special"> {</span><span class="identifier"> A</span><span class="special">,</span><span class="identifier"> B</span><span class="special">,</span><span class="identifier"> C</span><span class="special">};</span><span class="keyword">	
+void</span><span class="identifier"> fsm</span><span class="special">(</span><span class="identifier">coroutine_type</span><span class="special">::</span><a href="">self</a><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword"> char</span><span class="identifier"> input_</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+  state</span><span class="identifier"> m_state</span><span class="special"> =</span><span class="identifier"> A</span><span class="special">;</span><span class="keyword">
+  while</span><span class="special">(</span><span class="keyword">true</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+    bool</span><span class="identifier"> input</span><span class="special"> =</span><span class="identifier"> input_</span><span class="special"> !=</span><span class="char"> '0'</span><span class="special">;</span><span class="keyword">
+    switch</span><span class="special">(</span><span class="identifier">m_state</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+    case</span><span class="identifier"> A</span><span class="special">:</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="special"> (</span><span class="identifier">input</span><span class="special">?</span><span class="char"> '0'</span><span class="special"> :</span><span class="char"> '0'</span><span class="special">);</span><span class="identifier">
+      m_state</span><span class="special"> =</span><span class="identifier"> input</span><span class="special">?</span><span class="identifier"> B</span><span class="special"> :</span><span class="identifier"> A</span><span class="special">;</span><span class="keyword">
+      break</span><span class="special">;</span><span class="keyword">
+    case</span><span class="identifier"> B</span><span class="special">:</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="special"> (</span><span class="identifier">input</span><span class="special">?</span><span class="char"> '0'</span><span class="special"> :</span><span class="char"> '0'</span><span class="special">);</span><span class="identifier">
+      m_state</span><span class="special"> =</span><span class="identifier"> input</span><span class="special">?</span><span class="identifier"> C</span><span class="special"> :</span><span class="identifier"> A</span><span class="special">;</span><span class="keyword">
+      break</span><span class="special">;</span><span class="keyword">
+    case</span><span class="identifier"> C</span><span class="special">:</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="special"> (</span><span class="identifier">input</span><span class="special">?</span><span class="char"> '0'</span><span class="special"> :</span><span class="char"> '1'</span><span class="special">);</span><span class="identifier">
+      m_state</span><span class="special"> =</span><span class="identifier"> input</span><span class="special">?</span><span class="identifier"> C</span><span class="special"> :</span><span class="identifier"> A</span><span class="special">;</span><span class="keyword">
+      break</span><span class="special">;</span><span class="special">
+    }</span><span class="identifier">
+    input_</span><span class="special"> =</span><span class="identifier"> self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="special">
+  }</span><span class="special">
+}</span></code></pre>
+<p>
+We haven't gained much with this transformation. We have simply
+done moved the (implicit( external loop inside the fsm and applied a
+control inversion: from its internal point of view, <code class="computeroutput"><span class="identifier">fsm</span></code> is not
+longer called for each input, but calls the outside for inputs (using <code class="computeroutput"><a href="">yield</a><span class="special">()</span></code>)</p>
+<p>
+Let's examine the code more carefully and see if we can do better. The
+<code class="computeroutput"><span class="identifier">m_state</span></code> variable and its assignments are just carefully concealed
+<code class="computeroutput"><span class="keyword">goto</span></code> statements:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">void</span><span class="identifier"> fsm_goto</span><span class="special">(</span><span class="identifier">coroutine_type</span><span class="special">::</span><a href="">self</a><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword"> char</span><span class="identifier"> input</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+  while</span><span class="special">(</span><span class="keyword">true</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+  A</span><span class="special">:</span><span class="keyword">
+    if</span><span class="special">(</span><span class="identifier">input</span><span class="special"> !=</span><span class="char"> '0'</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+      input</span><span class="special"> =</span><span class="identifier"> self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="keyword">
+      goto</span><span class="identifier"> B</span><span class="special">;</span><span class="special">
+    }</span><span class="keyword"> else</span><span class="special"> {</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+      input</span><span class="special"> =</span><span class="identifier"> self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="keyword">
+      goto</span><span class="identifier"> A</span><span class="special">;</span><span class="special">
+    }</span><span class="identifier">
+  B</span><span class="special">:</span><span class="keyword">
+    if</span><span class="special">(</span><span class="identifier">input</span><span class="special"> !=</span><span class="char"> '0'</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+      input</span><span class="special"> =</span><span class="identifier"> self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="keyword">
+      goto</span><span class="identifier"> C</span><span class="special">;</span><span class="special">
+    }</span><span class="keyword"> else</span><span class="special"> {</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+      input</span><span class="special"> =</span><span class="identifier"> self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="keyword">
+      goto</span><span class="identifier"> A</span><span class="special">;</span><span class="special">
+    }</span><span class="identifier">
+  C</span><span class="special">:</span><span class="keyword">
+    if</span><span class="special">(</span><span class="identifier">input</span><span class="special"> !=</span><span class="char"> '0'</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+      input</span><span class="special"> =</span><span class="identifier"> self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="keyword">
+      goto</span><span class="identifier"> C</span><span class="special">;</span><span class="special">
+    }</span><span class="keyword"> else</span><span class="special"> {</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '1'</span><span class="special">;</span><span class="identifier">
+      input</span><span class="special"> =</span><span class="identifier"> self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="keyword">
+      goto</span><span class="identifier"> A</span><span class="special">;</span><span class="special">
+    }</span><span class="special">
+  }</span><span class="special">
+}</span></code></pre>
+<p><code class="computeroutput"><span class="identifier">fsm_goto</span></code> has lost the state variable <code class="computeroutput"><span class="identifier">m_state</span></code>. The current state of
+the <span class="bold"><strong>FSM</strong></span> is stored in the instruction pointer and need not to be
+managed explicitly. On the other hand the control flow of the code has
+become explicit and arguably more readable. Then again, calling
+readable a code full of <code class="computeroutput"><span class="keyword">goto</span></code>s might be a stretch. Let's complete the opera
+and do the final transformation:</p>
+<a name="fsm_structured"></a><p></p>
+<pre class="programlisting"><code class="literal"><span class="keyword">void</span><span class="identifier"> fsm_structured</span><span class="special">(</span><span class="identifier">coroutine_type</span><span class="special">::</span><a href="">self</a><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword"> char</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+ while</span><span class="special">(</span><span class="keyword">true</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+   if</span><span class="special">(</span><span class="identifier">self</span><span class="special">.</span><a href="">result</a><span class="special">()</span><span class="special"> !=</span><span class="char"> '0'</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+     std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+     self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="keyword">
+     if</span><span class="special">(</span><span class="identifier">self</span><span class="special">.</span><a href="">result</a><span class="special">()</span><span class="special"> !=</span><span class="char"> '0'</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+       std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+       self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="keyword">
+       if</span><span class="special">(</span><span class="identifier">self</span><span class="special">.</span><a href="">result</a><span class="special">()</span><span class="special"> ==</span><span class="char"> '0'</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+         std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '1'</span><span class="special">;</span><span class="identifier">
+         self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="special">
+       }</span><span class="keyword"> else</span><span class="special"> {</span><span class="identifier">
+         std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+         self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="special">
+       }</span><span class="special">
+     }</span><span class="keyword"> else</span><span class="special"> {</span><span class="identifier">
+       std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+       self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="special">
+     }</span><span class="special">
+   }</span><span class="keyword"> else</span><span class="special"> {</span><span class="identifier"> 
+     std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+     self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="special">
+   }</span><span class="special">
+ }</span><span class="special">
+}</span></code></pre>
+<p>
+We used <code class="computeroutput"><a href="">result</a><span class="special">()</span></code>. The sequence of <code class="computeroutput"><span class="keyword">if</span></code>s represent
+exactly the informal requirement of matching the sequence <code class="computeroutput"><span class="number">110</span></code>.</p>
+<p>
+Whether the above <span class="bold"><strong>FSM</strong></span> implementation is more readable of
+the <a href="finite_state_machines.html#fsm1">first implementation</a> is arguable. But it is easier to generalize
+it. The repetition of <code class="computeroutput"><span class="keyword">if</span></code> statements is a strong hint that the code
+should be refactored:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">typedef</span><span class="identifier"> boost</span><span class="special">::</span><span class="identifier">function</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">(</span><span class="identifier">coroutine_type2</span><span class="special">::</span><span class="identifier">self</span><span class="special">&amp;)&gt;</span><span class="identifier"> action_type</span><span class="special">;</span><span class="keyword">
+
+typedef</span><span class="identifier"> coroutine</span><span class="special">&lt;</span><span class="keyword">char</span><span class="special">(</span><span class="keyword">char</span><span class="special">)&gt;</span><span class="identifier"> coroutine_type2</span><span class="special">;</span><span class="keyword">
+
+void</span><span class="identifier"> terminator</span><span class="special">(</span><span class="identifier">coroutine_type2</span><span class="special">::</span><span class="identifier">self</span><span class="special">&amp;)</span><span class="special"> {}</span><span class="keyword">
+
+void</span><span class="identifier"> match</span><span class="special">(</span><span class="identifier">coroutine_type2</span><span class="special">::</span><span class="identifier">self</span><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword"> char</span><span class="identifier"> match</span><span class="special">,</span><span class="keyword"> char</span><span class="identifier"> out1</span><span class="special">,</span><span class="keyword"> char</span><span class="identifier"> out2</span><span class="special"> ,</span><span class="identifier"> action_type</span><span class="identifier"> act</span><span class="special">,</span><span class="identifier"> action_type</span><span class="identifier"> act2</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+  if</span><span class="special">(</span><span class="identifier">self</span><span class="special">.</span><span class="identifier">result</span><span class="special">()</span><span class="special"> ==</span><span class="identifier"> match</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+    self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">(</span><span class="identifier">out1</span><span class="special">);</span><span class="identifier">
+    act</span><span class="special">(</span><span class="identifier">self</span><span class="special">);</span><span class="special">
+  }</span><span class="keyword"> else</span><span class="special"> {</span><span class="identifier">
+    self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">(</span><span class="identifier">out2</span><span class="special">);</span><span class="identifier">
+    act2</span><span class="special">(</span><span class="identifier">self</span><span class="special">);</span><span class="special">
+  }</span><span class="special">
+}</span><span class="keyword">
+
+char</span><span class="identifier"> fsm_match</span><span class="special">(</span><span class="identifier">coroutine_type2</span><span class="special">::</span><span class="identifier">self</span><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword"> char</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+  action_type</span><span class="identifier"> s3</span><span class="special"> (</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(</span><span class="identifier">match</span><span class="special">,</span><span class="identifier"> _1</span><span class="special">,</span><span class="char"> '0'</span><span class="special">,</span><span class="char"> '1'</span><span class="special">,</span><span class="char"> '0'</span><span class="special">,</span><span class="identifier"> terminator</span><span class="special">,</span><span class="identifier"> terminator</span><span class="special">));</span><span class="identifier">
+  action_type</span><span class="identifier"> s2</span><span class="special"> (</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(</span><span class="identifier">match</span><span class="special">,</span><span class="identifier"> _1</span><span class="special">,</span><span class="char"> '1'</span><span class="special">,</span><span class="char"> '0'</span><span class="special">,</span><span class="char"> '0'</span><span class="special">,</span><span class="identifier"> s3</span><span class="special">,</span><span class="identifier"> terminator</span><span class="special">));</span><span class="identifier">
+  action_type</span><span class="identifier"> s1</span><span class="special"> (</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(</span><span class="identifier">match</span><span class="special">,</span><span class="identifier"> _1</span><span class="special">,</span><span class="char"> '1'</span><span class="special">,</span><span class="char"> '0'</span><span class="special">,</span><span class="char"> '0'</span><span class="special">,</span><span class="identifier"> s2</span><span class="special">,</span><span class="identifier"> terminator</span><span class="special">));</span><span class="keyword">
+  while</span><span class="special">(</span><span class="keyword">true</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+    s1</span><span class="special">(</span><span class="identifier">self</span><span class="special">);</span><span class="special">
+  }</span><span class="special"> 
+}</span></code></pre>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/note.png"></span>
+We use <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">function</span></code> because if <code class="computeroutput"><span class="identifier">match</span></code> where templated on the
+action type, the compiler wouldn't know which <code class="computeroutput"><span class="identifier">match</span></code> to pass to
+<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span></code>. There are more efficient solutions, but this is the
+most compact and simple.</td></tr></tbody>
+</table></div>
+<p><code class="computeroutput"><span class="identifier">match</span></code> chooses what symbol to yield and what action to follow
+by checking if the last parameter to the coroutine is equal to the
+symbol to be matched.</p>
+<p>
+The <a href="finite_state_machines.html#fsm_structured">structured <span class="bold"><strong>FSM</strong></span></a> can be extended to match
+more complex patterns. For example a matcher for the regular expression <code class="computeroutput"><span class="special">(</span><span class="number">01</span><span class="special">+</span><span class="number">010</span><span class="special">)</span></code>
+can be written as:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">void</span><span class="identifier"> fsm_regexp</span><span class="special">(</span><span class="identifier">coroutine_type</span><span class="special">::</span><span class="identifier">self</span><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword"> char</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+  while</span><span class="special">(</span><span class="keyword">true</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+    if</span><span class="special">(</span><span class="identifier">self</span><span class="special">.</span><span class="identifier">result</span><span class="special">()</span><span class="special"> ==</span><span class="char"> '0'</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+      self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">();</span><span class="keyword">
+      if</span><span class="special">(</span><span class="identifier">self</span><span class="special">.</span><span class="identifier">result</span><span class="special">()</span><span class="special"> ==</span><span class="char"> '1'</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+        std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+        self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">();</span><span class="keyword">
+        while</span><span class="special">(</span><span class="identifier">self</span><span class="special">.</span><span class="identifier">result</span><span class="special">()</span><span class="special"> ==</span><span class="char"> '1'</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+          std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+          self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">();</span><span class="special">
+        }</span><span class="identifier">
+        std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char">'0'</span><span class="special">;</span><span class="identifier">
+        self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">();</span><span class="keyword">
+        if</span><span class="special">(</span><span class="identifier">self</span><span class="special">.</span><span class="identifier">result</span><span class="special">()</span><span class="special"> ==</span><span class="char"> '1'</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+          std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+          self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">();</span><span class="keyword">
+          if</span><span class="special">(</span><span class="identifier">self</span><span class="special">.</span><span class="identifier">result</span><span class="special">()</span><span class="special"> ==</span><span class="char"> '0'</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+            std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '1'</span><span class="special">;</span><span class="identifier">
+            self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">();</span><span class="special">
+          }</span><span class="keyword"> else</span><span class="special"> {</span><span class="identifier">
+            std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char">'0'</span><span class="special">;</span><span class="identifier">
+            self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">();</span><span class="special">
+          }</span><span class="special"> 
+        }</span><span class="keyword"> else</span><span class="special"> {</span><span class="identifier">
+          std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char">'0'</span><span class="special">;</span><span class="identifier">
+          self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">();</span><span class="special">
+        }</span><span class="special">
+      }</span><span class="keyword"> else</span><span class="special"> {</span><span class="identifier">
+        std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char"> '0'</span><span class="special">;</span><span class="identifier">
+        self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">();</span><span class="special">
+      }</span><span class="special">
+    }</span><span class="keyword"> else</span><span class="special"> {</span><span class="identifier">
+      std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="char">'0'</span><span class="special">;</span><span class="identifier">
+      self</span><span class="special">.</span><span class="identifier">yield</span><span class="special">();</span><span class="special">
+    }</span><span class="special">
+  }</span><span class="special"> 
+}</span></code></pre>
+<p>
+Generalizing this example is left as an exercise for the reader.</p>
+<p>
+Notice that the above <span class="bold"><strong>FSM</strong></span> will fail to match the last six digits
+of this pattern:</p>
+<pre class="programlisting"><code class="literal"><span class="number">011011010</span></code></pre>
+<p>
+This because when it sees the fourth <code class="computeroutput"><span class="number">1</span></code>, while it was expecting a <code class="computeroutput"><span class="number">0</span></code>,
+the state machine does not backtrack to match the <code class="computeroutput"><span class="number">1</span><span class="special">+</span></code> pattern, but
+returns to the beginning of the pattern and tries to find a <code class="computeroutput"><span class="number">0</span></code>.</p>
+<p>
+It is possible to implement backtracking elegantly with coroutines
+using a goal driven design, but it is beyond the scope of this
+document. See the example <code class="literal"><a href="http://www.crystalclearsoftware.com/coroutine/example/complex_matcher.cpp" target="_top">complex_matcher.cpp</a></code> for more details.</p>
+</div>
+<table width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright © 2006 Giovanni P. Deretta</small></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="symmetric_coroutines.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="advanced.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="events.html"><img src="files/next.png" alt="Next"></a>
+</div>
+</body></html>

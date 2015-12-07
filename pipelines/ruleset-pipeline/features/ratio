@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+
+from hadoop import Hadoop
+from argparse import ArgumentParser
+import cfg
+
+parser = ArgumentParser()
+parser.add_argument('field')
+args = cfg.parse_args(parser)
+hp = args.hadoop
+
+bindir = args.config['variables']['rhbin']
+hp.start()
+hp.mapreduce( mapper = ('%s/ratio_mapper %s nocwt' % (bindir,args.field))
+            , reducer = '%s/ratio_reducer' % bindir
+            , input = 'rules' 
+            , output = 'part.' + args.field )

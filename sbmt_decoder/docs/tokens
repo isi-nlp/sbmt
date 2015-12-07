@@ -1,0 +1,19 @@
+fat_token and indexed_token originally were intended to inspire two parallel
+versions of all algorithms/types: those that work on integerized tokens and
+those that work on string+type-tag tokens
+
+some virtual interface: indexed_token_factory | fat_token_factory are provided.
+but you can also just use the concrete dictionary as it's the only one we have.
+
+complicated feature: the dictionaries are serialized the same way no matter what
+their implementation.
+
+the dictionary<in_memory_token_storage> type uses 4 diff. dictionaries for:
+foreign, native, tag, virtual.  dictionary is really an interface for 4 parallel
+dictionaries.  indexed_token is an integer type consisting of a few bits for
+which storage/type, and then the rest for the index within that.  TOP is a
+special index with no dictionary.
+
+I also use an in_memory_token_storage for feature_names (see docs/syntax_rule.scores)
+
+

@@ -1,0 +1,226 @@
+#  (C) Copyright David Abrahams 2001. Permission to copy, use, modify, sell and
+#  distribute this software is granted provided this copyright notice appears in
+#  all copies. This software is provided "as is" without express or implied
+#  warranty, and with no claim as to its suitability for any purpose.
+
+import modules ;
+
+# Return the value(s) of the given environment variable(s) at the time
+# bjam was invoked.
+rule environ ( variable-names + )
+{
+    return [ modules.peek .ENVIRON : $(variable-names) ] ;
+}
+
+.name = [ modules.peek : OS ] ;
+.platform = [ modules.peek : OSPLAT ] ;
+.version = [ modules.peek : OSVER ] ;
+
+local rule constant ( c )
+{
+    # First look for platform-specific name, then general value
+    local variables = .$(c)-$(.name) .$(c) ;
+    local result = $($(variables)) ;
+    return $(result[1]) ;
+}
+
+rule get-constant  ( )
+{
+    # Find the name of the constant being accessed, which is
+    # equal to the name used to invoke us.
+    local bt = [ BACKTRACE 1 ] ;
+    local rulename = [ MATCH ([^.]*)$ : $(bt[4]) ] ;
+    return [ constant $(rulename) ] ;
+}
+
+
+# export all the common constants
+.constants = name platform version shared-library-path-variable path-separator ;
+for local constant in $(.constants) 
+{
+    IMPORT $(__name__) : get-constant : $(__name__) : $(constant) ;
+}
+EXPORT $(__name__) : $(.constants) ;
+
+.shared-library-path-variable-NT = PATH ;
+.path-separator-NT = ";" ;
+.expand-variable-prefix-NT = % ;
+.expand-variable-suffix-NT = % ;
+
+.shared-library-path-variable-CYGWIN = PATH ;
+.path-separator-CYGWIN = ":" ;
+.expand-variable-prefix-CYGWIN = $ ;
+.expand-variable-suffix-CYGWIN = "" ;
+
+.shared-library-path-variable-MACOSX = DYLD_LIBRARY_PATH ;
+
+
+.shared-library-path-variable = LD_LIBRARY_PATH ;
+.path-separator = ":" ;
+.expand-variable-prefix = $ ;
+.expand-variable-suffix = "" ;
+
+if $(.name) = NT
+{
+    local home = [ environ HOMEDRIVE HOMEPATH ] ;
+    .home-directories = $(home[1])$(home[2]) [ environ HOME ] ;
+}
+else
+{
+    .home-directories = [ environ HOME ] ;
+}
+
+# Can't use 'constant' mechanism because it only returns 1-element
+# values.#  Copyright (c) 2005 Vladimir Prus.
+#
+#  Use, modification and distribution is subject to the Boost Software
+#  License Version 1.0. (See accompanying file LICENSE_1_0.txt or
+#  http://www.boost.org/LICENSE_1_0.txt)
+
+import modules ;
+
+rule get ( name : default-value ? )
+{
+    local m = [ MATCH --$(name)=(.*) : [ modules.peek : ARGV ] ] ;
+    if $(m)
+    {
+        return $(m[1]) ;
+    }
+    else
+    {
+        return $(default-value) ;
+    }        
+}
+
+
+rule process ( )
+{ 
+    # Check command-line args as soon as possible.  For each option try
+    # to load module named after option. Is that succeeds, invoke 'process'
+    # rule in the module. The rule may return "true" to indicate that the
+    # regular built process should not be attempted.
+    #
+    # Options take the general form of: --<name>[=<value>] [<value>]
+    #
+    
+    local ARGV = [ modules.peek : ARGV ] ;
+    local BOOST_BUILD_PATH = [ modules.peek : BOOST_BUILD_PATH ] ;
+    
+    local dont-build ;
+    local args = $(ARGV) ;
+    while $(args)
+    {
+        local arg = [ MATCH ^--(.*) : $(args[1]) ] ;
+        while $(args[2-]) && ! $(arg)
+        {
+            args = $(args[2-]) ;
+            arg = [ MATCH ^--(.*) : $(args[1]) ] ;
+        }
+        args = $(args[2-]) ;
+
+        if $(arg)
+        {
+            local split = [ MATCH ^(([^-=]+)[^=]*)(=?)(.*)$ : $(arg) ] ;
+            local full-name = $(split[1]) ;
+            local prefix = $(split[2]) ;
+            local values ;
+
+            if $(split[3])
+            {
+                values = $(split[4]) ;
+            }
+            if $(args) && ! [ MATCH ^(--).* : $(args[1]) ]
+            {
+                values += $(args[1]) ;
+                args = $(args[2-]) ;
+            }
+
+            # look in options subdirectories of BOOST_BUILD_PATH for modules
+            # matching the full option name and then its prefix.
+            local plugin-dir = options ;
+            local option-files = [
+              GLOB $(plugin-dir:D=$(BOOST_BUILD_PATH)) : $(full-name).jam $(prefix).jam
+            ] ;
+
+            if $(option-files)
+            {
+                # load the file into a module named for the option
+                local f = $(option-files[1]) ;
+                local module-name = --$(f:D=:S=) ;
+                modules.load $(module-name) : $(f:D=) : $(f:D) ;
+
+                # if there's a process rule, call it with the full option name
+                # and its value (if any).  If there was no "=" in the option,
+                # the value will be empty.
+                if process in [ RULENAMES $(module-name) ]
+                {
+                    dont-build +=
+                      [ modules.call-in $(module-name) : process --$(full-name) : $(values) ] ;
+                }
+            }
+        }
+    }
+
+    return $(dont-build) ;
+}
+
+
+rule home-directories ( )
+{
+    return $(.home-directories) ;
+}
+# Return the string needed to represent the expansion of the named
+# shell variable.
+rule expand-variable ( variable )
+{
+    local prefix = [ constant expand-variable-prefix ] ;
+    local suffix = [ constant expand-variable-suffix ] ;
+    return $(prefix)$(variable)$(suffix) ;
+}
+
+# Returns true if running on windows, whether in cygwin or not.
+rule on-windows 
+{
+    local result ;
+    if [ modules.peek : NT ] 
+    {
+        result = true ;
+    }
+    else if [ modules.peek : UNIX ] 
+    {
+        switch [ modules.peek : JAMUNAME ] 
+        {
+            case CYGWIN* :
+            {
+                result = true ;
+            }
+        }
+    }
+    return $(result) ;
+}
+
+if ! [ on-windows ] 
+{
+    .on-unix = 1 ;
+}
+
+rule on-unix
+{
+    return $(.on-unix) ;
+}
+     
+
+import regex ;
+
+rule __test__
+{
+    import assert ;
+    rule identity ( args * ) { return $(args) ; }
+
+    if ! ( --quiet in [ modules.peek : ARGV ] )
+    {
+        ECHO os: name= [ name ] ;
+        ECHO os: version= [ version ] ;
+    }
+    assert.true name ;
+}

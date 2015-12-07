@@ -1,0 +1,29 @@
+import sbmt-util ;
+
+project variable_length ;
+
+exe map_length_dist 
+  : map_length_dist.cpp 
+    /boost_coro
+    /xrsparse 
+    /sbmt_decoder//sbmt 
+    /boost/program_options
+    /boost/regex
+  ;
+exe map_lengths : map_lengths.cpp /boost_coro /xrsparse//xrsparse ;
+
+exe vlinfo 
+  : varlength_info.cpp
+    /sbmt_decoder//sbmt
+  ;
+
+sbmt-util.install install
+    :
+    : map_lengths
+      map_length_dist
+      vlinfo
+    :
+    :
+    : reduce_lengths
+      reduce_length_dist
+    ;

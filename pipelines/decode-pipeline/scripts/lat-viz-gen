@@ -1,0 +1,2121 @@
+#!/usr/bin/env perl 
+#
+# visualization based on Wei's script, using Python modules, and
+# employing new tricks from the new decoder.
+#
+use 5.006;
+use strict;
+use warnings;
+use Getopt::Long qw(:config bundling no_ignore_case);
+use File::Basename;
+use File::Copy;
+use File::Spec;
+use File::Temp qw(tempfile tempdir);
+use Fcntl qw(SEEK_SET);
+use Errno qw(EEXIST);
+use Carp;
+use Data::Dumper;
+use IPC::Open2;			# not really recommended (dead-locks)
+
+use lib dirname($0);
+use Lattice::Graph;
+use Lattice::Parser;
+use Lattice::Tool qw(START_SYMBOL);
+use Tree; 			# fancy tree formatting
+
+my @SAVE = ( @ARGV );
+use constant BOOKLET => 10000000;
+use constant BLEU_SCRIPT => 
+    File::Spec->catfile( dirname($0), 'bleu+1.py' );
+use constant TRANSLIT_TACLANG => 
+    File::Spec->catfile( dirname($0), 'ArabicTransliteration.txt' );
+use constant TRANSLIT_BUCKWALTER => 
+    File::Spec->catfile( dirname($0), 'Buck.txt' );
+
+# bit string to determine which trees to show
+use constant TEX_ETREE => 0x01;
+use constant TEX_DTREE => 0x02;
+use constant EPS_PTREE => 0x04;
+use constant EPS_DTREE => 0x08;
+
+my %default_config = 
+    ( rule_column_width => 70,
+      rule_fields => [qw(count gt_prob green maroon missingWord model1nrm model1inv glue-rule nonmonotone is_lexicalized phrase_pef phrase_pfe)],
+      nbest_max => 50,
+      # max_length => 25,
+      max_length => 45,
+      min_length => 0,
+      nbest_fields => [qw(text-length derivation-size sbtm-cost lm1 lm2 glue-rule)],
+      nbest_column_width => 100,
+      english => {},
+      replicate => 0,		# 0: replicate matching references
+                                # 1: do not replicate, if ALL references match
+                                # 2: do not replicate ANY matching references
+
+      'bleu+1' => 0,		# BLEU+1 scoring
+      bpen => 0,		# brevity penalty 
+      ligatures => 0,
+      decimals => 2,		# default decimal places
+      float_format => '%.2f',   # - formatting for weights, values, ...
+      epsilon => 0.01,		# - matches the format width!
+      booklet => BOOKLET,	# default sentences per book (all into 1 book)
+      tree => (EPS_PTREE | TEX_ETREE),	# bit string, which trees to show
+      'eps_tree' => 'fig',	# where to put the EPS files
+      'skip_nbest' => 0,	# skip n-best section, if set
+      'num_to_highlight' => 5 );
+
+$main::parser = Lattice::Parser->new; # may be undef
+$main::count = $main::output = 0;
+my $verbose = 1;
+my $language = 'chi';
+my $system = '';
+my $title = '';
+my $output = '-';
+my $missing_content = 1;
+my %config = ( %default_config );
+my $no_lattice = 0;
+
+use constant ENGLISH => '_english';
+
+my $tmpdir = $ENV{'MY_TMP'} || 
+    $ENV{TMP} || 
+    $ENV{TEMP} || 
+    $ENV{TMPDIR} ||
+    File::Spec->tmpdir() || 
+    '/tmp';
+$tmpdir = '/scratch' if -d '/scratch';
+
+
+sub usage {
+    print << "EOF";
+Usage: @{[basename($0)]} --language {ara,chi} [options] d1=i1 [d2=i2 [..]]
+
+ --verbose             more messages
+ --language            which language are we using...
+ --system              [deprecated, see --dataset and --title]
+ --dataset token       which dataset, e.g. dev-full, nist03 .. nist05, private.
+ --title 'phrase'      what to put into the title of each page.
+ --output fn           where to put the output, default is stdout.
+
+ --max-length n        maximum foreign sentence length to show, default $default_config{max_length}
+ --min-length n        minimum foreign sentence length to show, default $default_config{min_length}
+ --rule-column-witdh w maximum text width w for rules, default $default_config{rule_column_width}
+ --rule-fields f[,f]   which rule fields to display, multi-option, 
+	default: @{[join(',',@{$default_config{rule_fields}})]}
+ --nbest-max n         maximum n of unique n-best entries, default $default_config{nbest_max}
+ --nbest-fields f[,f]  which decoding weights to display, multi-option,
+	default: @{[join(',',@{$default_config{nbest_fields}})]}
+ --nbest-column-width  maximum text width w for decodings, default $default_config{nbest_column_width}
+ --num-to-highlight    something about highlights, default $default_config{'num_to_highlight'}
+
+ --no-gold             If specified, omit gold standard references to prevent
+                       your reading from becoming biased. Only works with
+                       --preset, and must occur before it. 
+ --preset root         OLD: Obtains english hypotheses files from the root dir with
+                       /<root>/<language>/<dataset>/*.hyp 
+                       Use this option *after* you\'ve set the --language!
+ -e|--english [k=]gs   multi-option: Gold standard file with reference trans-
+                       lation. k flags the output (default @{[ENGLISH]}). 
+ -s|--sentence r[,r]   multi-option: limit displayed sentences to those with r,
+                       or in a range, e.g. 1,2-4,5,8-11. default: all sentences
+ -f|--features f       multi-option, feature string that was used for decoding.
+ -F|--feature-file fn  Alternative to --features, read feature string from fn.
+ -R|--record fn        Print formatted record.txt as first page (pipeline).
+ --replicate           Once to remove replicated references (ALL refs agree).
+                       Twice to remove any agreeing references (ANY ref). 
+ --ends-in fn          File with the last token of the foreign sentence, one per line. 
+                       Only sentences with this final token are considered. 
+
+Recently added options: 
+ --ligatures           If specified, permit Arabtex ligutures.
+ --no-missing-content  Suppress messages output why sentences are skipped. 
+                       default: Leave explanation, if a sentence was witheld.
+ --no-lattice          Avoid lattice processing, even if they exist in input files.
+ --dot dir             Directory to put graphviz lattice files for each sentence. 
+ --partial-long [n]    Print reduced n-best and no trees for too-long sentences.
+                       If n is specified, it is the n-best length (default 10).
+ --transliterated      Print all Arabic in Arabtex transliterated form.
+ --decimals i          Number of decimal places to print for float numbers.
+ --bleu-plus-one       Enable BLEU+1 scoring in the n-best table. 
+ --brevity-penalty     Enable brevity penalty for BLEU+1 scoring.
+ -t|--tree bits        Determines which kind of trees to show, default $default_config{tree}
+                       @{[TEX_ETREE]}: create LaTeX english tree
+                       @{[TEX_DTREE]}: create LaTeX derivation tree
+                       @{[EPS_PTREE]}: create EPS part-of-speech colored tree
+                       @{[EPS_DTREE]}: create EPS derivation tree
+ --eps-files dir       Directory to store EPS tree files, default \"$default_config{'eps_tree'}\"
+                       You will need to ship these files to where you run LaTeX.
+                       Make the dir argument relative to the current directory!
+ --skip-nbest          For forced decoding visualization, skip n-best section.
+ --jonathan-url url    provide a base-URL to hyperlink rule ids to Jonathan.
+ --jonathan-map map    file to map rule ids onto the base URL.
+ --dotfiles dir        where to find graphviz dot/png files of the lattices. 
+                       [currently not activated]. 
+
+Mandatory arguments: 
+ d1[=i1]               combined input file from preparation stage (d1) and 
+                       index file (i1). The index file is optional - indices 
+                       can be derived from the preparation stage file(s). Smart
+                       mode will be attempted first, by substituting the last
+                       suffix on d1 with ".idx". 
+
+EOF
+
+    exit(1);
+}
+
+sub iso8601(;$) {
+    # purpose: poor man's strftime (avoid loading POSIX)
+    # returns: ISO 8601 like (not quite) formatted date stamp space time stamp
+    # warning: somewhat fudges the standard concerning zone and separator
+    #
+    my @x = localtime( defined $_[0] ? shift() : time() );
+    sprintf( "%04u-%02u-%02u %02u:%02u:%02u",
+	     $x[5]+1900, $x[4]+1, @x[3,2,1,0] );
+}
+
+sub find_exec($;@) {
+    # purpose: determine location of given binary in $PATH
+    # paramtr: $program (IN): executable basename to look for
+    #          @addon (opt. IN): Additional PATHs to look in
+    # returns: fully qualified path to binary, undef if not found
+    my $program = shift;
+    foreach my $dir ( ( File::Spec->path, @_ ) ) {
+        my $fs = File::Spec->catfile( $dir, $program );
+        return $fs if -x $fs;
+    }
+    undef;
+}
+
+sub max {
+    # purpose: find the greatest element in an array of natural numbers
+    # paramtr: @_ (IN): array of numbers
+    # returns: largest number in array, or -1
+    #
+    my $n = -1;
+    foreach my $x ( @_ ) {
+	$n = $x if $n < $x;
+    }
+    $n;
+}
+
+sub arabtex($;%) {
+    # purpose: intersect arabic words with vbars to avoid ligatures
+    # paramtr: $s (IN): input string
+    # returns: transliterated (or identical) output
+    # warning: will not transliterate things it does not know
+    #
+    my $s = shift;
+    croak unless defined $s;
+    my %a = ( @_ );
+
+    my $result = '';
+    my $n = 1;
+    my $flag = 0;
+    for ( my $i=0; $i < length($s); $i += $n ) {
+	my $ch = substr($s,$i,$n=1);
+	if ( $ch eq chr(216) || $ch eq chr(217) ) {
+	    $ch = $flag ? '|' : '';
+	    $ch .= substr($s,$i,$n=2);
+	    $flag = 1;
+	} else {
+	    $flag = 0;
+	    $ch = sprintf '0x%02X', ord($ch) 
+		if ( ord($ch) > 126 && %a );
+	}
+
+	$result .= $ch;
+    }
+ 
+    $result;
+}
+
+sub escape($;%) {
+    # purpose: LaTeX-escape certain characters
+    # paramtr: $s (IN): string to escape
+    # returns: escaped string;
+    #
+    local $_ = shift;
+    croak unless defined $_;
+    my %a = ( @_ );
+
+    s/([\$_%&#])/\\$1/g;
+    if ( $language ne 'ara' || exists $a{translit} ) {
+	s/([{}])/\\$1/g;
+    } else {
+	# v5.5 Tune problem
+	s/([{}])/sprintf(' 0x%02X',ord($1))/ge
+    }
+
+    s/([~^])/\\$1\{\}/g;
+    s/ -> / \$\\mapsto\$ /g;
+
+    if ( exists $a{RL} ) {
+	s/\@([[:punct:]])\@?/$1/g;	# new
+	s{/}{\$/\$}g;		# \RL{//} bombs
+    } else {
+	s/\@/\\symbol{64}/g;
+    }
+    s/\\\s/\$\\backslash\$ /g;	# grrr
+    s{!!ThisIsABackSlash!!}{\$\\backslash\$}g
+	if exists $a{english};
+
+    # some arab
+    if ( $language eq 'ara' ) {
+	s/(([\xD0-\xDF].)+)/\\RL{$1}/g
+	    if ( exists $a{rule} || exists $a{english} );
+
+	# cannot have <>
+	s/\</\$\<\$/g;
+	s/\>/\$\>\$/g;
+	s/\@/?/g;
+	$_ = arabtex($_,%a) unless $config{ligatures};
+    } elsif ( $language eq 'chi' ) {
+	s/([^[:ascii:]])/sprintf(' 0x%02X',ord($1))/ge
+	    if exists $a{english};
+    }
+
+    "$_";
+}
+
+%main::cache = ();
+sub read_line_from_file($$) {
+    # purpose: obtain a single line from one input file
+    # paramtr: $fn (IN): file name
+    #          $ln (IN): line number
+    # returns: undef, or the contents of the line
+    # FIXME: Need to remove caching, if input becomes large
+    #
+    my $fn = shift;
+    my $lineno = shift;
+
+    if ( ! exists $main::cache{$fn} ) {
+	local(*F);
+	$main::cache{$fn} = [];
+	if ( open( F, "<$fn" ) ) {
+	    binmode( F, ':raw' );
+	    while ( <F> ) {
+		s/[\012\015]+$//;
+		push( @{$main::cache{$fn}}, $_ );
+	    }
+	    close F;
+	} else {
+	    warn "Warning: open $fn: $!\n";
+	    return undef;
+	}
+    }
+
+    $main::cache{$fn}[$lineno-1];
+}
+
+%main::taclang = ();
+sub init_taclang(;$) {
+    # purpose: Reads Ulf's transliteration file
+    # paramtr: $tf (IN): Location of translitarion file
+    # globals: %main::taclang (OUT): tactical language transliteration table
+    #
+    my $fn = shift || TRANSLIT_TACLANG;
+    local(*F);
+
+    if ( open( F, "<$fn" ) ) {
+	warn "# @{[iso8601]}: initializing TacLang transliterations from $fn\n";
+	binmode( F, ':raw' );
+	while ( <F> ) {
+	    if ( /^([\xD0-\xDF].)/ ) {
+		my $ara = $1;
+		if ( /^[^:]+::(\S+)/ ) {
+		    $main::taclang{$ara} = $1;
+		} else {
+		    chomp;
+		    warn "Warning: Unable to parse line $.: \"$_\"\n";
+		}
+	    }
+	}
+	close F;
+    } else {
+	warn "Warning: Unable to read $fn: $!\n";
+    }
+}
+
+%main::bckwltr = ();
+sub init_buckwalter(;$) {
+    # purpose: Reads my buckwalter transliteration file
+    # paramtr: $tf (opt. IN): Location of translitarion file
+    # globals: %main::bckwltr (OUT): Buckwalter transliteration table
+    #
+    my $fn = shift || TRANSLIT_BUCKWALTER;
+    local(*F);
+
+    if ( open( F, "<$fn" ) ) {
+	warn "# @{[iso8601]}: initializing Buckwalter transliterations from $fn\n";
+	binmode( F, ':raw' );
+	while ( <F> ) {
+	    my @x = split /\t+/;
+	    if ( @x == 4 ) {
+		$main::bckwltr{$x[0]} = $x[1]; 
+	    } else {
+		chomp ;
+		warn "Warning: Unable to parse line $.: \"$_\"\n";
+	    }
+	}
+	close F;
+    } else {
+	warn "Warning: Unable to read $fn: $!\n";
+    }
+}
+
+sub transliterate($\%) {
+    # purpose: provide transliteration
+    # paramtr: $s (IN): input string
+    #          %t (IN): transliteration hash
+    # returns: transliterated (or identical) output
+    # warning: will not transliterate things it does not know
+    #
+    my $s = shift;
+    croak unless defined $s;
+    my $t = shift;
+    croak unless defined $t && ref $t eq 'HASH';
+
+    my $result = '';
+    my $n = 1;
+    for ( my $i=0; $i < length($s); $i += $n ) {
+	my $ch = substr($s,$i,$n=1);
+	if ( $ch =~ /[\xD0-\xD9]/ ) {
+	    $ch = substr($s,$i,$n=2);
+	}
+	if ( exists $t->{$ch} ) {
+	    $result .= $t->{$ch};
+	} elsif ( length($ch) > 1 ) {
+	    #$result .= "\\RL{$ch}";
+	    warn "Warning: replacing unknown \"$ch\" with \"?\"\n";
+	    $result .= '?';
+	} else {
+	    $result .= $ch;
+	}
+    }
+ 
+    $result;
+}
+
+sub trim($) {
+    # purpose: Trims redundant whitespace from head and tail of a string
+    # paramtr: $x (IN): some raw string
+    # returns: trimmed string, may be identical to argument, or even empty. 
+    #
+    local $_ = shift;
+    s/^\s+//;
+    s/\s+$//;
+    s/[\015\012]+$//;		# !5.8.8
+    "$_";
+}
+   
+
+sub generate_heading {
+    my @user = getpwuid($>);
+    my $user = $ENV{USER} || $ENV{LOGNAME} || $user[0] || 'unknown';
+    if ( @user && $user[6] ) {
+	$user = $user[6];
+	$user =~ s/[,;:].*//;
+	# heehee, man wird doch noch mal...
+	$user =~ s{Jens-S(\.|oenke) Voeckler}{Jens-S. V\\\"ockler};
+    }
+    "Generated by $user " . substr( iso8601(), 0, -3 );
+}
+
+sub getQTree($) {
+    # purpose: Attempt to redo globals.py in perl
+    # paramtr: $hyp (IN): contents of hyp attribute
+    # returns: LaTeX-tree formatted tree
+    #
+    local $_ = shift;
+    s{(\@UNKNOWN\@)/([^ ]+)}{($2 $1)}g;
+#    s{\(-LRB- \(\)}{(-LRB- -lrb-)}g;
+#    s{\(-RRB- \)\)}{(-RRB- -rrb-)}g;
+    s{\((\S+) \(\)}{($1 -lrb-)}g;
+    s{\((\S+) \)\)}{($1 -rrb-)}g;
+    s/\[/{[}/g;
+    s/\]/{]}/g;
+    s{\)}{ \)}g;
+    s{\(}{\[.}g;
+    s{\)}{\]}g;
+    s{-lrb-}{\(}g;
+    s{-rrb-}{\)}g;
+    s{\s+}{ }g;
+    "\\Tree $_";
+}
+
+sub getDerivQTree($) {
+    # purpose: Attempt to redo globals.py in perl
+    # paramtr: $derivation (IN): contents of derivation attribute
+    # returns: LaTeX-tree formatted tree
+    #
+    my $raw = shift;
+    my $result = '';
+    if ( substr($raw,0,1) eq '(' ) {
+	# new format
+	$raw =~ s/\)/ \]/g;
+	my @token = split /\s+/,$raw;
+	my @result = ();
+	foreach my $token ( @token ) {
+	    if ( $token eq ']' ) {
+		push( @result, " $token" );
+	    } elsif ( substr($token,0,1) eq '(' ) {
+		push( @result, "[." . substr($token,1) );
+	    } else {
+		push( @result, "[." . $token . " ]" );
+	    }
+	}
+	$result = join(' ',@result);
+    } else {
+	# old format
+	$raw =~ s{([-0-9]+)\s+\(}{\[.$1 }g;
+	$raw =~ s/\)/ \]/g;
+	$result = $raw;
+    }
+
+    "\\Tree $result";
+}
+
+sub min(@) {
+    my $min = shift;
+    foreach my $x ( @_ ) {
+	$min=$x if $x < $min;
+    }
+    $min;
+}
+
+sub special_escape($) {
+    my $t = escape( shift(), RL=>1, rule=>1 );
+    $t =~ s{\\([""''])}{$1}g;	# hmm, why is this not handled?
+    $t;
+}
+    
+sub print_lattice_horizontally($$) {
+    # purpose: print lattice into output; only call, if lattice exists
+    # fixme: THIS IS STILL BROKEN!
+    # paramtr: $sentid (IN): sentence number
+    #          $l_text (IN): single lattice to parse
+    #
+    my $sentid = shift;
+    my $l_text = shift;
+
+    return unless defined $main::parser; # working parser required
+    my $l = $main::parser->lattice( \$l_text );
+    if ( ! defined $l ) {
+	warn "Unable to parse lattice, skipping lattice production\n";
+	return ;
+    }
+    $l->delete_edge_by_text( START_SYMBOL );
+
+    # graphviz formattting
+    if ( exists $config{dotdir} && -d $config{dotdir} ) {
+	local(*DOT);
+	# FIXME: create multi-level hierarchy 
+	my $fn = File::Spec->catfile( $config{dotdir}, "$sentid.dot" );
+	if ( open( DOT, ">$fn" ) ) {
+	    binmode( DOT, ':raw' );
+	    print DOT $l->graphviz;
+	    close DOT;
+	} else {
+	    warn "Warning: open dot-file $fn: $!, not generating dot output\n";
+	}
+    }
+
+    my $table = $l->table;
+    # returns: { width => $ # maximum width of {col} field in {table}
+    #            table => [ { row => $, bad => $,
+    #                         col => [ FINAL => $, LABEL => $,
+    #                                  FEATS => % ] } ] }
+    # we will transpose this matrix
+    #
+    my @debug = ();
+    my $maxrow = $table->{width};
+    my $totals = @{$table->{table}} + 0;
+    my $factor = 16; 		# number of columns per row
+    my $maxcol = $factor;
+    for ( my $repeat=0; $repeat < $totals; $repeat += $maxcol ) {
+	# compute split point
+	$maxcol = min( $totals - $repeat, $factor );
+
+	# try to avoid 1-column tables by permitting some elastic
+	$maxcol++ if ( $totals - $repeat - $factor == 1 ); 
+
+	# adjust maxcol, if there is a multicol span at split point
+	while ( $table->{table}->[$repeat+$maxcol]->{bad} ) {
+	    warn "# @{[iso8601]}: moving split point due to multi-column span\n";
+	    --$maxcol;
+	    # emergency break
+	    die( "FATAL: Unable to find good split point. Most likely, you have\n",
+		 "a multi-column span that is larger than $factor columns." )
+		if $maxcol < 1;
+	}
+	push( @debug, $maxcol );
+
+	# print table header
+	print "%%% $maxcol columns\n";
+	print "\\begin{tabular}{|", join('|', map { 'c' } 1 .. $maxcol ), "|}\\hline\n";
+
+	# print title (spans) row
+	for ( my $i=0; $i < $maxcol; ++$i ) {
+	    my $start = $table->{table}->[$repeat+$i]->{row};
+	    my $final = $table->{table}->[$repeat+$i]->{col}->[0]->{FINAL};
+	    next unless defined $final; 
+	    print( $i ? ' & ' : '  ' );
+	    print "\\textbf{$start:$final}";
+	}
+	print "\\\\\\hline\n";
+
+	
+	# print initial values -- they always exist
+	for ( my $i=0; $i < $maxcol; ++$i ) {
+	    my $text = $table->{table}->[$repeat+$i]->{col}->[0]->{LABEL};
+	    $text = '' unless defined $text; # ??? 
+	    print( $i ? ' & ' : '  ' );
+	    print special_escape($text);
+	}
+	print "\\\\\\hline\n";
+
+	# print additional rows -- if they exist
+	for ( my $row=1; $row < $maxrow; ++$row ) {
+	    my ($start,$i,$span);
+	    my $mfmt = '|c|';
+	    my $final = 0; 
+	    for ( $i=$final; $i < $maxcol; ++$i ) {
+		next unless defined $table->{table}->[$repeat+$i]->{col}->[$row]; 
+		if ( ($span = $i - $final) ) {
+		    # some empty ones
+		    print( $final ? ' & ' : '  ' );
+		    print "\\multicolumn{$span}{$mfmt}{ }";
+		    $mfmt = 'c|';
+		    $final += $span;
+		}
+		my $save = $final;
+		$start = $table->{table}->[$repeat+$i]->{row};
+		$final = $table->{table}->[$repeat+$i]->{col}->[$row]->{FINAL};
+		my $text = $table->{table}->[$repeat+$i]->{col}->[$row]->{LABEL};
+		$text = special_escape($text);
+		if ( exists $table->{table}->[$repeat+$i]->{col}->[$row]->{FEATS}->{identity} ) {
+		    # is an identity rule
+		    $text = "\\psboxit{box .9 setgray fill}{\\spbox{$text}}";
+		}
+
+		print( $save ? ' & ' : '  ' );
+		if ( ($span = $final - $start) > 1 ) { # FIXME: Will fail, if not normalized!
+		    print "\\multicolumn{$span}{$mfmt}{$text}";
+		} else {
+		    print $text;
+		}
+		$mfmt = 'c|';
+		$final = $i+$span; # requires normalized table
+	    }
+
+	    # remaining columns, if any
+	    if ( ($span = $maxcol - $final) ) {
+		print( $final ? ' & ' : '  ' );
+		print "\\multicolumn{$span}{$mfmt}{ }";
+	    }
+	    print "\\\\\\hline\n";
+	}
+
+	# finalize LaTeX table
+	print "\\end{tabular}\n\n";
+    }
+
+    warn( "# @{[iso8601]}: lattice tables and columns [ ", 
+	  join(', ',@debug), " ]\n" ) if $verbose > 1; 
+}
+
+sub vformatted {
+    my $value = shift;
+    # Hmmm, just in case
+    if ( substr($value,0,3) eq '10^' || substr($value,0,2) eq 'e^' ) {
+	warn "# @{[iso8601]}: Seen non-normalized value $value"; 
+    }
+
+    if ( abs($value - int($value)) < $config{epsilon} ) {
+	# isa integer - pad part after decimal point
+	escape(int($value)) . " & \\hspace{\\myfloatwidth}";
+    } else {
+	# isa float
+	$value = sprintf( $config{float_format}, $value );
+	my ($v1,$v2) = split m{\.}, $value, 2;
+	$v2 = '0' unless defined $v2;
+	escape($v1) . ' & .' . escape($v2); 
+    }
+}
+
+sub print_dot_product {
+    my $sentid = shift;
+    my $best = trim( shift() );
+    my %attr = decoding_attributes($best);
+    my %feat = %{$config{feature}}; 
+    my $cost = 0.0;
+    $cost=$1 if $best =~ /\stotalcost=(\S+)\s/;
+
+    print "\n\\subsection*{[", escape("$system:$sentid");
+    print "] 1-best Dot Product}\n\\nopagebreak[3]\n";
+    print "\\tablehead{\\hline";
+    print "\\textsf{\\bfseries feature} & ";
+    print "\\multicolumn{2}{c|}{\\textsf{\\bfseries weight}} & ";
+    print "\\multicolumn{2}{c|}{\\textsf{\\bfseries value}} & ";
+    print "\\multicolumn{2}{c|}{\\textsf{\\bfseries product}}";
+    print "\\\\\\hline\\hline}\n";
+    print "\\tabletail{\\hline}\\tablelasttail{}\n";
+    print "{\\small\n";
+    print "\\begin{supertabular}{|r|r\@{}l|r\@{}l|r\@{}l|}\n";
+
+    my $sum = 0.0;
+    my $product;
+    foreach my $k ( sort keys %feat ) {
+	print "  \\textsf{\\bfseries ", escape($k), "} & ";
+	print vformatted( $feat{$k} ), " & ";
+	print vformatted( $attr{$k} || '0.0' ), " & ";
+	$product = ( $feat{$k} || 0.0 ) * ( $attr{$k} || 0.0 );
+	print vformatted( $product );
+	$sum += $product;
+	print "\\\\\\hline\n";
+    }
+    print "\\hline\n";
+    print "\\textsf{reported \\bfseries totalcost} & ", vformatted($cost), " & ";
+    print "\\multicolumn{2}{r|}{\$\\mathbf{\\vec{v}}\\cdot\\mathbf{\\vec{w}}\$} & ";
+    print vformatted($sum), "\\\\\\hline\n";
+    print "\\end{supertabular}\n";
+    print "}\n\n";
+}
+
+sub print_1best($$;$$$) {
+    my $best = shift;
+    my $sentid = shift;
+
+    my $lattice = shift;	# optional, may be undef
+    my $rawhyp = shift;		# first n-best raw value
+    my $label = shift || '1-best'; # label for 1-best hyp
+
+    print "%%%\n%%% print_1best for $sentid\n%%%\n\n";
+    print "\\begin{tabular}{r\@{\\ }p{0.9\\textwidth}}\n";
+    #print "\\begin{tabular}{\@{\\hfill}p{0.09\\textwidth}\@{\\ }p{0.89\\textwidth}}\n";
+
+    # foreign
+    $_ = trim( $best->[0] );
+    print "\\raggedleft\\textsf{\\bfseries foreign:} & ";
+    if ( $language eq 'chi' ) {
+	print( "\\begin{CJK}{GB}{song}", escape($_), "\\end{CJK}\\\\\n" );
+    } elsif ( $language eq 'ara' ) {
+	#print "%%% without textsf header, use raisebox of 1ex\n";
+	#print "\\raisebox{0ex}{\\RL{", escape($_, RL => 1), "}}\\\\\n";
+	print "\\vspace*{-1.5ex}";
+	print "\\RL{", escape($_, RL => 1), "}\\\\\n";
+    } else {
+	die "illegal language $language";
+    }
+
+    if ( $language eq 'ara' ) {
+	print( "\\textsf{\\bfseries tac-lang:} & ", 
+	       escape(transliterate($_,%main::taclang),translit=>1),
+	       "\\\\\n" );
+	print( "\\textsf{\\bfseries bckwltr:} & ", 
+	       escape(transliterate($_,%main::bckwltr),translit=>2),
+	       "\\\\\n" );
+    }
+
+    # extra sentences to compare against
+    if ( defined $config{english} ) {
+	my @v = (); 
+	foreach my $k ( sort keys %{$config{english}} ) {
+	    foreach my $fn ( @{$config{english}{$k}} ) {
+		my $v = read_line_from_file( $fn, $sentid );
+		push( @v, [ $v, $k, $fn ] ); 
+	    }
+	}
+
+	# count unique (non-agreeing) references
+	my $u = scalar keys %{{ map { $_->[0] => 1 } @v }}; 
+
+	# remove agreements, if so requested
+	if ( $config{replicate} == 1 && $u == 1 ) {
+	    # ALL references are identical
+	    splice( @v, 1 ); # keep only first item
+	} elsif ( $config{replicate} == 2 && $u < @v ) {
+	    # SOME references are identical
+	    my @newv = (); 
+	    for ( my $i=$#v; $i >= 0; --$i ) {
+		my $agree = 0; 
+		for ( my $j=$i-1; $j >= 0; --$j ) {
+		    $agree++ if $v[$i][0] eq $v[$j][0]; 
+		}
+		unshift( @newv, $v[$i] ) unless $agree; 
+	    }
+	    @v = @newv; 
+	}
+
+	foreach my $item ( @v ) {
+	    my ($v,$k,$fn) = @{$item}; 
+	    if ( $k eq ENGLISH ) {
+		my $base = basename($fn);
+		$base =~ s/\.(?:(?:mt)?tok|lc|eng|(?:text|speech|audio))//g;
+		$base =~ s/\.$language//g;
+		print "\\raggedleft\\textsf{\\bfseries ", escape($base), ":} & ";
+	    } else {
+		print "\\raggedleft\\textsf{\\bfseries ", escape($k), ":} & ";
+	    }
+	    $v =~ s{\\}{!!ThisIsABackSlash!!}g;
+	    print escape($v, english => 1) if defined $v;
+	    print "\\\\\n";
+	}
+    }
+
+    # english 1best hypothesis attr.hyp
+    $_ = trim( $best->[1] );
+    print "\\raggedleft\\textsf{\\bfseries $label:} & ", escape($_, english => 1), " \\\\\n";
+    print "\\end{tabular}\n\n";
+
+# JSV: 2009-02-04: This does not work correctly (never did)
+#
+#    # NEW: lattices -- if wanted && exists
+#    if ( defined $lattice && length($lattice) ) {
+#	print_lattice_horizontally($sentid,$lattice);
+#    } 
+
+    # NEW: graphical lattices
+    if ( exists $config{dotfiles} && $config{dotfiles} ) {
+	# for all files <$config{dotfiles}/$h/$sentid-?.dot>
+	# insert instruction to add PNG here 
+	print "\n\n\\subsection*{[", escape("$system:$sentid");
+	print "] Input Lattice}\n";
+	my $h = sprintf "%02d", int( $sentid / 100 ); 
+	my $f = File::Spec->catfile( $config{dotfiles}, $h, "$sentid-*.dot" );
+	my @f = glob($f); 
+	if ( @f ) {
+	    my $d = File::Spec->catfile( basename($config{dotfiles}), $h ); 
+	    for ( my $i=0; $i < @f; ++$i ) {
+		# includegraphics must use EPS not PNG (sigh). But fontlibs
+		# only generate proper UTF-8 chars in PNG or PDF mode (sigh). 
+		my $eps = basename($f[$i], '.dot') . '.eps'; 
+		print "\\includegraphics\[scale=0.5\]{$d/$eps}";
+		print "\\\\" if $i < $#f; 
+		print "\n"; 
+	    }
+	} else {
+	    warn "Warning: --dotfiles specified, but no dot file found!\n"; 
+	}
+	print "\n"; 
+    }
+
+    # NEW: dot product -- if features exist
+    if ( exists $config{feature} && defined $rawhyp ) {
+	print_dot_product($sentid, $rawhyp);
+    }
+}
+
+sub print_latex_dtree {
+    my ($best,$sentid) = @_;
+    my $dlist = trim( $best->[3] );
+
+    print "\\subsection*{[", escape("$system:$sentid"), "] 1-best Derivation}\n";
+    print "\\shrinkboxtokeepaspect(\\textwidth,0.9\\textheight){\\small ", 
+        escape(getDerivQTree($dlist), tree => 1), "}\n\n";
+}
+
+sub print_latex_etree {
+    my ($best,$sentid) = @_;
+    my $elist = trim( $best->[2] );
+
+    print "\\subsection*{[", escape("$system:$sentid"), "] 1-best Tree}\n";
+    print "\\shrinkboxtokeepaspect(\\textwidth,0.9\\textheight){\\small ", 
+        escape(getQTree($elist), tree => 1), "}\n\n";
+}
+
+sub print_eps_dtree {
+    my ($sentid,$best1,$rules,$nth) = @_;
+    use integer;
+    my $dir = File::Spec->catdir( $config{'eps_tree'}, $sentid / 100 );
+    no integer;
+    
+    my $tree = Tree->lisplike( $best1->[3] );
+    my $extra = ( defined $nth ? "-$nth" : '' );
+    my $dtree = File::Spec->catfile( $dir, "$sentid$extra-d.eps" );
+    if ( open( DTREE, ">$dtree" ) ) {
+	$tree->wide_assign_position ;
+	$tree->generate_ps( \*DTREE );
+	close DTREE;
+
+	print "\\subsection*{[", escape("$system:$sentid"), "] 1-best Derivation}\n";
+	print "\\shrinkboxtokeepaspect(\\textwidth,0.9\\textheight){";
+	print "\\includegraphics{$dtree}}\n\n";
+    } else {
+	warn "open $dtree: $!\n";
+    }
+}
+
+sub print_eps_ptree {
+    my ($sentid,$best1,$rules,$nth) = @_;
+    use integer;
+    my $dir = File::Spec->catdir( $config{'eps_tree'}, $sentid / 100 );
+    no integer;
+    
+    my $tree = Tree->lisplike( $best1->[3] );
+    my %rule = ();
+    Tree::prepare_rules_for_augment( %rule, @{$rules} );
+    $tree->augment( \%rule );
+
+    my $extra = ( defined $nth ? "-$nth" : '' );
+    my $ptree = File::Spec->catfile( $dir, "$sentid$extra-p.eps" );
+    if ( open( PTREE, ">$ptree" ) ) {
+	$tree->tight_assign_position ;
+	$tree->generate_ps( \*PTREE, colorbox => 1, showcount => 5000 );
+	close PTREE;
+
+	print "\\subsection*{[", escape("$system:$sentid"), "] 1-best PoS-Tree}\n";
+	print "\\shrinkboxtokeepaspect(\\textwidth,0.9\\textheight){";
+	print "\\includegraphics{$ptree}}\n\n";
+    } else {
+	warn "open $ptree: $!\n";
+    }
+}
+
+sub print_latex_trees($$) {
+    # my ($best1,$sentid) = @_;
+    print_latex_etree(@_) if ( ($config{tree} & TEX_ETREE) == TEX_ETREE );
+    print_latex_dtree(@_) if ( ($config{tree} & TEX_DTREE) == TEX_DTREE );
+}
+
+sub print_eps_trees($$$;$) {
+    # my ($sentid,$best1,$rules,$nth) = @_;
+    print_eps_ptree(@_)	if ( ($config{tree} & EPS_PTREE) == EPS_PTREE );
+    print_eps_dtree(@_)	if ( ($config{tree} & EPS_DTREE) == EPS_DTREE );
+}
+
+sub print_trees {
+    my ($sentid,$best1,$rules,$nth) = @_;
+    print_eps_ptree(@_)	if ( ($config{tree} & EPS_PTREE) == EPS_PTREE );
+    print_latex_etree($best1,$sentid) if ( ($config{tree} & TEX_ETREE) == TEX_ETREE );
+    print_eps_dtree(@_)	if ( ($config{tree} & EPS_DTREE) == EPS_DTREE );
+    print_latex_dtree($best1,$sentid) if ( ($config{tree} & TEX_DTREE) == TEX_DTREE );
+}
+
+
+
+sub format_line($$) {
+    # DEPRECATED - UNUSED
+    # purpose: break overlong lines 
+    # paramtr: $line (IN): line to break
+    #          $width (IN): column width
+    # returns: array of 1 or more lines
+    #
+    my $line = shift;
+    my $width = shift;
+
+    my @result = ();
+    while ( length($line) > $width ) {
+	my $break = rindex( $line, ' ', $width );
+	push @result, substr( $line, 0, $break, '' );
+    }
+    push( @result, $line ) if length($line) > 0;
+
+    @result;
+}
+
+sub rule_attributes($) {
+    # purpose: extract all attributes from a given rule
+    # paramtr: $rule (IN): xrs rule
+    # returns: hash with attributes
+    # warning: textual (phrase) attributes are munged
+    #
+    my $rule = shift;
+
+    my $p = rindex( $rule, ' ### ' );
+    die "FATAL: Invalid rule $rule\n" unless $p > 0;
+    local $_ = substr( $rule, $p+5 );
+    s/=\{[^\}]+\}/=TEXT/g; 	# omit phrasal (whitespace) rules
+    map { split /=/, $_, 2 } grep { /=/ } split ;
+}
+
+sub commas($) {
+    my $x = shift;
+    my $text = reverse $x;
+    $text =~ s/(\d{3})(?=\d)(?!\d*\.)/$1,/g;
+    return scalar reverse $text;
+}
+
+sub format_value($) {
+    # purpose: format a given value, which may be undefined
+    # paramtr: $value (IN): value to format
+    # returns: a valid string (always)
+    #
+    my $value = shift;
+    if ( defined $value ) {
+	# FIXME: some decoder-formatted data may have snuck in here
+	# This could be a decoder-version dependent n-best formatting
+	# or simply forgotten rule attributes
+	if ( substr($value,0,3) eq '10^' ) {
+	    warn "# Warning: Late resolving power notation \"$value\"\n";
+	    $value = -1 * substr($value,3);
+	} elsif ( substr($value,0,2) eq 'e^' ) {
+	    warn "# Warning: Late resolving power notation \"$value\"\n"; 
+	    $value = exp(1) ** substr($value,2); 
+	}
+
+	if ( abs( $value - int($value) ) < $config{epsilon} ) {
+	    # int
+	    # we may accidentally reach this branch for floats
+	    $value = commas( sprintf( "%ld", int($value) ) );
+	} else {
+	    # float
+	    $value = sprintf( $config{float_format}, $value );
+	}
+    } else {
+	$value = '-';
+    }
+
+    $value;
+}
+
+sub print_rules($$) {
+    # purpose: Emulate print_rules from go-latex
+    # paramtr: $rules (IN): rule array reference
+    #          $sentid (IN): sentence id
+    #
+    my $rules = shift;
+    my $sentid = shift;
+    print "%%%\n%%% print_rules for $sentid\n%%%\n\n";
+
+    my @rows = ();
+    foreach ( @{$rules} ) {
+	my $raw = trim($_);
+	my %attr = rule_attributes($raw);
+	my $rule = escape( substr($raw,0,rindex($raw,'###')), rule => 1 );
+	
+	my @probValues = ();	
+	foreach my $field ( @{$config{rule_fields}} ) {
+	    push( @probValues, format_value($attr{$field}) );
+	}
+	
+	push( @rows, { id => $attr{id},
+		       rule => $rule,
+		       fields => [ @probValues ] } );
+    }
+
+    my $probHeadings = '';
+    my $probColumns = '';
+    foreach my $raw ( @{$config{rule_fields}} ) {
+	my $name = escape($raw);
+	# $probHeadings .= "\n &" if length($probHeadings);
+	$probHeadings .= " &\n \\multicolumn{1}{c\@{\\,\\rule[-1ex]{0.5pt}{1ex}}}{" .
+	    "\\begin{rotate}{30}\\textsf{\\bfseries\\small $name}\\end{rotate}" .
+	    "\\rule{1em}{0pt}}";
+	$probColumns .= 'r|';
+    }
+
+    # print table
+    print "\n\\subsection*{[", escape("$system:$sentid");
+    print "] Rules Used in 1-best}\n";
+    print "\\nopagebreak[3]\n";
+    my $th = "\\cline{1-2}\\textsf{\\bfseries ID\\rule{0pt}{2.5ex}} ";
+    $th .= "& \\textsf{\\bfseries Rule} ";
+    $th .= "$probHeadings\\\\\\hline\\hline";
+    my $n = 2 + @{$config{rule_fields}};
+#    print "\\tablefirsthead{\\multicolumn{$n}{\@{}l}{\\textsf{\\bfseries\\Large [";
+#    print escape("$system:$sentid"), "] Rules Used in 1-Best\\rule[-1ex]{0pt}{3ex}}}\\\\\n$th}\n";
+#    print "\\tablefirsthead{$th}\n";
+    print "\\tablehead{$th}\n";
+    print "\\tabletail{\\hline}\n";
+    print "\\tablelasttail{}\n";
+    print "\\begin{supertabular}{|c|p{", $config{rule_column_width}, "ex}";
+    print "|$probColumns}\n";
+
+    my $probEmpty = join(' & ', map { '' } @{$config{rule_fields}} );
+    foreach my $row ( sort { $a->{id} <=> $b->{id} } @rows ) {
+	my $probRow = join( ' & ', map { escape($_) } @{$row->{fields}} );
+	my $green_p = ( $row->{id} <= -10000 );
+	my $ruleid = $row->{id}; 
+	if ( exists $config{url} && exists $config{mapjg} && 
+	     exists $config{mapjg}{$ruleid} ) {
+	    my $url = File::Spec->catfile( $config{url}, 
+					   $config{mapjg}{$ruleid} );
+	    $ruleid = "\\href{$url}{$ruleid}";
+	}
+
+	if ( $green_p ) {
+	    print "\\textcolor{darkgreen}{$ruleid} & ";
+	} else {
+	    print $ruleid, ' & ';
+	}
+	print '\\raggedright ';
+	if ( $language eq 'chi' ) {
+	    print "\\begin{CJK}{GB}{song}", $row->{rule}, "\\end{CJK}";
+	} elsif ( $language eq 'ara' ) {
+	    print $row->{rule};
+	} else {
+	    die;
+	}
+	print ' & ', $probRow, "\\\\";
+	print "\\hline\n";
+    }
+    print "\\end{supertabular}\n\n";
+}
+
+sub decoding_attributes($) {
+    # purpose: extract all attributes from a given decoding
+    # paramtr: $line (IN): decoder output
+    # returns: hash with attributes
+    # warning: textual (phrase) attributes are munged
+    #
+    local $_ = shift;
+
+    die "FATAL: Invalid decoding $_\n" unless /^NBEST/;
+    s/=\{\{\{.*?\}\}\}/=TEXT/g; # omit phrases
+    map { split /=/, $_, 2 } grep { /=/ } split ;
+}
+
+sub bleu_plus_1($\@) {
+    # purpose: score n-best list with BLEU+1 metric
+    # paramtr: 
+    # returns: 
+    #
+    my $sentid = shift;
+    my $hypref = shift;
+    return undef unless defined $config{english};
+
+    # obtain all 1..4 reference sentences for sentid
+    my @ref = ();
+    foreach my $k ( sort keys %{$config{english}} ) {
+	foreach my $fn ( @{$config{english}{$k}} ) {
+	    push( @ref, read_line_from_file( $fn, $sentid ) );
+	}
+    }
+
+    # repeat reference sentence n times each
+    my @fn = ();
+    for ( my $i=0; $i < @ref; ++$i ) {
+	my ($fh,$fn) = tempfile( "e.$i.XXXXXX", 
+				 SUFFIX => '.ref', DIR => $tmpdir );
+	die "FATAL: Unable to create temporary file in $tmpdir: $!\n" 
+	    unless defined $fh;
+	for ( my $j=0; $j < @{$hypref}; ++$j ) {
+	    print $fh $ref[$i], "\n";
+	}
+	close $fh; 
+	push( @fn, $fn );
+    }
+
+    # store hypothesis n-best
+    my ($fh,$fn) = tempfile( "h.XXXXXX", 
+			     SUFFIX => '.hyp', DIR => $tmpdir );
+    die "FATAL: Unable to create temporary file in $tmpdir: $!\n" 
+	unless defined $fh; 
+    print $fh join("\n",@{$hypref}), "\n";
+    close $fh; 
+    unshift( @fn, $fn );
+
+    # obtain BLEU+1 scores for each n-best hypothesis
+    my @result = ();
+    my $cmd = BLEU_SCRIPT;
+    $cmd .= ' -b' if $config{bpen}; # assess brevity penalty
+    $cmd .= ' ' . join(' ',@fn);
+    # warn( "# $cmd\n" );
+    open( BLEU, "$cmd 2>>/dev/null|" ) || die "FATAL: popen $cmd: $!\n";
+    while ( <BLEU> ) {
+	chomp; 
+	push @result, $_ * 100.0;
+    }
+    close BLEU || die "FATAL: pclose $cmd: $? ($!)\n";
+
+    # remove temporary files
+    unlink @fn;
+    @result;
+}
+
+sub nbest_sort(\@) {
+    my $aref = shift;
+    croak unless ref $aref eq 'ARRAY';
+    my $n = @{$aref}-1;
+    sort { $aref->[$a] <=> $aref->[$b] } 0..$n;
+}
+
+sub nbest_rsort(\@) {
+    my $aref = shift;
+    croak unless ref $aref eq 'ARRAY';
+    my $n = @{$aref}-1;
+    sort { $aref->[$b] <=> $aref->[$a] } 0..$n;
+}
+
+# assume lower is better unless set here
+my %direction = ( 'BLEU+1' => 1 );
+
+sub print_nbest($$) {
+    my $best = shift;
+    my $sentid = shift;
+    my $max = $config{nbest_max} || 1;
+    my @rows = ();
+    print "%%%\n%%% print_nbest for $sentid ($max)\n%%%\n\n";
+
+    # get field names and strip out model scores
+    my @fieldNames = @{$config{nbest_fields}};
+    my @show = ();
+    foreach my $name ( @fieldNames ) {
+	my $p = index($name,'=');
+	substr($name,$p) = '' if ( $p > 0 );
+
+	# determine features that where higher is better 
+	# these have a negative sign in the weight string. 
+	if ( exists $config{feature} ) {
+	    next unless exists $config{feature}{$name};
+	    $direction{$name} = 1 if $config{feature}{$name} < 0;
+	    push( @show, $name );
+	}
+    }
+
+    # store values to highlight later on
+    my @values = map { [] } @fieldNames;
+
+    # open n-best
+    my $rank = 1;
+    my @hyp = ();
+    foreach ( @{$best} ) {
+	last if $rank > $max;
+	my $line = trim($_);
+	my %attr = decoding_attributes($line);
+	if ( substr( $line, 0, 3 ) eq '%%%' ) {
+	    print "\\textit{$line}\\\\\n";
+	    next;
+	}
+
+	my $sentence = '';
+	if ( $line =~ m/\shyp=\{\{\{(.*?)\}\}\}/ ) {
+	    push( @hyp, $1 );
+	    $sentence = escape( $hyp[$#hyp], english => 1 );
+	} else {
+	    die "FATAL: No hypothesis found\n\n$line\n\n";
+	}
+	
+	my $nbest_pos = $attr{'unreranked-nbest-pos'};
+	$nbest_pos = $attr{'nbest'} unless defined $nbest_pos;
+	
+	my @costs = ();
+	for ( my $i=0; $i<@fieldNames; ++$i ) {
+	    push( @costs, format_value( $attr{$fieldNames[$i]} ) );
+	    push( @{$values[$i]}, ( $attr{$fieldNames[$i]} || 0 ) );
+	}
+
+	push( @rows, { rank => $rank,
+		       orig_rank => $nbest_pos+1,
+		       sentence => $sentence,
+		       costs => [ @costs ],
+		       weighted => format_value($attr{totalcost}) } );
+	$rank++;
+    }
+
+    # sneak in BLEU+1 after the fact
+    if ( defined $config{'bleu+1'} ) {
+	my @bp1 = bleu_plus_1( $sentid, @hyp );
+	push( @values, [] );
+	for ( my $i=0; $i < @bp1; ++$i ) {
+	    push( @{$rows[$i]->{costs}}, format_value($bp1[$i]) );
+	    push( @{$values[$#values]}, $bp1[$i] );
+	}
+	push( @fieldNames, 'BLEU+1' );
+    }
+
+    # compute which cost values to highlight
+    my @v;
+    for ( my $i=0; $i < @values; ++$i ) {
+	my @v = @{$values[$i]};
+	my @rank = exists $direction{$fieldNames[$i]} ? 
+	    nbest_rsort(@v) : 
+	    nbest_sort(@v);
+
+	my %seen = ();
+	my $n = 0;
+	for ( my $j = 0; $j < @rows && $n <= $config{'num_to_highlight'}; ++$j ) {
+	    if ( exists $seen{ $v[$rank[$j]] } ) {
+		$seen{ $v[$rank[$j]] }++;
+	    } else {
+		$seen{ $v[$rank[$j]] } = 1;
+		$n++;
+	    }
+	    last if $n > $config{'num_to_highlight'};
+
+	    $rows[ $rank[$j] ]{costs}[$i] = 
+		"\\textbf{" . $rows[ $rank[$j] ]{costs}[$i] . "}";
+	}
+    }
+
+    my $bestHeadings = '';
+    my $bestColumns = '';
+    foreach my $raw ( (@fieldNames, 'totalcost') ) {
+	my $name = escape($raw);
+	# $bestHeadings .= " &\n" if length($bestHeadings);
+	$bestHeadings .= " &\n \\multicolumn{1}{c\@{\\,\\rule[-1ex]{0.5pt}{1ex}}}{" . 
+	    "\\begin{rotate}{30}\\textsf{\\bfseries\\small $name}\\end{rotate}}";
+	$bestColumns .= 'r|';
+    }
+
+    # print table - NOTE: assumes already sorted by totalcost
+    print "\n\\subsection*{[", escape("$system:$sentid"), "] $max-best List}\n";
+    print "\\nopagebreak[3]\n";
+
+    # additional table request by Jason, to show the feature
+    # weights for all feature values in the n-best output
+    print( "\\begin{tabular}{|r|", 'c|' x @show, "}\\hline\n",
+	   "\\textbf{name} & ", 
+	   join( " & ", map { '\textsf{' . escape($_) . '}' } @show ), 
+	   "\\\\\\hline\n",
+	   "\\textbf{value} & ", 
+	   join( " & ", map { format_value($config{feature}{$_}) } @show ), 
+	   "\\\\\\hline\n",
+	   "\\end{tabular}\n\\vspace*{\\baselineskip}\n\n" );
+
+    my $th = "\\cline{1-3}\\textsf{\\bfseries \\#\\rule{0pt}{2.5ex}} ";
+    $th .= "& \\textsf{\\bfseries O\\#} ";
+    $th .= "& \\textsf{\\bfseries Sentence} ";
+    $th .= "$bestHeadings\\\\\\hline\\hline";
+    my $n = 4 + @fieldNames;
+#    print "\\tablefirsthead{\\multicolumn{$n}{\@{}l}{\\textsf{\\bfseries\\Large [";
+#    print escape("$system:$sentid"), "] $max-best List\\rule[-1ex]{0pt}{3ex}}}\\\\\n$th}\n";
+#    print "\\tablefirsthead{$th}\n";
+    print "\\tablehead{$th}\n";
+
+    # calculate dynamic headings
+    my $fieldColumns = join( '', map { "c|" } @fieldNames );
+    print "\\tabletail{\\hline}\n";
+    print "\\tablelasttail{}\n";
+    print "{\\small\n";
+    print "\\begin{supertabular}{|c|c|p{", $config{nbest_column_width}, "ex}|";
+    print $fieldColumns, "c|}\n";
+
+    for ( my $i=0; $i < @rows; ++$i ) {
+	my %row = %{$rows[$i]};
+
+	print $row{rank}, " & ";
+	print $row{orig_rank}, " & ";
+	print "\\raggedright ", $row{sentence}, " & ";
+	foreach my $cost ( @{$row{costs}} ) {
+	    print "$cost & ";
+	}
+	print $row{weighted}, "\\\\\n";
+	print "\\hline\n";
+    }
+
+    print "\\end{supertabular}\n";
+    print "}\n\n";
+    print "\\noindent{\\footnotesize *\\textsf{\\bfseries O\\#} is the n-best rank before duplicate removal.}\n";
+    print "\n\n";
+}
+
+sub check_ending($\%) {
+    # purpose: check, if the given sentence ends in the wish list token
+    # paramtr: $sentence (IN): foreign sentence
+    #          @wishlist (IN): list of tokens (assuming UTF-8 ???)
+    # returns: true if ending is found, false otherwise
+    #
+    my $token = pop( @{[ split( /\s+/, shift() ) ]} ); # last token
+    my $href = shift; 
+    exists $href->{$token}; 
+}
+
+sub read_combined($) {
+    # purpose: Read the combined input file and disseminate the sections
+    # paramtr: $fn (IN): name of the file to take apart
+    # returns: [0] sentence number
+    #          [1] foreign length
+    #          [2] 1-best stuff
+    #          [3] rules
+    #          [4] n-best hypotheses
+    #          [5] lattice (optional)
+    #
+    my $data = shift;
+    my @result = ( -1 );
+
+    foreach ( split /[\012\015]+/, $data ) {
+	s/[\012\015]*$//;	# safe chomp
+	if ( /^REALID: (\d+)(\s+(\S+))?/ ) {
+	    $result[0] = $1;
+	    $result[1] = $3 if ( defined $3 && $3 ne '' );
+	} elsif ( /^1BEST: / ) {
+	    push( @{$result[2]}, substr($_,7) );
+	} elsif ( /^FSDAG: / ) {
+	    $result[5] = substr($_,7)
+		unless $no_lattice;
+	} elsif ( /^RULES: / ) {
+	    push( @{$result[3]}, substr($_,7) );
+	} elsif ( /^NBEST / ) {
+	    push( @{$result[4]}, $_ );
+	} else {
+	    die "ERROR: Illegal input, line $., giving up\n";
+	} 
+    }
+
+    # NEW: guess length from original sentence
+    if ( ! defined $result[1] || $result[1] == 0 ) {
+	local $_ = $result[2][0]; 
+	$result[1] = (split) + 0; 
+	warn "# @{[iso8601]}: Inferred sentence $result[0] length as $result[1] words\n";
+    }
+
+    @result;
+}
+
+sub process($$;$) {
+    my $data = shift;
+    my $flag = shift;
+    my $nth = shift;		# multi-output same sentence for forced decoding
+    my ($sentence,$flength,$best1,$rules,$bestn,$lattice) = read_combined($data);
+    my $extra = ( defined $nth ? ":$nth" : '' );
+    my @title = map { escape( $_, latinok=>1 ) } ( $title, "$sentence$extra" );
+
+    print "\\typeout{processing sentence $sentence$extra}\n";
+    $main::count++;
+
+    # forced decoding may use MISSING, FAILED, or leave it undef 
+    $flength = '0' unless defined $flength; 
+    my $flength_numeric_p = ( defined $flength ? ( $flength =~ /\d+/ ) : 0 );
+
+    if ( exists $config{sentence} && ! exists $config{sentence}{"$sentence$extra"} ) {
+	warn "# @{[iso8601]}: $sentence$extra is not in selected sentence list, skipping\n";
+    } elsif ( exists $config{ending} && ! check_ending( $best1->[0], %{$config{ending}} ) ) {
+	warn "# @{[iso8601]}: $sentence$extra does not end in a preferred ending, skipping\n"; 
+	if ( $missing_content ) {
+	    print "\n\n\\sentence{$title[0]}{$title[1]}\n\n";
+	    print "Sentence $sentence$extra is not shown, because it does not end\n"; 
+	    print "in the preferred sentence ending token.\n\n"; 
+	    0; 
+	} else {
+	    $flag;
+	}
+    } elsif ( $flength_numeric_p && $flength < $config{min_length} ) {
+	warn "# @{[iso8601]}: $sentence$extra is too short ($flength < $config{min_length}), skipping\n";
+	if ( $missing_content ) {
+	    print "\n\n\\sentence{$title[0]}{$title[1]}\n\n";
+	    print "Sentence $sentence$extra is not shown, because its foreign length\n";
+	    print "of $flength words is shorter than the requested minimum of\n";
+	    print $config{min_length}, " words.\n\n";
+	    0;
+	} else { 
+	    $flag;
+	}
+    } elsif ( $flength_numeric_p && $flength > $config{max_length} ) {
+	if ( exists $config{partial} ) {
+	    # do print overly long sentences, but no trees
+	    # and a reduced n-best list
+	    print "\n\n";
+	    print "\\clearpage\n" if $flag;
+	    print "\\sentence{$title[0]}{$title[1]}\n";
+	    print_1best( $best1, $sentence, $lattice, $bestn->[0] );
+	    print "\\vspace*{\\baselineskip}\n\n";
+	    print "Omitting trees for sentence $sentence$extra, because its foreign\n";
+	    print "length of $flength words is longer than the requested maximum of\n";
+	    print $config{max_length}, " words.\n"; 
+	    print_rules( $rules, $sentence );
+
+	    # temporarily lower 
+	    local $config{'num_to_highlight'} = 3;
+	    local $config{nbest_max} = $config{partial};
+	    print_nbest( $bestn, $sentence );
+
+	    $main::output++;
+	    $flag+1;
+	} else {
+	    warn "# @{[iso8601]}: $sentence$extra is too long ($flength > $config{max_length}), skipping\n";
+	    if ( $missing_content ) {
+		print "\n\n\\sentence{$title[0]}{$title[1]}\n\n";
+		print "Sentence $sentence$extra is not shown, because its foreign length\n";
+		print "of $flength words is longer than the request maximum of\n";
+		print $config{max_length}, " words.\n\n";
+		0;
+	    } else {
+		$flag;
+	    }
+	}
+    } elsif ( ! $flength_numeric_p ) {
+	# forced decoding failures
+	warn "# @{[iso8601]}: $sentence$extra reported $flength, 1-best only\n";
+	print "\n\n\\sentence{$title[0]}{$title[1]}\n\n";
+	print_1best( $best1, $sentence, $lattice, $bestn->[0], 'forced' );
+	if ( $flength eq 'MISSING' ) {
+	    print "\n\n\\textsf{The decoder failed to produce \\emph{any} output.}\n\n";
+	} elsif ( $flength eq 'FAILED' ) {
+	    print "\n\n\\textsf{The decoder produced a \\emph{failed parse} output.}\n\n";
+	} else {
+	    print "\n\n\\textsf{Unknown failure more \\emph{$flength}.}\n\n";
+	}
+	0;
+    } else {
+	print "\n\n";
+	print "\\clearpage\n" if $flag;
+	print "\\sentence{$title[0]}{$title[1]}\n";
+	print_1best( $best1, $sentence, $lattice, $bestn->[0] );
+	print_trees( $sentence, $best1, $rules, $nth );
+	print_rules( $rules, $sentence );
+	print_nbest( $bestn, $sentence ) unless $config{'skip_nbest'}; 
+
+	$main::output++;
+	$flag+1;
+    }
+}
+
+sub start_new_document($) {
+    # purpose: start new document
+    # paramtr: $output (IN): filenname of new document to put stuff
+    # globals: OUT (IO): file descriptor as new default for print stmts
+    #          %config (IN): obtain header information
+    #
+    my $output = shift;
+    open( OUT, ">$output" ) || die "FATAL: open $output: $!\n";
+    binmode( OUT, ':raw' );
+    select OUT;		# new default destination for print
+
+    # start new doc
+    print $config{header}[0];
+    print "\\setlength{\\columnseprule}{0pt}\n";
+    print "\\begin{multicols}{2}[\\ ]\n";
+    print "\\tableofcontents\n";
+    print "\\end{multicols}\n";
+    print "\\clearpage\n\n";
+    print $config{header}[1];
+}
+
+
+sub nfile {
+    # purpose: sort function
+    basename($a,'.txt') <=> basename($b,'.txt');
+}
+
+#
+# --- main ------------------------------------------------------
+#
+
+usage unless @ARGV;
+warn "# @{[iso8601]} $0 @SAVE\n"; # say hi
+
+my $gold = 1;
+my $total = -1;
+GetOptions( 'help|h' => \&usage,
+	    'verbose|v!' => \$verbose, 
+	    'total=i' => \$total, # debug option
+	    'system=s' => sub { 
+		die( "ERROR: --system is depracated. Please use --dataset ",
+		     "and --title instead\n" );
+	    },
+	    'dataset=s' => \$system,
+	    'title=s' => \$title,
+	    'output|o=s' => \$output,
+	    'no-missing-content' => sub { $missing_content=0 },
+            'english|e=s' => sub {
+		my ($k,$v);
+		foreach my $e ( split /,/, $_[1] ) {
+		    if ( index( $e, '=' ) >= 0 ) {
+			($k,$v) = split /=/, $e, 2;
+		    } else {
+			$k = ENGLISH;
+			$v = $e;
+		    }
+
+		    if ( -r $v ) {
+			push( @{$config{english}{$k}}, $v );
+		    } else {
+			warn "Warning: Unable to read $v, skipping!\n";
+		    }
+		}
+	    },
+	    'gold!' => \$gold,
+	    'no-lattice|no-lattices' => \$no_lattice,
+	    'preset=s' => sub {
+		my $root = $_[1];
+		croak "$root is not a directory\n" unless -d $root;
+		my $rlang = File::Spec->catdir( $root, $language );
+		unless ( -d $rlang ) {
+		    warn "Warning: $rlang does not exist, skipping preset\n";
+		    return;
+		} else {
+		    warn "# @{[iso8601]}: found $rlang\n";
+		}
+		my $x = ( split /\s+/,lc($system) )[0];
+		my $rlsys = File::Spec->catdir( $rlang, $x );
+		unless ( -d $rlsys ) {
+		    warn "Warning: $rlsys does not exist, skipping preset\n";
+		    warn "Available systems: `ls -d $rlang`\n";
+		    return;
+		} else {
+		    warn "# @{[iso8601]}: found $rlsys\n";
+		}
+		opendir( DIR, $rlsys ) || die "opendir $rlsys: $!\n";
+		foreach my $f ( readdir(DIR) ) {
+		    my $fn = File::Spec->catfile( $rlsys, $f );
+		    next unless ( -f $fn && -r _ );
+		    if ( $gold == 0 && substr($f,0,4) eq 'gold' ) {
+			warn "# skipping gold standard $f\n";
+			next;
+		    }
+		    warn "# @{[iso8601]}: -e $fn\n";
+		    my $base = basename( $fn, '.hyp' );
+		    push( @{$config{english}{$base}}, $fn );
+		}
+		closedir DIR;
+	    },
+	    'sentence|s=s' => sub {
+		foreach my $r ( split /,/, $_[1] ) {
+		    if ( $r =~ /(\d+)-(\d+)/ ) {
+			for ( my $i=$1; $i<=$2; ++$i ) {
+			    $config{sentence}{$i} = $i;
+			}
+		    } else {
+			$config{sentence}{$r+0} = $r+0;
+		    }
+		}
+	    },
+	    'feature-file|F=s' => sub {
+		local(*F);
+		my $fn = $_[1];
+		if ( open( F, "<$fn" ) ) {
+		    warn "# @{[iso8601]}: reading $fn\n";
+		    binmode( F, ':raw' );
+		    while ( <F> ) {
+			s/[\015\012]+$//;
+			foreach my $f ( split /[;,]/,$_ ) {
+			    push( @{$config{feature}}, $f );
+			}
+		    }
+		    close F;
+		} else {
+		    die "ERROR: open $fn: $!\n";
+		}
+	    },
+	    'features|f=s' => sub {
+		foreach my $f ( split /[;,]/,$_[1] ) {
+		    push( @{$config{feature}}, $f );
+		}
+	    },
+	    'record|R=s' => sub { 
+		local(*F);
+		my $fn = $_[1];
+		if ( open( F, "<$fn" ) ) {
+		    binmode( F, ':raw' );
+		    my $state = 0;
+		    while ( <F> ) {
+			s/[\015\012]+$//;
+			if ( $state == 0 ) {
+			    if ( /^\#/ ) {
+				next unless length($_) > 5;
+				push( @{$config{record}}, substr( $_, 2 ) );
+			    } else { 
+				$state = 1;
+			    }
+			} elsif ( $state == 1 ) {
+			    if ( /^\#/ ) {
+				$state = 2;
+			    } elsif ( /--pass\s+(\S+)?/ ) {
+				push( @{$config{record}}, "decoder: $1" );
+			    }
+			} else {
+			    last;
+			}
+		    }
+		    close F;
+		} else {
+		    die "ERROR: open $fn: $!\n";
+		}
+	    },
+	    'replicate+' => sub { $config{replicate}++ }, 
+	    'ends-in|endings=s' => sub {
+		my $fn = $_[1]; 
+		my @x = (); 
+		open( IN, "<$fn" ) || die "FATAL: open $fn: $!\n"; 
+		while ( <IN> ) {
+		    s/[\015\012]+$//; # safe chomp
+		    push( @x, (split) ); 
+		}
+		close IN;
+		# currently an overwriting option
+		%{$config{ending}} = map { $_ => 1 } @x; 
+	    },
+	    'ligature|ligatures' => sub { $config{ligatures} = 1 },
+            'skip-headers|skip-header' => sub { $config{noheader} = 1 },
+            'dot=s' => sub { $config{dotdir} = $_[1]; },
+	    'language|l=s' => sub { $language = lc($_[1]) },
+	    'rule-column-width=i' => sub { $config{rule_column_width} = $_[1] },
+	    'min-length=i' => sub { $config{min_length} = $_[1]+0 },
+	    'max-length=i' => sub { $config{max_length} = $_[1]+0 },
+	    'rule-fields=s' => sub {
+		$config{rule_fields} = [] unless exists $config{new_rule};
+		push( @{$config{rule_fields}}, 
+		      map { trim($_) } split /,/, $_[1] );
+		$config{new_rule} = 1; # seen flag
+	    },
+	    'nbest-max=i' => sub { $config{nbest_max} = $_[1] },
+	    'nbest-column-width=i' => sub { $config{nbest_column_width} = $_[1] },
+	    'nbest-fields=s' => sub {
+		$config{nbest_fields} = [] unless exists $config{new_nbest};
+		push( @{$config{nbest_fields}}, 
+		      map { trim($_) } split /,/, $_[1] );
+		$config{new_nbest} = 1; # seen flag
+	    },
+	    'transliterated' => sub { $config{transtrue} = 1 },
+	    'booklet|book=i' => sub { $config{booklet} = $_[1]+0 },
+	    'partial-long:i' => sub { $config{partial} = $_[1] || 10 },
+	    'decimals=i' => sub { 
+		my $decimals = $_[1] + 0;
+		die "FATAL: $decimals is not non-negative" unless $decimals >= 0;
+		$config{decimals} = $decimals;
+		my $tmp = ('0' x ( $decimals || 1 )) . '1';
+		substr( $tmp, 1, 0, '.' ); # insert decimal point
+		$config{epsilon} = $tmp + 0.0; # make numerical
+		warn "# @{[iso8601]}: epsilon set to $config{epsilon}\n";
+		$config{float_format} = '%.' . $decimals . 'f';
+	    },
+	    'tree|t=o' => sub { $config{tree} = $_[1]+0 },
+	    'eps-files|eps-tree|eps-dir=s' => sub { $config{'eps_tree'} = $_[1] },
+	    'bleu-plus-one|bleu-plus-1' => sub { $config{'bleu+1'} = 1 },
+	    'brevity-penalty' => sub { $config{bpen} = 1 },
+	    'skip-n-best|skip-nbest' => sub { $config{'skip_nbest'} = 1 },
+	    'num-to-highlight=i' => sub { $config{'num_to_highlight'} = $_[1] }, 
+	    'dot-files|dotfiles=s' => sub { $config{dotfiles} = $_[1] }, 
+	    'jonathan-url=s' => sub { $config{url} = $_[1] },
+	    'jonathan-map=s' => sub { 
+		if ( open( MAP, "<" . $_[1] ) ) {
+		    while ( <MAP> ) {
+			chomp ; 
+			$config{mapjg}{$1} = $_ if m{/(-?\d+)\.html};
+		    }
+		    close MAP;
+		}
+	    }
+	  ) || die "ERROR: Problem processing options\n";
+die "FATAL: Please provide some description of your corpus with --system\n"
+    if length($system) == 0;
+$title=$system if length($title) == 0;
+
+# mini-sanity check
+if ( ($config{tree} & (EPS_DTREE | EPS_PTREE)) > 0 ) {
+    if ( $config{'eps_tree'} eq $default_config{'eps_tree'} ) {
+	# default directory may not exist, so create it
+	unless ( mkdir($config{'eps_tree'}) ) {
+	    # not a failure, if directory already exists
+	    die "FATAL: mkdir $config{eps_tree}: $!\n"
+		unless $!{EEXIST};
+	}
+    }
+    
+    die( "--eps-tree base directory \"", $config{'eps_tree'}, "\" does not exist!\n" )
+	if ( exists $config{'eps_tree'} && ! -d $config{'eps_tree'} );
+    if ( substr($config{'eps_tree'},0,1) eq File::Spec->catfile('','') ) {
+	die( "Please do not use absolute paths with --color-trees\n",
+	     "Please use a sub directory in your current workdir\n" );
+    }
+}
+
+
+
+#
+# summary
+#
+if ( defined $config{english} ) {
+    foreach my $k ( sort keys %{$config{english}} ) {
+	foreach my $fn ( @{$config{english}{$k}} ) {
+	    if ( $k eq ENGLISH ) {
+		my $base = basename($fn, '.tok', '.mttok', '.lc' );
+		warn "# @{[iso8601]}: found english $base\n";
+	    } else {
+		warn "# @{[iso8601]}: found english $k\n";
+	    }
+	}
+    }
+} else {
+    warn "Warning: No english refernces whatsoever!\n";
+}
+
+#
+# assemble LaTeX pre-amble into header[0]
+#
+$language = 'chi' if $language eq 'zh';
+$language = 'ara' if $language eq 'ar';
+$config{trailer} = "\n\\end{document}\n";
+@{$config{header}} = ( '', '' );
+if ( $language eq 'chi' || $language eq 'ara' ) {
+    my %ok = ( heading => escape(generate_heading()) );
+    ## warn "# ftell(DATA)=", 0+seek(DATA,0,1), "\n";
+    while ( <DATA> ) {
+	my ($prefix,$rest) = split /:/, $_, 2;
+	next unless length($prefix) == 3;
+	$rest =~ s/\$(\w+)/(exists $ok{$1} ? $ok{$1} : "\$$1")/egx;
+	$config{header}[0] .= $rest if ( $prefix eq 'all' || $prefix eq $language );
+    }
+
+    # read Ulf's transliteration tables
+    if ( $language eq 'ara' ) {
+	init_taclang();
+	init_buckwalter();
+	if ( $config{ligatures} ) {
+	    $config{header}[0] .= "\\ligstrue\n";
+	} else {
+	    $config{header}[0] .= "\\ligsfalse\n";
+	}
+
+	if ( exists $config{transtrue} ) {
+	    # For Steve -- produce no arabic script whatsoever
+	    $config{header}[0] .= "\\transtrue\n\\arabfalse\n";
+	}
+    }
+} else {
+    die "Illegal language $language\n";
+}
+
+#
+# remember how wide we format floats, so we can format ints
+#
+my $s = substr( sprintf( $config{float_format}, 1.0 ), 1 );
+$config{header}[0] .= "\\newlength{\\myfloatwidth}\n" .
+    "\\settowidth{\\myfloatwidth}{$s}\n";
+
+# 
+# add extras in initial page(s) to header[1]
+#
+my $flag = 0;
+if ( exists $config{record} && ! exists $config{noheader} ) {
+    $config{header}[1] =
+	"\n\\section[Configuration]{$system - Decoding Settings}\n\\nopagebreak[3]\n" .
+	"\\tablehead{\\textsf{\\bfseries property} & " .
+	"\\multicolumn{2}{l}{\\textsf{\\bfseries setting}}\\\\\\hline\\hline}\n" .
+	"\\tabletail{}\\tablelasttail{}\n" .
+	"{\\small\n" .
+	"\\begin{supertabular}{lll}\n";
+    foreach ( @{$config{record}} ) {
+	my ($k,$v) = split /\s*:\s*/, $_, 2;
+	next unless defined $v;
+	$config{header}[1] .= ( " \\textsf{\\bfseries " . escape($k) . "} & " );
+	($k,$v) = split m{=}, $v, 2;
+	if ( defined $v ) {
+	    $config{header}[1] .= ( escape($k) . ' & ' . escape($v) );
+	} else {
+	    $config{header}[1] .= ( "\\multicolumn{2}{l}{" . escape($k) . "}" );
+	}
+	$config{header}[1] .= "\\\\\n";
+    }
+    $config{header}[1] .= "\\end{supertabular}\n";
+    $config{header}[1] .= "}\n\n";
+    $flag++;
+}
+
+if ( exists $config{feature} ) {
+    # consolidate features (for David)
+    my %feat = ();
+    foreach my $i ( @{$config{feature}} ) {
+	my ($k,$v) = split m{:}, $i, 2; 
+	if ( exists $feat{$k} ) {
+	    # warn about duplicate feature
+	    warn "# @{[iso8601]}: new $k overwrites existing value\n";
+	}
+	$feat{$k} = $v;
+    }
+    $config{feature} = { %feat };
+    $config{f_count} = scalar keys %feat; 
+}
+
+sub add(\@$$) {
+    my $aref = shift;
+    my $sent = shift;
+    my $href = shift;
+    if ( defined $aref->[$sent] ) {
+	# probably forced decoding multi-entry
+	if ( ref $aref->[$sent] eq 'HASH' ) {
+	    # original 1-entry, expand
+	    warn "# @{[iso8601]}: adding 2nd entry for $sent\n";
+	    my $tmp = { %{$aref->[$sent]} };
+	    $aref->[$sent] = [ $tmp, $href ];
+	} else {
+	    # already multi-entry
+	    warn "# @{[iso8601]}: adding nth entry for $sent\n";
+	    push( @{$aref->[$sent]}, $href );
+	}
+    } else {
+	$aref->[$sent] = $href;
+    }
+}
+
+#
+# process or reconstitute index files
+#
+my ($p,@index,$dfn,$ifn);
+foreach my $fn ( @ARGV ) {
+    if ( ($p = index( $fn, '=' )) == -1 ) {
+	# attemp smart mode first
+	if ( $fn =~ m{\.[^./]+$} ) {
+	    $dfn = $ifn = $fn;
+	    $ifn =~ s{\.[^./]+$}{.idx};
+	    goto HAS_INDEX_FILE if -r $ifn;
+	}
+
+	# No index file, read data file and reconstruct index
+	warn "# @{[iso8601]}: Reconstructing index of $fn\n";
+	local $/ = '';
+	local(*F);
+	open( F, "<$fn" ) || die "ERROR: open $fn: $!\n";
+	binmode( F, ':raw');
+	my $start = tell(F);
+	while ( <F> ) {
+	    my $final = tell(F);
+	    if ( /^REALID:\s*(\d+)/ ) {
+		add( @index, $1, { data => $fn, start => $start, final => $final-1 } );
+		$start = $final;
+	    }
+	}
+	close F;
+    } else {
+	$dfn = substr( $fn, 0, $p );
+	$ifn = substr( $fn, $p+1 );
+
+      HAS_INDEX_FILE:
+	warn "# @{[iso8601]}: reading index from $ifn\n";
+	open( IDX, "<$ifn" ) || die "ERROR: open $ifn: $!\n";
+	# index file is pure ASCII (digits and whitespaces)
+	while ( <IDX> ) {
+	    chomp;
+	    my @x = split /\t/ ;
+	    next unless @x == 3;
+	    add( @index, $x[0], { data => $dfn, start => $x[1], final => $x[2] } );
+	}
+	close IDX;
+    }
+}
+
+#
+# process data files
+#
+my $out_count = 0;
+my $out_prefix = File::Spec->catfile( dirname($output), basename($output,'.tex') );
+my ($lastfn,$rsize,$lastdir);
+for ( my $nr = 0; $nr < @index; ++$nr ) {
+    next unless defined $index[$nr];
+    last if ( $total != -1 && $main::count >= $total );
+
+    if ( exists $config{sentence} && ! exists $config{sentence}{$nr} ) {
+	warn "# @{[iso8601]}: $nr is not in selected sentence list, skipping\n";
+    } else {
+	#
+	# only print headers, if we print anything at all
+	#
+	if ( $main::output % $config{booklet} == 0 ) {
+	    if ( $config{booklet} == BOOKLET ) {
+		# default 1 book mode, only run this at very beginning!
+		# note: the $output filename is AS SPECIFIED by user!
+		start_new_document($output) if $main::output == 0;
+	    } else {
+		# finish old doc
+		print $config{trailer} if $main::output;
+
+		# switch documents
+		$output = sprintf( "%s-%d.tex", $out_prefix, ++$out_count );
+		warn "# @{[iso8601]}: starting booklet $out_count\n";
+		start_new_document($output); 
+	    }
+	}
+
+	#
+	# 'eps_tree' trees -- create subdirs ahead, but only those we need
+	# treat stat() as more expensive than mkdir()
+	#
+	if ( exists $config{'eps_tree'} ) {
+	    use integer;
+	    my $dir = File::Spec->catdir( $config{'eps_tree'}, $nr / 100 );
+	    unless ( defined $lastdir && $lastdir eq $dir ) {
+		unless ( mkdir($dir) ) {
+		    die "ERROR: mkdir $dir: $!\n" unless $!{EEXIST}; 
+		}
+		$lastdir = $dir;
+	    }
+	}
+
+	if ( ref $index[$nr] eq 'HASH' ) {
+	    my %x = %{$index[$nr]};
+	    warn "# @{[iso8601]}: reading sentence $nr from $x{data}:$x{start}-$x{final}\n";
+
+	    if ( ! defined $lastfn || $lastfn ne $x{data} ) {
+		close F if defined $lastfn;
+		open( F, "<$x{data}" ) || die "ERROR: open $x{data}: $!\n";
+		binmode( F, ':raw' );
+	    }
+	    if ( seek( F, $x{start}, SEEK_SET ) ) {
+		my $amount = $x{final} - $x{start};
+		if ( ($rsize=read( F, $p, $amount )) == $amount ) {
+		    $flag = process( $p, $flag );
+		} else { 
+		    die "ERROR: read $x{data} ($rsize of $amount): $!\n";
+		}
+	    } else {
+		die "ERROR: seek $x{data}: $!\n";
+	    }
+	    $lastfn = $x{data};
+	} elsif ( ref $index[$nr] eq 'ARRAY' ) {
+	    # multi-entry
+	    for ( my $n=0; $n < @{$index[$nr]}; ++$n ) {
+		my %x = %{$index[$nr][$n]};
+		warn "# @{[iso8601]}: reading sentence $nr from $x{data}:$x{start}-$x{final}\n";
+
+		if ( ! defined $lastfn || $lastfn ne $x{data} ) {
+		    close F if defined $lastfn;
+		    open( F, "<$x{data}" ) || die "ERROR: open $x{data}: $!\n";
+		    binmode( F, ':raw' );
+		}
+		if ( seek( F, $x{start}, SEEK_SET ) ) {
+		    my $amount = $x{final} - $x{start};
+		    if ( ($rsize=read( F, $p, $amount )) == $amount ) {
+			$flag = process( $p, $flag, $n );
+		    } else { 
+			die "ERROR: read $x{data} ($rsize of $amount): $!\n";
+		    }
+		} else {
+		    die "ERROR: seek $x{data}: $!\n";
+		}
+		$lastfn = $x{data};
+	    }
+	}
+    }
+}
+close F if defined $lastfn;
+
+# finish old doc
+if ( $main::output ) {
+    print $config{trailer};
+    close OUT;
+    select STDOUT;
+}
+
+# done
+my $msg = "processed $main::count sentences, $main::output with tables";
+$msg .= " in $out_count booklets\n" if $config{booklet} != BOOKLET;
+warn "# @{[iso8601]}: $msg\n"; 
+
+my $sce = find_exec( 'convert-encoding', 
+		     File::Spec->catfile( (getpwnam('sdeneefe'))[7], 'bin' ) );
+my $n2a = find_exec( 'native2ascii', 
+		     File::Spec->catfile( $ENV{'JAVA_HOME'}, 'bin' ) );
+if ( $output ne '-' && $language eq 'chi' ) {
+    if ( ( $n2a && -x $n2a ) || ( $sce && -x $sce ) ) {
+	# UTF8 to GB2312 conversion
+	my @arg;
+	warn "# @{[iso8601]}: converting UTF8 to GB2312 for you\n";
+	rename( $output, "$output.utf8" );
+
+	if ( -x $sce ) {
+	    # Steve's handy little Java tool
+	    warn "# @{[iso8601]}: using Steve\'s handy little tool\n";
+	    
+	    @arg = ( $sce, "$output.utf8", $output, 'UTF8', 'GB2312' );
+	    system { $arg[0] } @arg;
+	    die( "ERROR: ", $arg[0], " returned ", $?>>8, '/', ($? & 127), "\n" )
+		unless $? == 0;
+	} else {
+	    # The long way around using native2ascii
+	    warn "# @{[iso8601]}: using multiple native2ascii trickery\n";
+
+	    warn "# escape \\u\n";
+	    my $rand = join( '', qw(89 de b6 0a cf 7d 9d 46 40 e9 d4 14 05 3e d4) );
+	    @arg = ( $^X, '-i', '-pe', 's{\\\\u}{' . $rand . '}g', "$output.utf8" );
+	    system { $arg[0] } @arg;
+	    die( "ERROR: ", $arg[0], " returned ", $?>>8, '/', ($? & 127), "\n" )
+		unless $? == 0;
+
+	    warn "# utf8 to native\n";
+	    @arg = ( $n2a, '-encoding', 'UTF8', "$output.utf8", "$output.java" );
+	    system { $arg[0] } @arg;
+	    die( "ERROR: ", $arg[0], " returned ", $?>>8, '/', ($? & 127), "\n" )
+		unless $? == 0;
+
+	    warn "# native to gb2312\n";
+	    @arg = ( $n2a, '-reverse', '-encoding', 'GB2312', "$output.java", $output );
+	    system { $arg[0] } @arg;
+	    die( "ERROR: ", $arg[0], " returned ", $?>>8, '/', ($? & 127), "\n" )
+		unless $? == 0;
+
+	    warn "# unescape \\u\n";
+	    @arg = ( $^X, '-i', '-pe', 's{' . $rand . '}{\\\\u}g', $output );
+	    system { $arg[0] } @arg;
+	    die( "ERROR: ", $arg[0], " returned ", $?>>8, '/', ($? & 127), "\n" )
+		unless $? == 0;
+	}
+    } else {
+	warn "\nWARNING: You MUST convert UTF8 TO GB2312 before running LaTeX!\n\n";
+    }
+}
+
+exit 0;
+
+# other stuff, instead of a here document
+
+__DATA__
+all:\documentclass[letterpaper]{article}
+all:\usepackage[left=12mm,right=12mm,top=20mm,bottom=12mm,landscape,dvips]{geometry}
+all:\usepackage{times,tabularx,supertabular}
+all:\usepackage{qtree,pst-tree,pst-qtree,pstricks}
+chi:\usepackage{CJK}
+ara:\usepackage{arabtex,atrans,nashbf,utf8}
+all:\usepackage[T1]{fontenc}
+all:\usepackage{rotating}
+all:\usepackage{psboxit,multicol,color}
+all:\usepackage{graphicx} % hmmm
+all:\PScommands
+all:\setlength{\parindent}{0pt}
+all:\makeatletter
+all:\renewcommand{\l@section}{\@dottedtocline{1}{1.5em}{2.3em}}
+all:\def\shrinkboxtokeepaspect(#1,#2)#3{\shrinkboxto(#1,0){\shrinkboxto(0,#2){#3}}}
+all:\def\shrinkboxto(#1,#2){\pst@makebox{\@shrinkboxto(#1,#2)}}
+all:\def\@shrinkboxto(#1,#2){%
+all:\begingroup
+all:\pssetlength\pst@dima{#1}%
+all:\pssetlength\pst@dimb{#2}%
+all:\ifdim\pst@dima=\z@\else
+all:\pst@divide{\pst@dima}{\wd\pst@hbox}\pst@tempc
+all:\ifdim\pst@tempc pt > 1 pt
+all:\def\pst@tempc{1 }%
+all:\fi
+all:\edef\pst@tempc{\pst@tempc\space}%
+all:\fi
+all:\ifdim\pst@dimb=\z@
+all:\ifdim\pst@dima=\z@
+all:\@pstrickserr{%
+all:\string\shrinkboxto\space dimensions cannot both be zero}\@ehpa
+all:\def\pst@tempa{}%
+all:\def\pst@tempc{1 }%
+all:\def\pst@tempd{1 }%
+all:\else
+all:\let\pst@tempd\pst@tempc
+all:\fi
+all:\else
+all:\pst@dimc=\ht\pst@hbox
+all:\advance\pst@dimc\dp\pst@hbox
+all:\pst@divide{\pst@dimb}{\pst@dimc}\pst@tempd
+all:\ifdim\pst@tempd pt > 1 pt
+all:\def\pst@tempd{1 }%
+all:\fi
+all:\edef\pst@tempd{\pst@tempd\space}%
+all:\ifdim\pst@dima=\z@ \let\pst@tempc\pst@tempd \fi
+all:\fi
+all:\edef\pst@tempa{\pst@tempc \pst@tempd scale }%
+all:\@@scalebox
+all:\endgroup}
+all:\pslongbox{Shrinkboxto}{\shrinkboxto}
+all:
+all:\DeclareRobustCommand*\textsubscript[1]{%
+all:{\m@th\ensuremath{_{\mbox{\fontsize\sf@size\z@\selectfont#1}}}}}
+all:
+all:\setcounter{secnumdepth}{0} %% suppress section numbering
+all:\usepackage[dvips,linkcolor=blue]{hyperref} 
+all:\pagestyle{myheadings}
+all:\newcounter{sentence}
+all:\renewcommand{\thesection}{Sentence~\arabic{sentence}}
+all:\newcommand{\sentence}[2]{%
+all:  \setcounter{sentence}{#2}
+all:  \section[Sentence #2]{#1 - sentence~#2}%
+all:  \markboth{{#1 - sentence~#2}\hfill {$heading}\hfill}%
+all:           {{#1 - sentence~#2}\hfill {$heading}\hfill}%
+all:}
+all:\makeatother
+all:
+all:\definecolor{darkgreen}{rgb}{0,0.3,0.1}
+all:\definecolor{lightgreen}{rgb}{0.9,1,0.9}
+all:\begin{document}
+ara:\setcode{utf8}
+all:\qtreecenterfalse
+all:
+ara:\setarab
+chi:\begin{CJK}{GB}{song}
+chi:\end{CJK}

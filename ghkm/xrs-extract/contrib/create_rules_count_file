@@ -1,0 +1,124 @@
+#!/usr/bin/perl
+
+# Note: old method of collecting rule counts. You probably won't need to 
+# run it anymore.
+
+# This script collects counts from rule extracts read from STDIN
+# and sends to STDOUT a rule file that has each rule
+# appearing only once (with the added fields: count=X
+# and fraccounts=Y).
+
+use strict;
+
+# This temporary file must be put in a location that contains
+# a _lot_ of free space: (/tmp should be fine in most cases
+# on the cluster)
+#my $TMPDIR = '/tmp';
+my $TMPDIR = '~/nlg/tmp';
+
+# Decompress all .gz files, sort, and uniq:
+open(F,"cat | sort -T $TMPDIR | uniq -c |");
+
+# Process uniq'ed rule counts: assign a count
+# and a fractional count to each rule, and drop 
+# those that appear only once:
+my %LHSBUFFER;
+my %ROOTBUFFER;
+my ($tlhs,$trhs,$tfields,$tcount,$tfraccount,$tminimal);
+my ($lcount,$lfraccount);
+my ($rcount,$rfraccount);
+my ($prevlhs,$prevroot);
+print "\$\$\$ filetype=rule version=1.0\n";
+while(<F>) {
+  chop;
+  s/ start=(\S+)//;
+  s/ end=(\S+)//;
+  s/ id=(\S+)//;
+  my ($root,$lhs,$rhs,$fields,$uniqcount,$count,$fraccount,$minimal);
+  my $rule;
+  /^\s*(\d+)\s+(.*) ### (.*)$/;
+  $uniqcount = $1; $rule = $2; $fields = $3;
+  next if $rule =~ /^(%|\$\$\$)/;
+  ($lhs,$rhs) = split(/ -> /,$rule);
+  $lhs =~ /^([^(]+)/;
+  $root = $1;
+  $fields =~ s/ count=(\S+)//;
+  $count = ($1) ? $uniqcount : $1*$uniqcount;
+  $fields =~ s/ fraccount=(\S+)//;
+  $fraccount = $1*$uniqcount;
+  $fields =~ s/ minimal=(\S+)//;
+  $minimal = $1*$uniqcount;
+  #print "lhs: $lhs rhs: $rhs ucount: $uniqcount count: $count\n";
+  # Update counts of lhs-rhs:
+  if($tlhs    eq $lhs && 
+     $trhs    eq $rhs && 
+     $tfields eq $fields) {
+    $tcount     += $count; 
+    $tfraccount += $fraccount; 
+    $tminimal   += $minimal;
+  } else {
+    addcounts($tlhs,$trhs,$tfields,$tcount,$tfraccount,$tminimal);
+    $tlhs       = $lhs;
+    $trhs       = $rhs;
+    $tfields    = $fields;
+    $tcount     = $count; 
+    $tfraccount = $fraccount; 
+    $tminimal   = $minimal;
+  }
+  # Update counts of lhs:
+  if($prevlhs eq $lhs) {
+    $lcount     += $count; 
+    $lfraccount += $fraccount; 
+  } else {
+    addlhscounts($lcount,$lfraccount);
+    $prevlhs    = $lhs;
+    $lcount     = $count; 
+    $lfraccount = $fraccount; 
+  }
+  # Update counts of root:
+  if($prevroot eq $root) {
+    $rcount     += $count;
+    $rfraccount += $fraccount;
+  } else {
+    printcounts($rcount,$rfraccount);
+    $prevroot   = $root;
+    $rcount     = $count; 
+    $rfraccount = $fraccount; 
+  }
+}
+addcounts($tlhs,$trhs,$tfields,$tcount,$tfraccount,$tminimal);
+addlhscounts($lcount,$lfraccount);
+printcounts($rcount,$rfraccount);
+
+## Subroutines: ##
+
+sub addcounts {
+  my ($lhs,$rhs,$fields,$count,$fraccount,$minimal) = @_;
+  #if($count > 1 && $rhs ne "") {
+  if($rhs ne "") {
+    #push @LHSBUFFER, "$lhs -> $rhs ### $fields".
+    push @{$LHSBUFFER{$lhs}}, "$rhs ### $fields".
+                  " minimal=".($minimal/$count).
+                  " count=$count fraccount=$fraccount";
+  }
+}
+
+sub addlhscounts {
+  my ($lcount,$lfraccount) = @_;
+  foreach my $lhs (keys %LHSBUFFER) {
+	 for(my $i=0; $i<=$#{$LHSBUFFER{$lhs}};++$i) {
+		push @{$ROOTBUFFER{$lhs}}, "$LHSBUFFER{$lhs}[$i] lhscount=$lcount lhsfraccount=$lfraccount";
+	 }
+  }
+  %LHSBUFFER = ();
+}
+
+sub printcounts {
+  my ($rcount,$rfraccount) = @_;
+  foreach my $lhs (keys %ROOTBUFFER) {
+	 for(my $i=0; $i<=$#{$ROOTBUFFER{$lhs}};++$i) {
+		print "$lhs -> $ROOTBUFFER{$lhs}[$i] rootcount=$rcount rootfraccount=$rfraccount\n";
+	 }
+  }
+  %ROOTBUFFER = ();
+}

@@ -1,0 +1,116 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Invocation</title>
+<link rel="stylesheet" href="../../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.69.1">
+<link rel="start" href="../../index.html" title="Part I. Boost.Build v2 User Manual">
+<link rel="up" href="../advanced.html" title="Chapter 4. User documentation">
+<link rel="prev" href="configuration.html" title="Configuration">
+<link rel="next" href="targets.html" title="Declaring targets">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../boost.png"></td></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="configuration.html"><img src="../../images/prev.png" alt="Prev"></a><a accesskey="u" href="../advanced.html"><img src="../../images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../images/home.png" alt="Home"></a><a accesskey="n" href="targets.html"><img src="../../images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="bbv2.advanced.invocation"></a>Invocation</h2></div></div></div>
+<p>This section describes how invoke Boost.Build from the command line</p>
+<p>To build all targets defined in Jamfile in the current directory with default properties, run:
+</p>
+<pre class="screen">
+bjam
+</pre>
+<p>To build specific targets, specify them on the command line:
+</p>
+<pre class="screen">
+bjam lib1 subproject//lib2 
+</pre>
+<p>
+      </p>
+<p>To request a certain value for some property, add <code class="literal">
+      <em class="replaceable"><code>property</code></em>=<em class="replaceable"><code>value</code></em></code> to the command line:
+</p>
+<pre class="screen">
+bjam toolset=gcc variant=debug optimization=space
+</pre>
+<p>
+       For often used features, like <code class="literal">toolset</code> and <code class="literal">variant</code> you can
+       omit the feature name, so the above can be written as:
+</p>
+<pre class="screen">
+bjam optimization=space
+</pre>
+<p>
+      </p>
+<p>Boost.Build recognizes the following command line options.</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="option">--clean</code></span></dt>
+<dd><p>Cleans all targets in the current directory and 
+            in any subprojects. Note that unlike the <code class="literal">clean</code> 
+            target in make, you can use <code class="literal">--clean</code>
+            together with target names to clean specific targets.</p></dd>
+<dt><span class="term"><code class="option">--clean-all</code></span></dt>
+<dd><p>Cleans all targets, 
+            no matter where they are defined. In particular, it will clean targets 
+            in parent Jamfiles, and targets defined under other project roots.
+            </p></dd>
+<dt><span class="term"><code class="option">--build-dir</code></span></dt>
+<dd>
+<p>Changes build directories for all project roots being built. When
+            this option is specified, all Jamroot files should declare project name.
+            The build directory for the project root will be computed by concatanating
+            the value of the <code class="option">--build-dir</code> option, the project name 
+            specified in Jamroot, and the build dir specified in Jamroot 
+            (or <code class="literal">bin</code>, if none is specified).
+            </p>
+<p>The option is primarily useful when building from read-only
+            media, when you can't modify Jamroot.
+            </p>
+</dd>
+<dt><span class="term"><code class="option">--version</code></span></dt>
+<dd><p>Prints information on Boost.Build and Boost.Jam
+                  versions.
+            </p></dd>
+<dt>
+<a name="bbv2.reference.init.options.help"></a><span class="term"><code class="option">--help</code></span>
+</dt>
+<dd><p>Invokes the online help system. This prints general
+                  information on how to use the help system with additional
+                  --help* options.
+            </p></dd>
+<dt><span class="term"><code class="option">--debug-configuration</code></span></dt>
+<dd><p>Produces debug information about loading of Boost.Build 
+            and toolset files.</p></dd>
+<dt><span class="term"><code class="option">--debug-building</code></span></dt>
+<dd><p>Prints what targets are being built and with what properties.
+            </p></dd>
+<dt><span class="term"><code class="option">--debug-generators</code></span></dt>
+<dd><p>Produces debug output from generator search process. 
+            Useful for debugging custom generators.
+            </p></dd>
+<dt><span class="term"><code class="option">--ignore-config</code></span></dt>
+<dd><p>Do not load <code class="literal">site-config.jam</code> and
+                  <code class="literal">user-config.jam</code> configuration files.
+            </p></dd>
+<dt><span class="term"><code class="option">--debug</code></span></dt>
+<dd><p>Enables internal checks.
+            </p></dd>
+</dl></div>
+<p>For complete specification of command line syntax, see 
+      <a href="../reference.html#bbv2.reference.init.args" title="Command line arguments">the section called &#8220;Command line arguments&#8221;</a>
+      </p>
+</div>
+<table width="100%"><tr>
+<td align="left"></td>
+<td align="right"><small></small></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="configuration.html"><img src="../../images/prev.png" alt="Prev"></a><a accesskey="u" href="../advanced.html"><img src="../../images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../images/home.png" alt="Home"></a><a accesskey="n" href="targets.html"><img src="../../images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

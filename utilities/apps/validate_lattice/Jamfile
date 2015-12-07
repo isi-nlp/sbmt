@@ -1,0 +1,8 @@
+project validate_lattice ;
+
+exe validate_lattice
+  : /sbmt_decoder//sbmt
+    validate_lattice.cpp
+    /gusc//gusc
+    ../..//lattice_tree_construct
+  ;

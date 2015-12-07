@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+
+import cfg, argparse, os, sys, pickle
+parser=argparse.ArgumentParser()
+
+parser.add_argument('ext')
+d = cfg.parse_args(parser)
+hp = d.hadoop
+
+ext = d.ext
+
+tdir=os.path.join(d.scriptdir,'taglex')
+taglex='weightlex.'+ext
+taglexflat=taglex+'.flat'
+taglexwordpairs=taglex+'.wordpairs'
+taglexjoin=taglex+'.join'
+parttaglex='part.'+taglex
+flag=''
+if ext == 'inv':
+    flag=' -i'
+
+auxmap = pickle.load(open(d.tmpdir + "/training.aux.map"))
+
+#hp.put(file,taglex)
+if not hp.file_exists('training'):
+    hp.put(os.path.join(d.tmpdir,'training'),'training')
+
+hp.mapreduce( input='training'
+            , output='data'
+            , mapper=os.path.join(d.config['variables']['rhbin'],'mkdata') + ' ' + str(auxmap['weighted-count'])
+            )
+hp.mapreduce( input='data'
+            , mapper=os.path.join(d.config['variables']['rhbin'],'count_align_weighted') + flag
+            , reducer=os.path.join(d.config['variables']['rhbin'],'divide') + " -l"
+            , output=taglex
+            ) 
+hp.remove('data')
+#hp.getmerge(taglex,d.tmpdir + "/" + taglex)
+if not hp.file_exists('rules.alignments'):
+    hp.mapreduce( input='rules'
+                , output='rules.alignments'
+                , mapper=os.path.join(d.config['variables']['rhbin'],'ifea')
+                )
+
+hp.mapreduce( input=taglex
+            , output=taglexflat 
+            , mapper=os.path.join(tdir,'rotate')
+            , reducer=os.path.join(tdir,'flatten')
+            , sortkeys=2
+            )
+#hp.getmerge(taglex,os.path.join(d.tmpdir,taglex))
+hp.remove(taglex)
+hp.mapreduce( input='rules.alignments'
+            , mapper=os.path.join(tdir,'wordpairs') + flag
+            , output=taglexwordpairs 
+            )
+mp={ 'join':os.path.join(d.scriptdir,'join')
+   , 'taglexwordpairs':taglexwordpairs
+   , 'taglexflat':taglexflat
+   , 'taglexjoin':taglexjoin
+   , 'config':d.config_files }
+   
+joincall=cfg.PTemplate('$join $taglexwordpairs $taglexflat -c $config -e -E -k 3 -o $taglexjoin').substitute(mp)
+# taglexwordpairs and taglexflat are now removed (-E option to join)
+
+hp.start(mappers=4)
+hp.syscall(joincall)
+hp.start(mappers=4,reducers=2)
+hp.mapreduce( input=taglexjoin
+            , output=parttaglex
+            , mapper=os.path.join(tdir,'idfirst')
+            , reducer=os.path.join(tdir,'score')+' -w 4 '+taglex
+            )
+hp.remove(taglexjoin)
+hp.start()

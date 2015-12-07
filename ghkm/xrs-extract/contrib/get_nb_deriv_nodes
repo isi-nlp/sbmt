@@ -1,0 +1,16 @@
+#!/usr/bin/perl
+
+# Read derivations from STDIN and output the number of nodes
+# in each derivation:
+
+use strict;
+
+while(<STDIN>) {
+  chop;
+  s/\s#\d+\(/ /g;         # remove first references
+  s/\s#\d+\s/ /g;         # remove back-references
+  s/[()]//g;              # ignore parents
+  s/\S+/x/g;              # map each token to a single character 
+  s/\s+//g;               # ignore spaces 
+  print length($_),"\n";
+}

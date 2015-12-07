@@ -1,0 +1,1223 @@
+q
+q$.$("$") -> "美元" 
+qCOMMA.COMMA(",") -> "," 
+q-LRB-.-LRB-("-LRB-") -> "(" 
+q-RRB-.-RRB-("-RRB-") -> ")" 
+qPERIOD.PERIOD("zones") -> "区" 
+qCOLON.COLON(";") -> "," 
+qADJP.ADJP(JJ("chinese") CC("and") JJ("foreign")) -> "中外" 
+qADJP.ADJP(JJ("crude") CC("and") JJ("loose")) -> "粗放" 
+qADJP.ADJP(JJ("open") PP(x0: NP-C(NPB(x1: NN("trade"))))) -> qTO.x0 qJJ.x1 "开放" 
+qADJP.ADJP(JJ("scientific") CC("and") JJ("technological")) -> "科技" 
+qADJP.ADJP(JJ("southeast") JJ("asian")) -> "东南亚" 
+qADJP.ADJP(JJ("urban") CC("and") JJ("rural")) -> "城乡" 
+qADJP.ADJP(RB("newly") VBN("created")) -> "新" "增" 
+qADJP.ADJP(x0: x1: x2:) -> qADJP.x0 qCC.x1 qADJP.x2 
+qADJP.ADJP(x0: x1:) -> qPP.x1 qJJ.x0 
+qADJP.ADJP(x0:) -> qJJ.x0 
+qADJP.ADJP(x0: x1:) -> qRB.x0 "为" qJJ.x1 
+qADJP.ADJP(x0: x1:) -> qRB.x0 qJJ.x1 
+qADVP.ADVP(ADVP(RBR("higher")) PP(IN("than") x0:)) -> "比" qNP-C.x0 
+qADVP.ADVP(RB("far") CC("and") RB("away")) -> "远远" 
+qADVP.ADVP(RB("so") RB("far")) -> "迄今" "已" 
+qADVP.ADVP(RB("up") PP(IN("by") NP-C(NPB(CD("43.2") NN("percent"))))) -> "增长" "百分之" "四十三" "点" "二" 
+qADVP.ADVP(x0: x1:) -> qRB.x0 qVP.x1 
+qADVP.ADVP(x0:) -> qRB.x0 
+qCC.CC("and") -> "," 
+qCC.CC("and") -> "与" 
+qCC.CC("and") -> "及" 
+qCC.CC("and") -> "和" 
+qCC.CC("or") -> "或" 
+qCC.CC("or") -> "至" 
+qCD.CD("10") -> "十" 
+qCD.CD("10,000") -> "万" 
+qCD.CD("13") -> "十三" 
+qCD.CD("14") -> "十四" "个" 
+qCD.CD("14") -> "十四" 
+qCD.CD("15") -> "十五" 
+qCD.CD("17") -> "十七" 
+qCD.CD("1991") -> "一九九一年" 
+qCD.CD("1991") -> "九九" 
+qCD.CD("1995") -> "一九九五年" 
+qCD.CD("20") -> "二十" 
+qCD.CD("20") -> "二十多" 
+qCD.CD("200,000") -> "十二" "万" "多" 
+qCD.CD("2000") -> "二千" 
+qCD.CD("225") -> "二百二" "十五" 
+qCD.CD("259,000") -> "二十五" 
+qCD.CD("27.6") -> "二十七" "点" "六" 
+qCD.CD("37") -> "三十七" 
+qCD.CD("38.6") -> "三十八" 
+qCD.CD("39") -> "三十九" 
+qCD.CD("4,000") -> "四千" "余" "个" 
+qCD.CD("410") -> "四百" "一十" 
+qCD.CD("48.2") -> "四十八" 
+qCD.CD("5,000,000") -> "五百" "万" "元" 
+qCD.CD("50") -> "五十" 
+qCD.CD("550") -> "五百" "五十" 
+qCD.CD("57") -> "五十七" 
+qCD.CD("6,000") -> "六千" "家" 
+qCD.CD("71") -> "七十一" "件" 
+qCD.CD("78") -> "七十八" 
+qCD.CD("90") -> "九十" 
+qCD.CD("@-@") -> "至" 
+qCD.CD("hundred") -> "百" "家" 
+qCD.CD("one") -> "一" 
+qCD.CD("one") -> "其中" 
+qCD.CD("seven") -> "七" 
+qCD.CD("seventy") -> "七十" 
+qCD.CD("three") -> "三" "个" 
+qCD.CD("three") -> "三" 
+qCD.CD(CD("1980") CD("s")) -> "八十" "年代" 
+qCD.CD(CD("1990") CD("@-@") x0:) -> "一" "九九" "0" "年" ":" qCD.x0 
+qCD.CD(x0: x1: x2:) -> qCD.x0 "一" qCD.x1 qCD.x2 
+qCONJP.CONJP(RB("not") RB("only")) -> "不仅" 
+qDT.DT("a") -> "一" 
+qDT.DT("a") -> "了" "一" 
+qDT.DT("a") -> "了" 
+qDT.DT("a") -> "作为" "一" 
+qDT.DT("a") -> "的" 
+qDT.DT("all") -> "全" 
+qDT.DT("all") -> "各" 
+qDT.DT("an") -> "一" "项" 
+qDT.DT("both") -> "两" 
+qDT.DT("each") -> "各" 
+qDT.DT("each") -> "每" "个" 
+qDT.DT("every") -> "各" 
+qDT.DT("no") -> "不" 
+qDT.DT("the") -> "全" 
+qDT.DT("the") -> "其" 
+qDT.DT("the") -> "向" 
+qDT.DT("the") -> "在" 
+qDT.DT("the") -> "由" "该" 
+qDT.DT("the") -> "的" 
+qDT.DT("the") -> "该" 
+qDT.DT("the") -> "这" 
+qDT.DT("these") -> "这" 
+qDT.DT("these") -> "这些" 
+qDT.DT("this") -> "这" "一" 
+qDT.DT("this") -> "这" 
+qDT.DT("those") -> "这些" 
+qIN.IN("about") -> "约" 
+qIN.IN("across") -> "跨" 
+qIN.IN("along") -> "沿" 
+qIN.IN("among") -> "中" 
+qIN.IN("among") -> "在" 
+qIN.IN("as") -> "," 
+qIN.IN("as") -> "为" 
+qIN.IN("at") -> "在" 
+qIN.IN("before") -> "前" 
+qIN.IN("by") -> "的" 
+qIN.IN("by") -> "经" 
+qIN.IN("during") -> "期间" 
+qIN.IN("for") -> "为" 
+qIN.IN("for") -> "对" 
+qIN.IN("from") -> "从" 
+qIN.IN("in") -> "在" 
+qIN.IN("in") -> "的" 
+qIN.IN("of") -> "的" 
+qIN.IN("on") -> "在" 
+qIN.IN("over") -> "多" 
+qIN.IN("per") -> "每" 
+qIN.IN("than") -> "比" 
+qIN.IN("that") -> "," 
+qIN.IN("throughout") -> "在" 
+qIN.IN("up") -> "截至" 
+qIN.IN("while") -> "," 
+qIN.IN("while") -> "在" 
+qIN.IN("with") -> "," 
+qIN.IN("with") -> "与" 
+qIN.IN("with") -> "在" 
+qIN.IN("with") -> "有" 
+qIN.IN("with") -> "随着" 
+qIN.IN("within") -> "在" 
+qJJ.JJ("actual") -> "实际" 
+qJJ.JJ("ancient") -> "古老" 
+qJJ.JJ("base") -> "基础" 
+qJJ.JJ("beijing") -> "京" 
+qJJ.JJ("brisk") -> "活跃" 
+qJJ.JJ("chinese") -> "中国" 
+qJJ.JJ("consistent") -> "一致" 
+qJJ.JJ("cooperative") -> "协作" 
+qJJ.JJ("cooperative") -> "合作" 
+qJJ.JJ("critical") -> "生命" 
+qJJ.JJ("current") -> "目前" 
+qJJ.JJ("direct") -> "直" 
+qJJ.JJ("domestic") -> "国内" 
+qJJ.JJ("economic") -> "经济" 
+qJJ.JJ("eighth") -> "八" 
+qJJ.JJ("electrical") -> "电" 
+qJJ.JJ("electronic") -> "电" 
+qJJ.JJ("financial") -> "金融" 
+qJJ.JJ("first") -> "第一" 
+qJJ.JJ("five") -> "五" 
+qJJ.JJ("fixed") -> "固定" 
+qJJ.JJ("fixed") -> "定期" 
+qJJ.JJ("flourishing") -> "欣欣向荣" 
+qJJ.JJ("foreign") -> "允许" "境外" 
+qJJ.JJ("foreign") -> "国外" 
+qJJ.JJ("foreign") -> "境外" 
+qJJ.JJ("foreign") -> "外" 
+qJJ.JJ("foreign") -> "外商" 
+qJJ.JJ("foreign") -> "家" "外商" 
+qJJ.JJ("formal") -> "正式" 
+qJJ.JJ("general") -> "总" 
+qJJ.JJ("good") -> "好" 
+qJJ.JJ("good") -> "良好" 
+qJJ.JJ("grand") -> "大" 
+qJJ.JJ("high") -> "高" 
+qJJ.JJ("hot") -> "片" "热" 
+qJJ.JJ("impeded") -> "畅" 
+qJJ.JJ("important") -> "主要" 
+qJJ.JJ("important") -> "重大" 
+qJJ.JJ("important") -> "重要" 
+qJJ.JJ("incomplete") -> "不" "完全" 
+qJJ.JJ("industrial") -> "产业" 
+qJJ.JJ("industrial") -> "工业" 
+qJJ.JJ("international") -> "国际" 
+qJJ.JJ("japan") -> "日本" 
+qJJ.JJ("japanese") -> "日本" 
+qJJ.JJ("joint") -> "联合" 
+qJJ.JJ("key") -> "重点" 
+qJJ.JJ("large") -> "大" 
+qJJ.JJ("large") -> "大型" 
+qJJ.JJ("last") -> "上" 
+qJJ.JJ("lateral") -> "横向" 
+qJJ.JJ("legal") -> "法制" 
+qJJ.JJ("legal") -> "法规" 
+qJJ.JJ("local") -> "地方" 
+qJJ.JJ("local") -> "当地" 
+qJJ.JJ("main") -> "主" 
+qJJ.JJ("main") -> "主要" 
+qJJ.JJ("major") -> "重大" 
+qJJ.JJ("many") -> "许多" 
+qJJ.JJ("medical") -> "医疗" 
+qJJ.JJ("medium") -> "中" 
+qJJ.JJ("modern") -> "现代化" 
+qJJ.JJ("municipal") -> "市" 
+qJJ.JJ("national") -> "国" 
+qJJ.JJ("national") -> "国家" 
+qJJ.JJ("new") -> "新" 
+qJJ.JJ("nitrogen") -> "氮" 
+qJJ.JJ("normal") -> "正常" 
+qJJ.JJ("old") -> "老" 
+qJJ.JJ("open") -> "开放" 
+qJJ.JJ("outside") -> "外" 
+qJJ.JJ("outstanding") -> "佼佼者" 
+qJJ.JJ("outstanding") -> "突出" 
+qJJ.JJ("past") -> "曾" 
+qJJ.JJ("preliminary") -> "初步" 
+qJJ.JJ("preparatory") -> "准备" 
+qJJ.JJ("previous") -> "上" 
+qJJ.JJ("promotional") -> "推广" 
+qJJ.JJ("provincial") -> "省" 
+qJJ.JJ("rapid") -> "迅速" 
+qJJ.JJ("real") -> "现实" 
+qJJ.JJ("regional") -> "地区" 
+qJJ.JJ("relevant") -> "有关" 
+qJJ.JJ("risk") -> "风险" 
+qJJ.JJ("rural") -> "乡镇" 
+qJJ.JJ("same") -> "同" 
+qJJ.JJ("seventh") -> "七" 
+qJJ.JJ("several") -> "数" 
+qJJ.JJ("several") -> "许多" 
+qJJ.JJ("similar") -> "类" 
+qJJ.JJ("single") -> "单" 
+qJJ.JJ("small") -> "小" 
+qJJ.JJ("social") -> "社会" 
+qJJ.JJ("southwest") -> "西南" "三" 
+qJJ.JJ("sovereign") -> "主权" 
+qJJ.JJ("specialized") -> "专门" 
+qJJ.JJ("standardized") -> "规范" 
+qJJ.JJ("structural") -> "体制" 
+qJJ.JJ("tall") -> "高" 
+qJJ.JJ("timely") -> "适时" 
+qJJ.JJ("urban") -> "城市" 
+qJJ.JJ("various") -> "各" 
+qJJ.JJ("vigorous") -> "积极" 
+qJJ.JJ("year") -> "年" 
+qJJ.JJ(JJ("high") JJ("@-@") x0:) -> "高" qJJ.x0 
+qJJ.JJ(JJ("import") JJ("@-@") JJ("export")) -> "进出口" 
+qJJ.JJ(JJ("large") JJ("@-@") JJ("scale")) -> "大型" "化" 
+qJJ.JJ(JJ("large") JJ("@-@") JJ("scale")) -> "大型" 
+qJJ.JJ(JJ("optical") JJ("@-@") x0:) -> "光" qJJ.x0 
+qJJ.JJ(JJ("twenty") JJ("@-@") JJ("two")) -> "二十二" 
+qJJ.JJ(x0: JJ("@-@") JJ("hangzhou")) -> qJJ.x0 "杭" 
+qJJR.JJR("cheaper") -> "便宜" 
+qJJR.JJR("more") -> "多" "个" 
+qJJS.JJS("highest") -> "最高" 
+qJJS.JJS("most") -> "多" 
+qNAC.NAC(x0: x1: x2: x3: x4: x5: x6:) -> qNNP.x0 qCOMMA.x1 qNNP.x2 qCOMMA.x3 qNNP.x4 qCOMMA.x5 qNNP.x6 
+qNN.NN("@-@") -> ":" 
+qNN.NN("activity") -> "活动" 
+qNN.NN("amount") -> "金额" 
+qNN.NN("announcement") -> "发布" 
+qNN.NN("approval") -> "允许" 
+qNN.NN("area") -> "区" 
+qNN.NN("asset") -> "资产" 
+qNN.NN("atmosphere") -> "环境" 
+qNN.NN("automobile") -> "汽车" 
+qNN.NN("average") -> "平均" "水平" 
+qNN.NN("backbone") -> "骨干" 
+qNN.NN("bank") -> "银行" 
+qNN.NN("biotechnology") -> "生物" "技术" 
+qNN.NN("bond") -> "债券" 
+qNN.NN("border") -> "边境" 
+qNN.NN("business") -> "业务" 
+qNN.NN("business") -> "企业" 
+qNN.NN("business") -> "贸易" 
+qNN.NN("canal") -> "沿" "运河" 
+qNN.NN("canal") -> "运河" 
+qNN.NN("capital") -> "资" 
+qNN.NN("capital") -> "资金" 
+qNN.NN("capitalist") -> "资本" "市场" 
+qNN.NN("center") -> "中心" 
+qNN.NN("change") -> "改变" 
+qNN.NN("channel") -> "通道" 
+qNN.NN("clothing") -> "服装" 
+qNN.NN("coal") -> "煤炭" 
+qNN.NN("conference") -> "会议" 
+qNN.NN("construction") -> "工程" 
+qNN.NN("construction") -> "建筑" 
+qNN.NN("construction") -> "建设" 
+qNN.NN("contract") -> "承包" 
+qNN.NN("convenience") -> "便利" 
+qNN.NN("cooperation") -> "合作" 
+qNN.NN("corporation") -> "公司" 
+qNN.NN("corridor") -> "走廊" 
+qNN.NN("coverage") -> "保障" 
+qNN.NN("credit") -> "信用" 
+qNN.NN("credit") -> "信贷" 
+qNN.NN("crystal") -> "晶" 
+qNN.NN("currency") -> "货币" 
+qNN.NN("development") -> "发展" 
+qNN.NN("development") -> "开发" 
+qNN.NN("economy") -> "经济" "的" "发展" 
+qNN.NN("economy") -> "经济" 
+qNN.NN("effectiveness") -> "有效" 
+qNN.NN("employer") -> "雇主" 
+qNN.NN("end") -> "底" 
+qNN.NN("enterprise") -> "企业" 
+qNN.NN("enthusiasm") -> "热情" 
+qNN.NN("equipment") -> "设备" 
+qNN.NN("establishment") -> "建设" 
+qNN.NN("export") -> "出口" 
+qNN.NN("factory") -> "厂" 
+qNN.NN("finance") -> "金融" 
+qNN.NN("framework") -> "体制" 
+qNN.NN("framework") -> "框架" 
+qNN.NN("frontier") -> "边境" 
+qNN.NN("gas") -> "气" 
+qNN.NN("government") -> "政府" 
+qNN.NN("growth") -> "发展" 
+qNN.NN("high") -> "高" 
+qNN.NN("import") -> "进口" 
+qNN.NN("increase") -> "增加" 
+qNN.NN("increase") -> "增长" 
+qNN.NN("increase") -> "进一步" 
+qNN.NN("industry") -> "业" 
+qNN.NN("industry") -> "工业" 
+qNN.NN("information") -> "介绍" 
+qNN.NN("infrastructure") -> "结构" 
+qNN.NN("installation") -> "安装" 
+qNN.NN("institution") -> "机构" 
+qNN.NN("insurance") -> "保" 
+qNN.NN("insurance") -> "保险" 
+qNN.NN("insurance") -> "险" 
+qNN.NN("integration") -> "一体" "化" 
+qNN.NN("investment") -> "投资" 
+qNN.NN("irrigation") -> "灌溉" 
+qNN.NN("item") -> "项" 
+qNN.NN("knowledge") -> "了解" 
+qNN.NN("land") -> "土" "上" 
+qNN.NN("level") -> "级" 
+qNN.NN("liability") -> "责任" 
+qNN.NN("loan") -> "贷款" 
+qNN.NN("loss") -> "损失" 
+qNN.NN("machinery") -> "机械" "设备" 
+qNN.NN("machinery") -> "机械" 
+qNN.NN("management") -> "经营" 
+qNN.NN("market") -> "市场" 
+qNN.NN("metropolis") -> "城" 
+qNN.NN("monitoring") -> "监督" 
+qNN.NN("number") -> "广西" 
+qNN.NN("number") -> "数字" 
+qNN.NN("opening") -> "开发" 
+qNN.NN("opening") -> "开放" 
+qNN.NN("organization") -> "机构" 
+qNN.NN("passage") -> "通道" 
+qNN.NN("percent") -> "占" "百分之" 
+qNN.NN("percent") -> "百分之" 
+qNN.NN("period") -> "期" 
+qNN.NN("planning") -> "规划" 
+qNN.NN("point") -> "点" 
+qNN.NN("procurement") -> "采购" 
+qNN.NN("production") -> "生产" 
+qNN.NN("productivity") -> "生产力" 
+qNN.NN("profit") -> "利润" 
+qNN.NN("project") -> "工程" 
+qNN.NN("project") -> "项目" 
+qNN.NN("quota") -> "额" 
+qNN.NN("rating") -> "评" "级" 
+qNN.NN("ratio") -> "比例" 
+qNN.NN("reconstruction") -> "建设" 
+qNN.NN("reform") -> "建设" 
+qNN.NN("reform") -> "改革" 
+qNN.NN("region") -> "区" 
+qNN.NN("risk") -> "风险" 
+qNN.NN("savings") -> "储蓄" 
+qNN.NN("scale") -> "规模" 
+qNN.NN("sea") -> "出海" 
+qNN.NN("series") -> "系列" 
+qNN.NN("service") -> "服务" 
+qNN.NN("share") -> "分担" 
+qNN.NN("source") -> "来源" 
+qNN.NN("speed") -> "迅速" 
+qNN.NN("speed") -> "速度" 
+qNN.NN("step") -> "同步" 
+qNN.NN("structure") -> "体制" 
+qNN.NN("structure") -> "结构" 
+qNN.NN("supply") -> "供应" "量" 
+qNN.NN("support") -> "支柱" 
+qNN.NN("system") -> "制度" 
+qNN.NN("technology") -> "技术" 
+qNN.NN("thoroughness") -> "深入" 
+qNN.NN("ton") -> "吨" 
+qNN.NN("torch") -> "火炬" 
+qNN.NN("tourist") -> "旅游" 
+qNN.NN("trade") -> "贸易" 
+qNN.NN("transformation") -> "转化" 
+qNN.NN("transmission") -> "输" 
+qNN.NN("transportation") -> "运输" "方面" 
+qNN.NN("transportation") -> "运输" 
+qNN.NN("understanding") -> "了解" 
+qNN.NN("use") -> "应用" 
+qNN.NN("utilization") -> "使用" 
+qNN.NN("utilization") -> "利用" 
+qNN.NN("water") -> "水" 
+qNN.NN("world") -> "世界" "上" 
+qNN.NN("year") -> "增长" 
+qNN.NN("year") -> "年" 
+qNN.NN("yuan") -> "元" 
+qNN.NN("zone") -> "区" "内" 
+qNN.NN("zone") -> "区" 
+qNN.NN("zone") -> "开发区" 
+qNN.NN(x0: x1: NN("the")) -> qNN.x0 qNN.x1 
+qNNP.NNP("aluminum") -> "铝" 
+qNNP.NNP("award") -> "奖" 
+qNNP.NNP("bank") -> "银行" 
+qNNP.NNP("banking") -> "银行" 
+qNNP.NNP("beijing") -> "京" 
+qNNP.NNP("bond") -> "债" 
+qNNP.NNP("britain") -> "英国" 
+qNNP.NNP("canal") -> "运河" 
+qNNP.NNP("changjiang") -> "长江" 
+qNNP.NNP("china") -> "中国" 
+qNNP.NNP("china") -> "华" 
+qNNP.NNP("city") -> "市" 
+qNNP.NNP("corporation") -> "公司" 
+qNNP.NNP("department") -> "部门" 
+qNNP.NNP("district") -> "区" 
+qNNP.NNP("eighth") -> "八" 
+qNNP.NNP("europe") -> "欧" 
+qNNP.NNP("factory") -> "厂" 
+qNNP.NNP("finland") -> "芬兰" 
+qNNP.NNP("france") -> "法国" 
+qNNP.NNP("germany") -> "德国" 
+qNNP.NNP("golden") -> "黄金" 
+qNNP.NNP("grand") -> "大" 
+qNNP.NNP("great") -> "大" 
+qNNP.NNP("guangxi") -> "广西" "仅" 
+qNNP.NNP("guangxi") -> "广西" 
+qNNP.NNP("guizhou") -> "贵州" 
+qNNP.NNP("hangzhou") -> "杭州" 
+qNNP.NNP("hunan") -> "湖南" 
+qNNP.NNP("hunchun") -> "珲" "春" 
+qNNP.NNP("industries") -> "业" 
+qNNP.NNP("institute") -> "研究所" 
+qNNP.NNP("invention") -> "发明" 
+qNNP.NNP("italy") -> "意大利" 
+qNNP.NNP("japan") -> "日本" 
+qNNP.NNP("loan") -> "贷款" 
+qNNP.NNP("major") -> "重大" 
+qNNP.NNP("national") -> "国家" 
+qNNP.NNP("new") -> "新" 
+qNNP.NNP("october") -> "十月" 
+qNNP.NNP("pingxiang") -> "凭" "祥" 
+qNNP.NNP("pudong") -> "浦东" 
+qNNP.NNP("reform") -> "改革" 
+qNNP.NNP("ruili") -> "瑞" "丽" 
+qNNP.NNP("september") -> "九月" 
+qNNP.NNP("shanghai") -> "上海" 
+qNNP.NNP("sichuan") -> "四川" 
+qNNP.NNP("singapore") -> "新加坡" 
+qNNP.NNP("southwest") -> "西南" 
+qNNP.NNP("steel") -> "钢" 
+qNNP.NNP("taiwan") -> "台" 
+qNNP.NNP("taiwan") -> "台湾" 
+qNNP.NNP("waterway") -> "水道" 
+qNNP.NNP("xizang") -> "西藏" 
+qNNP.NNP("yining") -> "伊" "宁" 
+qNNP.NNP("yunnan") -> "四川" "," "云南" 
+qNNP.NNP(NNP("import") NNP("@-@") NNP("export")) -> "进出口" 
+qNNP.NNP(x0: NNP("@-@") NNP("hangzhou")) -> qNNP.x0 "杭" 
+qNNPS.NNPS("banks") -> "银行" 
+qNNPS.NNPS("enterprises") -> "企业" 
+qNNPS.NNPS("securities") -> "证券" 
+qNNS.NNS("accomplishments") -> "成果" 
+qNNS.NNS("accomplishments") -> "成绩" 
+qNNS.NNS("achievements") -> "成果" 
+qNNS.NNS("adjustments") -> "调整" 
+qNNS.NNS("agreements") -> "协议" 
+qNNS.NNS("applications") -> "应用" 
+qNNS.NNS("areas") -> "领域" 
+qNNS.NNS("authorities") -> "当局" 
+qNNS.NNS("balances") -> "余额" 
+qNNS.NNS("borders") -> "境内" 
+qNNS.NNS("businesses") -> "业务" 
+qNNS.NNS("businesses") -> "企业" 
+qNNS.NNS("businesses") -> "家" "企业" 
+qNNS.NNS("businesses") -> "行业" 
+qNNS.NNS("centuries") -> "世纪" 
+qNNS.NNS("cities") -> "个" "城市" 
+qNNS.NNS("cities") -> "城市" 
+qNNS.NNS("classes") -> "级" 
+qNNS.NNS("communications") -> "通讯" 
+qNNS.NNS("companies") -> "公司" 
+qNNS.NNS("conditions") -> "状况" 
+qNNS.NNS("contractors") -> "承包" "商" 
+qNNS.NNS("contracts") -> "包" 
+qNNS.NNS("contracts") -> "承包" 
+qNNS.NNS("corporations") -> "公司" 
+qNNS.NNS("costs") -> "成本" 
+qNNS.NNS("countries") -> "国家" 
+qNNS.NNS("customs") -> "海关" 
+qNNS.NNS("departments") -> "部门" 
+qNNS.NNS("deposits") -> "存款" 
+qNNS.NNS("districts") -> "地区" 
+qNNS.NNS("documents") -> "文件" 
+qNNS.NNS("economies") -> "经济" 
+qNNS.NNS("enterprises") -> "企业" 
+qNNS.NNS("exports") -> "出口" 
+qNNS.NNS("facilities") -> "设施" 
+qNNS.NNS("factories") -> "厂" 
+qNNS.NNS("factories") -> "厂家" 
+qNNS.NNS("imports") -> "进出口" 
+qNNS.NNS("imports") -> "进口" 
+qNNS.NNS("industries") -> "产业" 
+qNNS.NNS("inspections") -> "检查" 
+qNNS.NNS("items") -> "项" 
+qNNS.NNS("items") -> "项目" 
+qNNS.NNS("launches") -> "发射" 
+qNNS.NNS("loans") -> "贷款" 
+qNNS.NNS("materials") -> "材料" 
+qNNS.NNS("medicines") -> "药品" 
+qNNS.NNS("merchants") -> "商贾" 
+qNNS.NNS("mines") -> "矿" 
+qNNS.NNS("nations") -> "国家" 
+qNNS.NNS("operations") -> "工作" 
+qNNS.NNS("organizations") -> "机构" 
+qNNS.NNS("pharmaceuticals") -> "医药" 
+qNNS.NNS("pillars") -> "支柱" 
+qNNS.NNS("plans") -> "计划" 
+qNNS.NNS("problems") -> "问题" 
+qNNS.NNS("products") -> "产品" 
+qNNS.NNS("products") -> "商品" 
+qNNS.NNS("profits") -> "利" 
+qNNS.NNS("projects") -> "建设" 
+qNNS.NNS("projects") -> "项目" 
+qNNS.NNS("provinces") -> "省" 
+qNNS.NNS("rates") -> "率" 
+qNNS.NNS("regions") -> "区" 
+qNNS.NNS("requirements") -> "要求" 
+qNNS.NNS("requirements") -> "需求" 
+qNNS.NNS("residents") -> "居民" 
+qNNS.NNS("results") -> "成果" 
+qNNS.NNS("risks") -> "风险" 
+qNNS.NNS("roads") -> "路" 
+qNNS.NNS("sales") -> "销售" 
+qNNS.NNS("savings") -> "存款" 
+qNNS.NNS("shores") -> "岸" 
+qNNS.NNS("sites") -> "工地" 
+qNNS.NNS("situations") -> "情况" 
+qNNS.NNS("statistics") -> "统计" 
+qNNS.NNS("sums") -> "金额" 
+qNNS.NNS("targets") -> "目标" 
+qNNS.NNS("taxes") -> "税" 
+qNNS.NNS("telecommunications") -> "通信" 
+qNNS.NNS("tons") -> "吨" 
+qNNS.NNS("types") -> "种" 
+qNNS.NNS("types") -> "类" 
+qNNS.NNS("years") -> "年" "来" 
+qNNS.NNS("years") -> "年" 
+qNNS.NNS("zones") -> "区" 
+qNNS.NNS(NNS("sub") NNS("@-@") x0:) -> "分" qNNS.x0 
+qNP.NP(NPB(JJ("notable") NN("success")) PP(IN("for") x0:)) -> qNP-C.x0 "成果" "显著" 
+qNP.NP(NPB(NNP("development")) PP(IN("of") NP-C(NPB(NPB(x0: POS("'s")) NNP("pudong") NNP("district")) x1:))) -> qNNP.x0 "浦东" "开发" qPP.x1 
+qNP.NP(x0: CC("and") NP(NPB(JJ("other") x1:))) -> qNP.x0 "等" qNNS.x1 
+qNP.NP(x0: CC("and") x1: x2: x3:) -> qNP.x0 qNP.x1 qCC.x2 qNP.x3 
+qNP.NP(x0: x1: x2: x3: x4: x5: x6:) -> qNP.x0 qCOMMA.x1 qNP.x2 qCOMMA.x3 qNP.x4 qCOMMA.x5 qNP.x6 
+qNP.NP(x0: x1: x2: x3: x4: x5: x6:) -> qNP.x0 qCOMMA.x1 qNP.x2 qCC.x3 qNP.x4 qCC.x5 qNP.x6 
+qNP.NP(x0: x1: x2:) -> qNP.x0 qCOMMA.x1 qNP.x2 
+qNP.NP(x0: x1:) -> qNP.x1 qNPB.x0 
+qNP.NP(x0: x1:) -> qNPB.x0 qPP.x1 
+qNP.NP(x0: x1:) -> qNPB.x0 qPRN.x1 
+qNP.NP(x0: x1:) -> qNPB.x0 qVP.x1 
+qNP.NP(x0:) -> qNPB.x0 
+qNP-C.NP-C(NP(NPB(NNS("colleges") CC("and") JJ("technical") NNS("schools"))) COMMA(",") NP(NPB(JJ("large") NNS("academies") CC("and") NNS("institutes"))) COMMA(",") CC("and") NP(x0: VP(x1: PP(x2: NP-C(NPB(ADJP(JJ("large") CC("and") x3:) x4:)))))) -> "大专" "院校" "," "大型" "科研" "院" "所" "和" "大" qJJ.x3 qNNS.x4 qVBN.x1 qIN.x2 qNPB.x0 
+qNP-C.NP-C(NP(NPB(x0: x1:)) CC("and") NP(NPB(x2: NN("technology") NNS("businesses"))) x3: x4: x5: NP(NPB(x6: x7: NNS("enterprises"))) COMMA(",") CC("and") NP(NPB(x8: ADJP(RB("newly") VBN("established")) JJ("foreign") JJ("commercial") x9: x10:))) -> qCD.x0 "家" qJJ.x1 qJJ.x2 "企业" qCC.x3 qNP.x4 qCC.x5 qJJ.x6 qJJ.x7 "," "兴办" "了" qCD.x8 "家" "外商" qNN.x9 qNNS.x10 
+qNP-C.NP-C(NP(NPB(x0: x1: x2: NNS("ties")) PP(IN("with") x3:)) CC("and") NP(NPB(JJ("other") NNS("provinces") COMMA(",") x4:)) CC("and") NP(NPB(NNS("municipalities")))) -> "与" qNP-C.x3 "等" "省" qNNS.x4 "市" qPRP$.x0 qJJ.x1 qJJ.x2 "联合" 
+qNP-C.NP-C(NP(x0: x1:) CC("and") x2:) -> qPP.x1 qNP.x2 qNPB.x0 
+qNP-C.NP-C(NPB(DT("an") JJ("important") x0:) PP(IN("in") NP-C(NPB(x1: JJ("foreign") NN("trade") x2:)))) -> qNPB.x1 "外贸" "重要" qNN.x2 qNN.x0 
+qNP-C.NP-C(NPB(DT("the") JJ("fourteen") JJ("chinese") x0: x1:) SBAR(WHNP(WDT("which")) SG-C(VP(VBD("were") VP-C(x2: PP(x3: NP-C(NPB(x4: NN("trade"))))))))) -> "中国" "十四" "个" qNN.x0 qTO.x3 qJJ.x4 qVBN.x2 qNNS.x1 
+qNP-C.NP-C(NPB(DT("the") JJ("outstanding") NN("characeristic")) PP(IN("of") NP-C(NPB(x0: JJ("economic") NN("zone"))))) -> qDT.x0 "个" "开发区" "的" "突出" "特点" 
+qNP-C.NP-C(NPB(DT("the") NN("number")) x0:) -> qPP.x0 
+qNP-C.NP-C(NPB(DT("the") x0:) PP(IN("of") NP-C(x1: PP(IN("of") NP-C(NPB(NPB(NPB(x2: JJ("high")) x3: NPB(JJ("new") NN("technology"))) x4: x5:)))))) -> qNPB.x2 "高" "新" "技术" qJJ.x4 qNN.x5 qNPB.x1 "高" "新" "技术" qNNS.x0 qCC.x3 
+qNP-C.NP-C(NPB(JJ("foreign") JJ("commercial") NN("investment")) PP(IN("in") x0:)) -> "外商" "投资" qNP-C.x0 
+qNP-C.NP-C(NPB(NN("aid")) PP(TO("to") NP-C(NPB(DT("the") JJ("poor"))))) -> "扶贫" 
+qNP-C.NP-C(NPB(NPB(x0: NN("construction") NN("industry") POS("'s")) NN("opening")) PP(TO("to") NP-C(NPB(DT("the") JJ("outside") NN("world"))))) -> qNPB.x0 "建筑业" "对" "外" "开放" 
+qNP-C.NP-C(NPB(NPB(x0: NN("construction") NNS("industries") POS("'s")) NN("opening")) PP(TO("to") NP-C(NPB(DT("the") JJ("outside") NN("world"))))) -> qNPB.x0 "建筑业" "对" "外" "开放" 
+qNP-C.NP-C(NPB(x0: x1: x2: NNS("enterprises")) VP(VBG("doing") NP-C(NPB(NN("business"))) x3:)) -> qCD.x0 qJJ.x1 qNN.x2 "企业" qPP.x3 "开业" 
+qNP-C.NP-C(NPB(x0: NNS("areas")) PP(IN("of") NP-C(x1: PP(IN("throughout") NP-C(NPB(DT("the") NN("region")) x2:))))) -> qDT.x0 "区" "各" qNPB.x1 qPP.x2 
+qNP-C.NP-C(NPB(x0: x1:) x2:) -> qNN.x1 qPP.x2 qDT.x0 
+qNP-C.NP-C(NPB(x0: JJ("annual") NN("production")) PP(IN("of") NP-C(NPB(x1: x2: NN("silicon"))))) -> qJJ.x0 "硅" qJJ.x1 qNN.x2 "年" "产" 
+qNP-C.NP-C(NPB(x0: NNS("achievements")) PP(x1: x2:)) -> qNP-C.x2 qJJ.x0 "成果" qIN.x1 "转化" 
+qNP-C.NP-C(NPB(x0: VBG("involving") NN("trade")) PP(IN("with") NP-C(NPB(NNS("foreigners"))))) -> "涉外" qNN.x0 
+qNP-C.NP-C(NPB(x0: x1:) x2:) -> qNPB.x0 qPP.x2 qNN.x1 
+qNP-C.NP-C(x0: CC("and") NP(NPB(DT("the") NNP("americas")))) -> qNP.x0 "美" 
+qNP-C.NP-C(x0: CC("and") NP(NPB(JJ("other") x1:))) -> qNP.x0 "等" qNNS.x1 
+qNP-C.NP-C(x0: CC("and") x1:) -> qNP.x0 qNP.x1 
+qNP-C.NP-C(x0: x1: x2: x3: x4: x5: x6:) -> qNP.x0 qCOMMA.x1 qNP.x2 qCOMMA.x3 qNP.x4 qCOMMA.x5 qNP.x6 
+qNP-C.NP-C(x0: x1: x2: x3: x4:) -> qNP.x0 qCOMMA.x1 qNP.x2 qCOMMA.x3 qNP.x4 
+qNP-C.NP-C(x0: x1: x2:) -> qNP.x0 qCC.x1 qNP.x2 
+qNP-C.NP-C(x0: PP(IN("for") NP-C(NPB(x1: x2: x3: x4: x5:) x6:))) -> qDT.x1 qCD.x2 qNNS.x3 "的" qNPB.x0 qCC.x4 qPP.x6 qNN.x5 
+qNP-C.NP-C(x0: PP(IN("of") NP-C(x1: x2:))) -> qPP.x2 qNPB.x0 qNPB.x1 
+qNP-C.NP-C(x0: PP(x1: NP-C(NPB(NPB(x2: NNP("peoples") POS("'s")) x3:)))) -> qNPB.x2 qNPB.x0 "人民" qNNPS.x3 qIN.x1 
+qNP-C.NP-C(x0: x1: x2:) -> qNPB.x0 qCOMMA.x1 qSBAR.x2 
+qNP-C.NP-C(x0: x1:) -> qADJP.x1 qNPB.x0 
+qNP-C.NP-C(x0: x1:) -> qNP.x1 qNPB.x0 
+qNP-C.NP-C(x0: x1:) -> qNPB.x0 qPP.x1 
+qNP-C.NP-C(x0: x1:) -> qPP.x1 qNPB.x0 
+qNP-C.NP-C(x0: x1:) -> qVP.x1 "的" qNPB.x0 
+qNP-C.NP-C(x0: x1:) -> qVP.x1 qNPB.x0 
+qNP-C.NP-C(x0:) -> qNPB.x0 
+qNPB.NPB(CD("72.15") NN("percent")) -> "占" "百分之" "七十二" "点" "一" "五" 
+qNPB.NPB(DT("a") JJ("straight") NN("line")) -> "呈" "直线" 
+qNPB.NPB(DT("a") JJR("faster") NN("increase")) -> "增长" "速度" 
+qNPB.NPB(DT("a") x0: x1: x2:) -> qJJ.x0 qJJ.x1 qNN.x2 
+qNPB.NPB(DT("a") x0: x1:) -> qJJ.x0 qNN.x1 
+qNPB.NPB(DT("an") JJ(JJ("export") JJ("@-@") JJ("oriented")) x0:) -> "外向" "型" qNN.x0 
+qNPB.NPB(DT("an") NN("increase")) -> "增加" 
+qNPB.NPB(DT("the") JJ("entire") x0:) -> "全" qNN.x0 
+qNPB.NPB(DT("the") JJ("foreign") NN("exchange") x0:) -> "外汇" qNN.x0 
+qNPB.NPB(DT("the") JJ("gross") NN("value")) -> "总值" 
+qNPB.NPB(DT("the") JJ("mainland") NN("motherland")) -> "祖国" "大陆" 
+qNPB.NPB(DT("the") JJ("whole") NN("nation") POS("'s")) -> "全" "国" 
+qNPB.NPB(DT("the") JJ(x0: JJ("@-@") JJ("five")) NN("year") NN("plan")) -> qJJ.x0 "五" 
+qNPB.NPB(DT("the") JJS("largest") x0: x1:) -> "最" "大" qNN.x0 "的" qNN.x1 
+qNPB.NPB(DT("the") NN("credit") NN("loan") x0:) -> "信贷" qNN.x0 
+qNPB.NPB(DT("the") NN("majority")) -> "绝大部分" 
+qNPB.NPB(DT("the") NNP("state") NNP("council")) -> "国务院" 
+qNPB.NPB(DT("the") NNP("united") NNP("states")) -> "美国" 
+qNPB.NPB(DT("the") x0: NN("quality") NNS("levels")) -> "水平" qJJ.x0 
+qNPB.NPB(DT("the") x0: x1: x2:) -> qJJ.x0 qJJ.x1 qNN.x2 
+qNPB.NPB(DT("the") x0: x1:) -> qJJ.x0 qNN.x1 
+qNPB.NPB(DT("the") x0: x1: x2: x3:) -> qJJ.x0 "的" qNNP.x1 qNNP.x2 qNNP.x3 
+qNPB.NPB(DT("the") x0: x1:) -> qNN.x0 qNNS.x1 
+qNPB.NPB(DT("the") x0:) -> qNN.x0 
+qNPB.NPB(DT("the") x0: CD("five") NN("year") NN("plan")) -> qNNP.x0 "五" 
+qNPB.NPB(DT("the") x0: NNP("autonomous") NNP("region")) -> qNNP.x0 "自治区" 
+qNPB.NPB(DT("the") x0: x1:) -> qNNP.x0 qNN.x1 
+qNPB.NPB(DT("the") x0: x1: x2: x3:) -> qNNP.x0 qNNP.x1 qNN.x2 qNN.x3 
+qNPB.NPB(DT("the") x0: x1: x2:) -> qNNP.x0 qNNP.x1 qNNP.x2 
+qNPB.NPB(DT("the") x0: x1:) -> qNNP.x0 qNNP.x1 
+qNPB.NPB(DT("the") x0:) -> qNNS.x0 
+qNPB.NPB(DT("this") NN("amount")) -> "其中" 
+qNPB.NPB(JJ("annual") JJ("average") x0:) -> "年" "平均" qNN.x0 
+qNPB.NPB(JJ("complete") NNS("sets")) -> "成套" 
+qNPB.NPB(JJ("economic") NN("base") x0: x1: x2: x3: x4:) -> "基础" qNNS.x0 qCC.x1 qJJ.x2 qJJ.x3 qNNS.x4 
+qNPB.NPB(JJ("electric") NN("power") x0: NN("construction") NNS("materials")) -> "电力" qCOMMA.x0 "建材" 
+qNPB.NPB(JJ("foreign") NN("capital")) -> "外资" 
+qNPB.NPB(JJ("foreign") NN("commerce") x0: x1:) -> "外商" qNN.x0 qNN.x1 
+qNPB.NPB(JJ("foreign") NN("exchange")) -> "外汇" 
+qNPB.NPB(JJ("foreign") NNS("contacts")) -> "外" "开放" 
+qNPB.NPB(JJ("gross") NN("output") NNS("values")) -> "产值" 
+qNPB.NPB(JJ("joint") NN("capital") x0: x1:) -> "合资" qNN.x0 qNNS.x1 
+qNPB.NPB(JJ("last") NN("year") POS("'s")) -> "去年" 
+qNPB.NPB(JJ("last") NN("year")) -> "去年" 
+qNPB.NPB(JJ("nuclear") NN("power")) -> "能源" 
+qNPB.NPB(JJ("orderly") NN("progress")) -> "有序" "进行" 
+qNPB.NPB(JJ("raw") NNS("materials")) -> "原料" 
+qNPB.NPB(JJ("such") x0:) -> qNN.x0 
+qNPB.NPB(JJ(x0: JJ("@-@") JJ("term")) NNS("deposits")) -> qJJ.x0 "存款" 
+qNPB.NPB(NN("bank") NNS("loans")) -> "融资" 
+qNPB.NPB(NN("construction") NN("industry") x0:) -> "建筑业" qNNS.x0 
+qNPB.NPB(NN("construction") NNS("projects")) -> "工程" 
+qNPB.NPB(NN("iron") CC("and") NN("steel")) -> "钢铁" 
+qNPB.NPB(NN("savings") NNS("deposits")) -> "项" "存款" 
+qNPB.NPB(NN("village") CC("and") NN("township") x0: x1:) -> "乡镇" qNN.x0 qNNS.x1 
+qNPB.NPB(NNP("agriculture") CC("and") NN("animal") NN("husbandry") x0:) -> "农牧业" "生产" qNNS.x0 
+qNPB.NPB(NNP("china") POS("'s")) -> "中国" "对" 
+qNPB.NPB(NNP("china") POS("'s")) -> "中国" 
+qNPB.NPB(NNP("gansu") NNP("province") POS("'s")) -> "甘肃省" 
+qNPB.NPB(NNP("hangzhou") POS("'s")) -> "杭州" 
+qNPB.NPB(NNP("hong") NNP("kong")) -> "香港" 
+qNPB.NPB(NNP("pudong") POS("'s")) -> "浦东" 
+qNPB.NPB(NNP("taiwan") JJ("commercial") x0:) -> "台商" qNN.x0 
+qNPB.NPB(NNP("taiwan") POS("'s")) -> "台湾" 
+qNPB.NPB(NNP("wuxi") POS("'s")) -> "无锡" "市" 
+qNPB.NPB(NNP("xizang") POS("'s")) -> "西藏" 
+qNPB.NPB(NNP("yangzhou") POS("'s")) -> "扬州" 
+qNPB.NPB(NNP("yunnan") NNPS("provinces")) -> "云南省" 
+qNPB.NPB(NNS("communications") CC("and") NN("transportation")) -> "交通" 
+qNPB.NPB(NNS("economics") COMMA(",") x0: x1: x2: x3: NN("science") CC("and") NN("technology") x4: NN("culture") CC("and") NN("education")) -> "经济" "," "贸易" "," qNN.x0 qCOMMA.x1 qNN.x2 qCOMMA.x3 "科技" qCOMMA.x4 "文教" 
+qNPB.NPB(NPB(x0: POS("'s")) NNP("pudong") NNP("district")) -> qNNP.x0 "浦东" 
+qNPB.NPB(PRP$("its") x0: x1: x2:) -> qNNS.x0 qCC.x1 qNNS.x2 
+qNPB.NPB(PRP$("our") x0:) -> qNN.x0 
+qNPB.NPB(QP(JJR("more") IN("than") x0:) NN("high")) -> "有" qCD.x0 "多" "个" "高" 
+qNPB.NPB(VBN("finished") NNS("products")) -> "成品" 
+qNPB.NPB(VBN("manufactured") NNS("goods") x0: x1: x2: NNS("items")) -> "生产" "性" "项目" qCC.x0 qJJ.x1 qNN.x2 "项目" 
+qNPB.NPB(x0: x1: POS("'s")) -> qADJP.x0 qNNS.x1 
+qNPB.NPB(x0: x1:) -> qADJP.x0 qNNS.x1 
+qNPB.NPB(x0: x1: x2:) -> qCD.x0 qJJ.x1 "性" qNNS.x2 
+qNPB.NPB(x0: x1: x2:) -> qCD.x0 qNN.x1 qNNS.x2 
+qNPB.NPB(x0: x1:) -> qCD.x0 qNN.x1 
+qNPB.NPB(x0: x1:) -> qNN.x1 qCD.x0 
+qNPB.NPB(x0: x1:) -> qCD.x0 qNNS.x1 
+qNPB.NPB(x0:) -> qCD.x0 
+qNPB.NPB(x0: JJ("economic") NN("zone")) -> qDT.x0 "个" "开发区" 
+qNPB.NPB(x0: NN("nation") POS("'s")) -> qDT.x0 "国" 
+qNPB.NPB(x0: NN("space") NN("flight") x1:) -> "航天" qNN.x1 qDT.x0 
+qNPB.NPB(x0: VBG("guiding") NN("principle")) -> qDT.x0 "方针" 
+qNPB.NPB(x0: x1: x2: x3:) -> qDT.x0 qADJP.x1 "的" qNN.x2 qNNS.x3 
+qNPB.NPB(x0: x1: x2: x3:) -> qDT.x0 "条" qJJ.x1 "的" qJJ.x2 qNN.x3 
+qNPB.NPB(x0: x1: x2: x3:) -> qDT.x0 qJJ.x1 qJJ.x2 qNN.x3 
+qNPB.NPB(x0: x1: x2:) -> qDT.x0 qJJ.x1 qNN.x2 
+qNPB.NPB(x0: x1: x2: x3:) -> qDT.x0 qJJS.x1 qNN.x2 qNN.x3 
+qNPB.NPB(x0: x1: POS("'s")) -> qDT.x0 qNN.x1 
+qNPB.NPB(x0: x1: x2:) -> qDT.x0 qNN.x1 qPOS.x2 
+qNPB.NPB(x0: x1:) -> qDT.x0 qNN.x1 
+qNPB.NPB(x0: x1: x2: x3: x4:) -> qNNP.x1 qNNP.x2 qNNP.x3 qNNP.x4 qDT.x0 
+qNPB.NPB(x0: x1:) -> qDT.x0 qNNS.x1 
+qNPB.NPB(x0:) -> qDT.x0 
+qNPB.NPB(x0: NN("machinery") CC("and") JJ("electrical") x1:) -> qJJ.x0 "机电" qNNS.x1 
+qNPB.NPB(x0: NNP("peoples") POS("'s")) -> qJJ.x0 "人民" 
+qNPB.NPB(x0: x1: x2: x3: x4: x5: x6:) -> qJJ.x0 qCOMMA.x1 qJJ.x2 qCC.x3 qJJ.x4 qNN.x5 qNNS.x6 
+qNPB.NPB(x0: x1: x2:) -> qJJ.x0 qADJP.x1 qNNS.x2 
+qNPB.NPB(x0: x1: x2: x3:) -> qJJ.x0 qCD.x1 qNN.x2 qNNS.x3 
+qNPB.NPB(x0: x1: x2:) -> qNN.x2 qJJ.x0 qJJ.x1 
+qNPB.NPB(x0: x1: x2:) -> qJJ.x0 "的" qJJ.x1 qNNS.x2 
+qNPB.NPB(x0: x1: x2: JJ("economic") NN("zone")) -> qJJ.x0 qNN.x1 qJJ.x2 "开发区" 
+qNPB.NPB(x0: x1: x2:) -> qJJ.x0 qNN.x1 qNN.x2 
+qNPB.NPB(x0: x1: x2: x3: x4:) -> qJJ.x0 qNN.x1 "的" qNNS.x2 qCC.x3 qNN.x4 
+qNPB.NPB(x0: x1: x2:) -> qJJ.x0 qNN.x1 qNNS.x2 
+qNPB.NPB(x0: x1:) -> qJJ.x0 qNN.x1 
+qNPB.NPB(x0: x1: x2: NNS("computers") x3: NN("computer") x4:) -> qJJ.x0 qNNS.x1 qCOMMA.x2 "计算机" qCC.x3 qNNS.x4 
+qNPB.NPB(x0: x1:) -> qJJ.x0 qNNS.x1 
+qNPB.NPB(x0: x1: x2:) -> qJJ.x0 qUCP.x1 qNNS.x2 
+qNPB.NPB(x0:) -> qJJ.x0 
+qNPB.NPB(x0: x1: x2:) -> qNAC.x0 qCOMMA.x1 qNNP.x2 
+qNPB.NPB(x0: CC("and") x1:) -> qNN.x0 qNNS.x1 
+qNPB.NPB(x0: x1: x2: x3: x4: x5:) -> qNN.x0 qJJ.x1 qNNS.x2 qCC.x3 qNN.x4 qNNS.x5 
+qNPB.NPB(x0: x1: x2: CC("and") JJ("other") x3: x4: x5:) -> qNN.x0 qNN.x1 qNN.x2 "等" qJJ.x3 qNN.x4 qNNS.x5 
+qNPB.NPB(x0: x1: x2: x3:) -> qNN.x0 qNN.x1 qNN.x2 qNN.x3 
+qNPB.NPB(x0: x1: x2:) -> qNN.x0 qNN.x1 qNN.x2 
+qNPB.NPB(x0: x1:) -> qNN.x0 qNN.x1 
+qNPB.NPB(x0: x1: x2: x3:) -> qNN.x0 qNNS.x1 qCC.x2 qNNS.x3 
+qNPB.NPB(x0: x1:) -> qNN.x0 qNNS.x1 
+qNPB.NPB(x0:) -> qNN.x0 
+qNPB.NPB(x0: x1: x2:) -> qNNP.x0 qCOMMA.x1 qNNP.x2 
+qNPB.NPB(x0: x1: x2:) -> qNNP.x0 qJJ.x1 qNN.x2 
+qNPB.NPB(x0: x1: x2: CC("and") JJ("other") x3: x4: x5:) -> qNNP.x0 qNNP.x1 qNNP.x2 "等" qJJ.x3 qNN.x4 qNNS.x5 
+qNPB.NPB(x0: x1:) -> qNNP.x0 qNNS.x1 
+qNPB.NPB(x0: x1:) -> qNNP.x0 qPOS.x1 
+qNPB.NPB(x0:) -> qNNP.x0 
+qNPB.NPB(x0:) -> qNNPS.x0 
+qNPB.NPB(x0: CC("and") x1:) -> qNNS.x0 qNNS.x1 
+qNPB.NPB(x0: x1: x2:) -> qNNS.x0 qCC.x1 qNNS.x2 
+qNPB.NPB(x0: x1:) -> qNNS.x0 qNNS.x1 
+qNPB.NPB(x0:) -> qNNS.x0 
+qNPB.NPB(x0: CC("and") x1:) -> qNPB.x0 qNPB.x1 
+qNPB.NPB(x0: JJ("famous") JJ("scenic") x1: x2: x3: NNP("city") NN("area")) -> qNPB.x0 "著名" "风景" qNN.x1 qNN.x2 qNNP.x3 "市区" "内" 
+qNPB.NPB(x0: JJ("foreign") NN("commerce") x1: x2: x3:) -> qNPB.x0 "外商" qNN.x1 qNN.x2 qPOS.x3 
+qNPB.NPB(x0: NNP("hangzhou") NNP("university") NNP("semiconductor") x1:) -> qNPB.x0 "浙大" "半导体" qNNP.x1 
+qNPB.NPB(x0: NNS("imports") CC("and") NNS("exports")) -> qNPB.x0 "进出口" 
+qNPB.NPB(x0: x1: x2: x3: x4:) -> qNPB.x0 qCD.x1 qNN.x3 qJJ.x2 qNNS.x4 
+qNPB.NPB(x0: x1: JJ("economic") NN("zone")) -> qNPB.x0 qJJ.x1 "开发区" 
+qNPB.NPB(x0: x1: JJ("strong") NNS("points")) -> qNPB.x0 qJJ.x1 "特点" 
+qNPB.NPB(x0: x1: x2: JJ("canal") JJ("economic") NN("zone")) -> qNPB.x0 qJJ.x1 qJJ.x2 "运河" "经济带" 
+qNPB.NPB(x0: x1: x2: x3:) -> qNPB.x0 qJJ.x1 qJJ.x2 qNN.x3 
+qNPB.NPB(x0: x1: x2:) -> qNPB.x0 qJJ.x1 qNN.x2 
+qNPB.NPB(x0: x1:) -> qNPB.x0 qJJ.x1 
+qNPB.NPB(x0: x1: CC("and") NN("opening")) -> qNPB.x0 qNN.x1 "开放" 
+qNPB.NPB(x0: x1: x2: x3:) -> qNPB.x0 qNN.x1 qNNS.x2 qNN.x3 
+qNPB.NPB(x0: x1:) -> qNPB.x0 qNN.x1 
+qNPB.NPB(x0: x1: x2:) -> qNPB.x0 qNNP.x1 qNNS.x2 
+qNPB.NPB(x0: x1:) -> qNPB.x0 qNNS.x1 
+qNPB.NPB(x0:) -> qPRP.x0 
+qNPB.NPB(x0: JJ("foreign") NN("business") x1: x2:) -> "外商" qNN.x1 qNNS.x2 qQP.x0 
+qNPB.NPB(x0: x1: NNS("enterprises")) -> qJJ.x1 "类" "企业" qQP.x0 "家" 
+qNPB.NPB(x0: x1:) -> qQP.x0 qJJ.x1 
+qNPB.NPB(x0: x1:) -> qNN.x1 qQP.x0 
+qNPB.NPB(x0:) -> qQP.x0 
+qNPB.NPB(x0:) -> qRB.x0 
+qNPB.NPB(x0: x1:) -> qVBG.x0 qNNS.x1 
+qNPB.NPB(x0: NN("construction") NNS("projects")) -> qVBN.x0 "工程" 
+qNPB.NPB(x0: NN("construction") NNS("projects")) -> qVBN.x0 "的" "工程" 
+qPOS.POS("'s") -> "的" 
+qPOS.POS("'s") -> "首" 
+qPP.PP(IN("along") NP-C(NPB(PRP$("its") NNS("shores")))) -> "沿岸" 
+qPP.PP(IN("at") NP(NPB(DT("the") JJ("same") NN("time")))) -> "同时" 
+qPP.PP(IN("at") NP(NPB(DT("the") NN("beginning")) PP(IN("of") NP-C(NPB(JJ("last") NN("year")))))) -> "去年" "初" 
+qPP.PP(IN("at") NP(NPB(DT("the") x0:) x1:)) -> "到" qPP.x1 qNN.x0 
+qPP.PP(IN("at") NP(NPB(NN("present")))) -> "到" "目前" 
+qPP.PP(IN("by") SG-C(VP(VBG("using") x0:))) -> "利用" qNP-C.x0 
+qPP.PP(IN("by") x0:) -> qNP-C.x0 
+qPP.PP(IN("during") NP-C(NPB(DT("the") x0: CD("five") NN("year") NN("plan")) x1:)) -> qJJ.x0 "五" "期间" qPRN.x1 
+qPP.PP(IN("for") NP-C(NPB(DT("the") JJ("first") NN("time")))) -> "首次" 
+qPP.PP(IN("for") NP-C(NPB(DT("the") NN("undertaking")) x0:)) -> "进行" qPP.x0 
+qPP.PP(IN("for") x0:) -> qNP.x0 
+qPP.PP(IN("for") x0:) -> qNP-C.x0 
+qPP.PP(IN("for") x0:) -> qSG-C.x0 
+qPP.PP(IN("in") NP(NPB(CD("1991")))) -> "一九九一年" 
+qPP.PP(IN("in") NP(NPB(JJ("recent") NNS("years")))) -> "近年" "来" 
+qPP.PP(IN("in") NP(NPB(JJ("recent") x0:))) -> "近" "几" qNNS.x0 
+qPP.PP(IN("in") NP(x0: PP(IN("of") NP-C(NPB(JJ("last") NN("year")))))) -> "去年" qNPB.x0 
+qPP.PP(IN("in") NP-C(NPB(NN("addition")))) -> "此外" 
+qPP.PP(IN("in") x0:) -> qNP-C.x0 
+qPP.PP(IN("of") NP-C(NPB(CD("1,500,000") x0:) x1:)) -> qPP.x1 "一百" "五十" "万" qNNS.x0 
+qPP.PP(IN("of") NP-C(NPB(DT("the") x0: x1: x2:))) -> "的" qJJ.x0 qNN.x1 qRB.x2 
+qPP.PP(IN("of") x0:) -> qNP-C.x0 
+qPP.PP(IN("on") NP(NPB(x0: CD("1995")))) -> "一九九五年" qNNP.x0 
+qPP.PP(IN("on") x0:) -> qNP-C.x0 
+qPP.PP(IN("over") NP(NPB(DT("the") JJ("past") x0: NNS("years")))) -> qCD.x0 "年" "来" 
+qPP.PP(IN("over") NP(NPB(DT("the") JJ("recent") NNS("years")))) -> "近年" "来" 
+qPP.PP(IN("over") x0:) -> qNP-C.x0 
+qPP.PP(IN("throughout") NP-C(NPB(DT("the") JJ("entire") x0:))) -> "全" qNN.x0 
+qPP.PP(IN("throughout") NP-C(NPB(DT("the") x0:))) -> "全" qNN.x0 
+qPP.PP(IN("up") PP-C(TO("to") NP-C(NPB(DT("the") NN("present"))))) -> "迄今" 
+qPP.PP(IN("within") NP-C(NPB(DT("the") x0: x1: NNS("zones")))) -> qJJ.x0 qNN.x1 "区" "内" 
+qPP.PP(TO("to") NP-C(NPB(DT("the") JJ("mainland") NN("motherland")))) -> "对" "祖国" "大陆" 
+qPP.PP(TO("to") x0:) -> qNP-C.x0 
+qPP.PP(VBG("according") PP-C(TO("to") x0:)) -> "据" qNP-C.x0 
+qPP.PP(x0: x1:) -> qNP.x1 qIN.x0 
+qPP.PP(x0: x1:) -> qIN.x0 qNP-C.x1 
+qPP.PP(x0: x1:) -> qIN.x0 qPP.x1 
+qPP.PP(x0: x1:) -> qIN.x0 qSG-C.x1 
+qPP.PP(x0:) -> qIN.x0 
+qPP.PP(x0: x1: x2:) -> qTO.x1 qSG-C.x2 "作" qJJ.x0 
+qPP.PP(x0: NP-C(x1: VP(VBG("coming") PP(TO("to") x2:)))) -> "进入" qTO.x0 qNPB.x1 "到" qNP-C.x2 
+qPRN.PRN(x0: x1: x2:) -> q-LRB-.x0 "一" qNP.x1 q-RRB-.x2 
+qPRN.PRN(x0: x1: x2:) -> q-LRB-.x0 qNP.x1 q-RRB-.x2 
+qPRP$.PRP$("its") -> "其" 
+qPRP$.PRP$("its") -> "的" 
+qPRP.PRP("it") -> "," 
+qPRP.PRP("it") -> "并" 
+qPRP.PRP("it") -> "还" 
+qPRP.PRP("they") -> "他们" 
+qQP.QP(JJR("better") IN("than") x0:) -> qCD.x0 "以上" 
+qQP.QP(JJR("more") IN("than") CD("10")) -> "十" "多" "个" 
+qQP.QP(JJR("more") IN("than") CD("130")) -> "一百" "三十" "余" 
+qQP.QP(JJR("more") IN("than") CD("500")) -> "五百多" "家" 
+qQP.QP(x0: x1: x2:) -> qIN.x0 qNN.x2 qCD.x1 
+qQP.QP(x0: x1:) -> qCD.x1 qIN.x0 
+qQP.QP(x0: x1:) -> qRB.x0 qCD.x1 
+qRB.RB("actively") -> "积极" 
+qRB.RB("already") -> "已" 
+qRB.RB("also") -> "还" 
+qRB.RB("annually") -> "每" "年" 
+qRB.RB("cumulatively") -> "累计" 
+qRB.RB("currently") -> "当前" 
+qRB.RB("enthusiastically") -> "积极" 
+qRB.RB("especially") -> "尤" 
+qRB.RB("first") -> "先" 
+qRB.RB("forward") -> "进一步" 
+qRB.RB("further") -> "进一步" 
+qRB.RB("high") -> "高" 
+qRB.RB("immensely") -> "极大" 
+qRB.RB("nearly") -> "近" 
+qRB.RB("newly") -> "新" 
+qRB.RB("not") -> "没有" 
+qRB.RB("now") -> "已" 
+qRB.RB("nowadays") -> "如今" 
+qRB.RB("only") -> "仅" 
+qRB.RB("precisely") -> "正" 
+qRB.RB("rapidly") -> "迅速" 
+qRB.RB("rather") -> "比较" 
+qRB.RB("recently") -> "最近" 
+qRB.RB("smoothly") -> "顺利" 
+qRB.RB("swiftly") -> "迅速" 
+qS.S(ADVP(RB("furthermore")) COMMA(",") NP-C(NPB(PRP("it"))) x0:) -> "并" qVP.x0 
+qS.S(NP-C(NPB(DT("the") JJ("annual") NN("average")) x0:) VP(VBD("was") PRT(RP("up")) NP-C(NPB(x1: NN("percent"))))) -> qPP.x0 "年" "均" "增长" "百分之" qCD.x1 "点" "六" 
+qS.S(NP-C(NPB(DT("the") JJ("annual") NN("average")) x0:) VP(VBD("was") x1: x2:)) -> qPP.x0 "年" "均" qADVP.x1 qSBAR.x2 
+qS.S(NP-C(NPB(DT("the") x0:) PP(IN("of") NP-C(x1: VP(VBN("taken") PP(IN("out") PP-C(IN("of") NP-C(NPB(NN("circulation"))))))))) VP(VBZ("has") NP-C(NPB(DT("the") NN("effect")) PP(IN("of") SG-C(VP(VBG("restraining") NP-C(NPB(NN("commodity") NNS("prices"))) x2:)))))) -> qNPB.x1 "回笼" "的" qNN.x0 "," "为" "平" "抑" qPP.x2 "物价" "发挥" "了" "作用" 
+qS.S(NP-C(NPB(DT("this"))) VP(VBD("was") ADJP(ADJP(RB("clearly") JJR("higher")) PP(IN("than") x0:)))) -> "明显" "高于" qNP-C.x0 
+qS.S(NP-C(NPB(JJ("last") NN("year") x0:)) VP(VBD("were") VP-C(VBN("realized") PP(IN("with") NP-C(NPB(DT("a") JJ("total") NN("value")) VP(VP(VBG("reaching") S-C(NP-C(NPB(PRP("us"))) NP-C(NPB($("$") CD("109,820,000,000"))))) x1: VP(VBG("accounting") PP(IN("for") NP-C(NPB(x2: NN("percent")) PP(IN("of") NP-C(x3: PP(x4: NP-C(NPB(NPB(NNP("china") POS("'s")) NNS("imports") CC("and") JJ(JJ("exports") JJ("@-@") JJ("up"))))))))) PP(IN("from") NP-C(NPB(x5: NN("percent"))) NP(NPB(DT("the") JJ("previous") NN("year"))))))))))) -> "去年" "实现" qNNS.x0 "总值" "达" "一千" "零" "九十八" "点" "二亿" "美元" qCOMMA.x1 "占" "全" "国" "进出口" qNPB.x3 qIN.x4 "比重" "由" "上" "年" "的" "百分之" qCD.x5 "提高" "到" "百分之" qCD.x2 
+qS.S(NP-C(NPB(JJ("major") x0: x1:)) VP(x2: NP-C(NPB(x3: x4: x5: JJ("raw") NNS("materials"))))) -> "而" qNN.x0 qNNS.x1 qVBD.x2 "以" qNN.x3 qCC.x4 qJJ.x5 "原材料" "为主" 
+qS.S(NP-C(NPB(JJ(JJ("mainland") JJ("@-@") JJ("taiwan")) NN("trade") NN("volume"))) VP(VBD("reached") NP-C(NPB(PRP("us"))) NP(NPB(x0: CD("20,000,000,000")) x1:))) -> qNP.x1 "两" "岸" "贸易额" "为" "二百" "亿" q$.x0 
+qS.S(NP-C(NPB(NPB(NNP("xizang") POS("'s")) x0: NNS("operations"))) VP(x1: NP-C(NPB(JJ("notable") x2:)))) -> "西藏" qJJ.x0 "工作" qVBP.x1 "显著" qNNS.x2 
+qS.S(NP-C(NPB(NPB(x0: POS("'s")) NNP("corporate") x1: NNP("research") NNP("institute"))) VP(x2: NP-C(NPB(DT("the") x3: x4: x5: x6: NN("credit") NN("rating")) SG(VP(TO("to") VP-C(VB("be") VP-C(VBN("aa1"))))) x7: x8:))) -> qNNP.x0 "公社" qNNP.x1 "研究所" qVBD.x2 qNNP.x3 qNNP.x4 qNNP.x5 qNN.x6 "信用" "等级" "为" "aa" ":" qCOMMA.x7 qSBAR.x8 
+qS.S(NP-C(NPB(QP(JJR("more") IN("than") CD("ninety")) NN("percent")) PP(IN("of") NP-C(NPB(JJ("foreign") NN("commerce") x0: x1: NNS("products")) VP(VBN("exported") NP(NPB(JJ("last") NN("year"))))))) VP(x2: NP-C(NPB(x3: VBN("manufactured") NNS("goods"))) PP(IN("with") NP-C(NPB(x4: NN("value")) PP(IN("of") NP-C(NPB(NNP("us")))))) ADJP(ADJP(NP(NPB(x5: CD(CD("43,880,000,000") CD("@-@") CD("36.7"))) NP(NPB(NN("percent")))) JJR("higher")) PP(IN("than") x6:)))) -> "去年" "外商" qNN.x0 qNN.x1 "出口" "商品" "中" qVBD.x2 qJJ.x3 "制成品" "占" "九成" "以上" "," "达" "四百" "三十八" "点" "八" "亿" q$.x5 "," "比" qNP-C.x6 "增长" qDT.x4 "百分之" "三十六" "点" "七" 
+qS.S(NP-C(NPB(x0: NN("area")) PP(IN("of") NP-C(NPB(NNS("savings")))) PP(IN("during") NP(NPB(DT("the") x1: CD("five") NN("year") NN("plan"))))) VP(VBD("was") ADVP(NP(NPB(NNP("rmb") CD("50,000,000"))) JJR("higher") IN("than")) PP(IN("during") NP(NPB(DT("the") x2: CD("five") NN("year") NN("plan")) PRN(x3: NP(NPB(CD(CD("1986") x4: CD("1990")))) x5:))) x6: PP(IN("with") NP-C(x7: PP(IN("of") NP-C(NPB(CD("27.49") NN("percent")))))))) -> qNNP.x1 "五" "期间" qDT.x0 "项" "存款" "比" qJJ.x2 "五" q-LRB-.x3 "一" "九" "八" "六" qCD.x4 "一" "九九" "0" "年" q-RRB-.x5 "末" "净增" "五十" "亿" "元" qCOMMA.x6 qNPB.x7 "百分之" "二十七" "点" "四" "九" 
+qS.S(NP-C(NPB(x0: NNP("taiwan") JJ("commercial") x1: NN("plan")) x2:) VP(VBD("had") NP-C(NPB(CD("490") NNS("items")) VP(VBN("valued") PP(IN("at") NP-C(NPB(NNP("us")))) NP(NPB($("$") CD("10,920,000,000"))))))) -> qVP.x2 qDT.x0 "台商" qNN.x1 "案" "共" "四百" "九十" "项" "," "金额" "为" "十点" "九二" "亿" "美元" 
+qS.S(NP-C(NPB(x0: x1:) PRN(-LRB-("-LRB-") PP(IN("of") NP-C(NPB(NNS("approvals")))) -RRB-("-RRB-"))) VP(VBZ("is") PP(x2: NP-C(NPB(DT("the") NN("forefront")) PP(IN("of") NP-C(NPB(x3: x4: JJ("economic") NNS("zones")))))))) -> qDT.x0 "数量" qNN.x1 qIN.x2 qNPB.x3 qJJ.x4 "开发区" "中" "名列前茅" 
+qS.S(NP-C(NPB(x0: x1: NNS("accomplishments"))) VP(VBP("are") ADJP(JJ("bright") PP(IN("for") x2:)))) -> qNP-C.x2 qJJ.x0 qNN.x1 "成就" "显著" 
+qS.S(NP-C(NPB(x0: NN("pattern"))) VP(VBZ("emerges") x1:)) -> qPP.x1 "呈现" qNNP.x0 "格局" 
+qS.S(NP-C(NPB(x0: x1: x2: x3: NNP("rmb") x4: x5:)) VP(VBP("approach") NP-C(NPB(NNP("rmb") CD("100,000,000,000"))))) -> qNPB.x0 qCD.x1 qNN.x2 qNNS.x3 "人民币" qNN.x4 qNNS.x5 "近" "一千" "亿" "元" 
+qS.S(NP-C(NPB(x0: x1:)) VP(x2: VP-C(x3: PP(PP(x4: NP-C(NPB(x5: x6:))) x7:) x8:))) -> qPRP$.x0 qNNS.x6 qNN.x1 qVBZ.x2 qIN.x4 qADJP.x5 qVBN.x3 qPP.x8 qPP.x7 
+qS.S(NP-C(x0: PP(IN("of") NP-C(NPB(DT("these"))))) VP(VBP("are") x1:)) -> "其中" qNP-C.x1 qNPB.x0 
+qS.S(NP-C(x0: PRN(x1: PP(x2: NP-C(NPB(NNS("loans")) PP(IN("for") x3:))) x4:)) VP(VBD("were") NP-C(NPB(NNP("rmb") CD("438,000,000") JJR("more")) PP(IN("than") NP-C(NP(NPB(ADJP(x5: VBN("created")) NNS("loans")) x6:) COLON(";") x7:))))) -> qNPB.x0 q-LRB-.x1 qVBG.x2 qNP-C.x3 "贷款" q-RRB-.x4 "比" qPP.x6 qRB.x5 "增" "四" "点" "三八" "亿" "元" ":" qNP.x7 
+qS.S(PP(IN("among") NP-C(NPB(DT("these")))) COMMA(",") x0: x1: x2:) -> "其中" qS.x0 qCOLON.x1 qS.x2 
+qS.S(PP(IN("around") NP(NPB(CD("1992")))) COMMA(",") S(x0: VP(x1: NP-C(NP(NPB(NAC(NNP("heihe") x2: x3: x4: x5: x6: x7:) x8: x9:)) CC("and") NP(NPB(DT("the") JJ("other") x10: x11: x12:) x13:)))) x14: x15: x16:) -> qNP-C.x0 "于" "一九九二年" "先后" qVBD.x1 "黑河" qCOMMA.x2 qNNP.x3 qCOMMA.x4 qNNP.x5 qCOMMA.x6 qNNP.x7 qCOMMA.x8 qNNP.x9 "等" qCD.x10 qNN.x11 qNNS.x12 qPP.x13 qCOLON.x14 qS.x15 qPERIOD.x16 
+qS.S(PP(IN("as") PP-C(IN("of") NP-C(NPB(DT("the") NN("end")) PP(IN("of") NP-C(NPB(JJ("last") NN("year"))))))) x0: NP-C(NPB(DT("the") x1:) x2:) x3: x4:) -> "到" "去年" "底" qCOMMA.x0 qNN.x1 qPP.x2 qADVP.x3 qVP.x4 
+qS.S(PP(IN("in") NP-C(NPB(NN("trade")) PP(IN("between") NP-C(NPB(DT("the") NN("mainland") CC("and") NNP("taiwan")))))) COMMA(",") NP-C(NPB(NNP("taiwan"))) VP(VBZ("has") NP-C(NPB(DT("a") JJ("favorable") NN("balance")) PP(IN("of") NP-C(NPB(NN("trade")) PP(IN("of") NP-C(NPB(NNP("us"))))))) NP(NPB($("$") CD("14,700,000,000"))))) -> "台湾" "在" "两" "岸" "贸易" "中" "顺差" "一百" "四十七" "亿" "美元" 
+qS.S(PP(IN("in") NP-C(NPB(NNP("changzhou") NNP("city")) COMMA(",") SBAR(WHNP(WDT("which")) SG-C(VP(NNS("borders") NP-C(NPB(DT("the") NN("canal")))))))) COMMA(",") PP(IN("within") NP-C(NPB(DT("an") NN("area")) PP(IN("of") NP-C(NPB(PDT("half") DT("a") JJ("square") NN("kilometer")))))) NP-C(NPB(EX("there"))) VP(VBP("are") NP-C(NP(NPB(CD("185") x0: x1:)) CC("and") x2:))) -> "常州" "市" "沿" "运河" "两" "岸" "零点" "五" "平方公里" "范围" "内" "," qJJ.x0 qNNS.x1 qNP.x2 "企业" "有" "一百" "八十六" "家" 
+qS.S(PP(IN("of") NP-C(NPB(NPB(x0: x1: x2: POS("'s")) JJS("largest") x3: x4:))) x5: NP-C(NPB(QP(CD("10") CC("or") JJR("more")))) VP(VBP("have") ADVP(RB("already")) VP-C(x6: S-C(NP-C(NPB(NNP("china"))) VP(TO("to") VP-C(ADVP(RB("cooperatively")) x7: x8:)))))) -> qNN.x2 "最" "大" qDT.x0 qCD.x1 "家" qJJ.x3 qNNS.x4 "中" qCOMMA.x5 "有" "十几" "家" "已" qVBN.x6 "中国" "," "其中" "不少" "公司" "与" "中国" "公司" "合资" "合作" qVB.x7 qNP-C.x8 
+qS.S(PP(IN("over") NP(NPB(DT("the") JJ("last") NN("decade")) x0: NP(NP(x1: PP(IN("from") x2:)) x3: NP(x4: x5:)))) x6: x7: VP(x8: x9:)) -> "十几" "年" "来" qCOMMA.x0 qVBP.x8 qPP.x5 qCOMMA.x6 qNP-C.x7 "等" "十几" "个" qNP-C.x2 qCC.x3 qNPB.x4 "的" qNPB.x1 qVP-C.x9 
+qS.S(PP(IN("over") NP(NPB(DT("the") JJ("past") QP(x0: CC("or") JJR("more")) NNS("years")))) S(NP-C(NPB(DT("the") ADJP(x1: x2: x3:) NN("progess")) x4:) x5:) COLON(";") S(NP-C(NPB(PRP$("their") x6: x7: NNS("influences"))) VP(VBP("have") ADVP(RB("obviously")) VP-C(VBN("increased") PP(IN("in") NP-C(NPB(NN("strength")))) COMMA(",") PP(IN("with") NP-C(NPB(DT("an") JJ("annual") x8: JJ("average") x9:) PP(IN("of") NP-C(x10: x11: NP(x12: PP(IN("than") NP-C(NPB(DT("the") JJ("national") JJ("annual") NN("average"))))))))))))) -> qCD.x0 "年" "多" "来" qCC.x2 qPP.x4 qJJ.x1 qJJ.x3 "发展" qVP.x5 "," qJJ.x6 qJJ.x7 "实力" "明显" "增强" ":" qJJ.x8 "年" "平均" qNN.x9 qNPB.x10 qCOMMA.x11 "高于" "全" "国" "年" "平均" qNPB.x12 
+qS.S(PP(IN("over") NP(NPB(JJ("recent") NNS("years")))) NP-C(NPB(DT("the") NN("pace")) PP(IN("of") NP-C(NPB(NN("progress")) PP(IN("of") NP-C(NPB(NPB(NPB(NNP("china") POS("'s")) x0: x1: POS("'s")) NN("opening")) PP(TO("to") NP-C(NPB(DT("the") x2: NN("world"))))))))) VP(VBZ("has") VP-C(VBN("taken") NP-C(NPB(DT("another") x3:) PP(IN("in") NP-C(NPB(NN("speed")))))))) -> "中国" qNN.x0 qNN.x1 "近年" "来" "对" qJJ.x2 "开放" "步伐" qNN.x3 "加快" 
+qS.S(PP(VBG("according") PP-C(TO("to") NP-C(NPB(DT("an") NN("official")) PP(IN("of") NP-C(NPB(DT("the") NNP("jiangsu") NNP("province") NNP("jiangsu") x0: NNP("corporate") NNP("group"))))))) x1: NP-C(NPB(NNP("jiangsu") x2:)) x3:) -> "据" "江苏" "苏" qNNP.x0 "集团" "公司" "负责人" "介绍" qCOMMA.x1 "苏" qNNP.x2 qVP.x3 
+qS.S(PP(VBG("according") PP-C(TO("to") NP-C(NPB(NNP("taiwan") NNP("ministry")) PP(IN("of") NP-C(NPB(NNP("economic") NNPS("affairs"))) x0:)))) x1: NP-C(NPB(NPB(JJ("last") NN("year") POS("'s")) NN("volume")) PP(IN("of") NP-C(NPB(NN("trade")) PP(IN("between") NP-C(NPB(DT("the") NN("mainland") CC("and") NNP("taiwan"))))))) VP(VBD("was") NP-C(NPB(NNP("us"))) NP(NPB($("$") CD("20,900,000,000"))))) -> "据" "台" "经济部" qNNS.x0 qCOMMA.x1 "去年" "两" "岸" "贸易额" "为" "二百" "零" "九" "亿" "美元" 
+qS.S(S(NP(NPB(JJ("last") NN("year"))) NP-C(NPB(x0: NN("margin")) PP(IN("of") NP-C(NPB(NN("increase")) x1:))) VP(VBD("was") x2: ADJP(ADJP(JJR("higher")) PP(IN("than") NP-C(NPB(DT("the") x3:) PP(IN("of") NP-C(NPB(NPB(DT("the") x4: POS("'s")) NN("growth"))))))))) COMMA(",") CC("and") S(NP-C(NPB(PRP("it"))) VP(VBD("exceeded") NP-C(NPB(DT("the") x5:) VP(VBN("raised") PP(IN("by") NP-C(NPB(DT("the") JJ("financial") NNS("operations") x6:) PP(IN("at") NP-C(NPB(DT("the") NN("begining")) PP(IN("of") NP-C(NPB(DT("the") NN("year"))))))))))))) -> "去年" qPP.x1 qDT.x0 "增幅" qADVP.x2 "高于" qNN.x4 "发展" qNN.x3 "," "实现" "了" "年初" "金融" "工作" qNN.x6 "提出" "的" qNNS.x5 
+qS.S(S(NP-C(NPB(DT("this"))) VP(VBZ("is") ADJP(RB("especially") JJ("true") PP(x0: NP-C(NPB(DT("the") NNP("zhengda") x1:)))) x2: SG(VP(x3: NP-C(x4: SBAR(WHNP(WDT("which")) SG-C(VP(VBP("have") VP-C(VBN("opened") NP-C(NP(NPB(JJ("general") x5: NN("insurance"))) COMMA(",") NP(NP(NPB(NN("auto") x6:)) CC("and") NP(NPB(JJ("other") x7: x8:))))))))))))) COLON(";") S(NP-C(NPB(PRP("it"))) VP(VBZ("is") ADJP(RB("also") x9:) x10: x11: SG(VP(x12: x13: VP(x14: S-C(NP-C(NPB(x15: x16: x17: x18:)) x19:))))))) -> "特别" "是" qIN.x0 "正大" qNNP.x1 qCOMMA.x2 qVBG.x3 qNPB.x4 "开办" "了" "常规" "的" qNN.x5 "保险" "," "资产" "保险" "," "汽车" qNN.x6 "等" qNN.x7 qNNS.x8 "," "还" qJJ.x9 qPP.x10 qCOMMA.x11 qVP.x12 qCC.x13 qVBG.x14 qJJ.x15 qNN.x16 qNN.x17 "投保" qNNS.x18 qVP.x19 
+qS.S(S(NP-C(NPB(EX("there"))) VP(VBP("are") NP-C(NPB(CD("435") x0: x1:) VP(x2: PP(x3: NP-C(x4: PP(IN("in") NP-C(NPB(NNP("zhenjiang") x5:))))) x6: PP(IN("with") NP-C(NP(NPB(JJ("annual") NNS("outputs")) PP(IN("of") NP-C(NPB(NNP("rmb") CD("2,200,000,000"))))) x7: NP(NPB(NNS("profits"))) CC("and") NP(NPB(NNS("taxes")) PP(IN("of") NP-C(NPB(NNP("rmb") CD("168,000,000"))))))))))) COLON(";") S(NP-C(NPB(DT("these"))) VP(VBP("are") NP-C(NPB(DT("the") x8: x9:) PP(IN("of") NP-C(NPB(NPB(NNP("zhenjiang") POS("'s")) x10:))))))) -> "镇江" qNNP.x5 qIN.x3 qNPB.x4 qVBN.x2 qJJ.x0 "类" qNNS.x1 "四百" "三十五" "家" qCOMMA.x6 "年" "产值" "二十二" "亿" "元" qCC.x7 "利税" "一点" "六" "八" "亿" "元" "," "是" "镇江" qNN.x10 "的" qJJ.x8 qNNS.x9 
+qS.S(S(NP-C(NPB(EX("there"))) VP(VBP("are") NP-C(NPB(x0: x1:) x2:))) x3: S(S(NP-C(NPB(EX("there"))) VP(VBP("are") NP-C(NPB(x4: x5: NNS("enterprises")) PP(IN("with") NP-C(x6: VP(x7: NP-C(NPB(NNP("rmb") CD("100,000,000"))))))))) COLON(";") S(NP-C(NPB(DT("these"))) VP(VBP("have") VP-C(VBN("become") NP-C(NPB(x8: x9: NN("framework")) x10:)))))) -> qVP.x2 qNNS.x1 "有" qQP.x0 qCOLON.x3 qVBG.x7 "亿元" qNPB.x6 "的" qJJ.x5 "企业" "有" qQP.x4 "家" "," "成为" qPP.x10 qDT.x8 qJJ.x9 "骨架" 
+qS.S(S(NP-C(NPB(EX("there"))) VP(VBP("are") x0: PP(IN("near") NP-C(NP(NPB(x1: NN("canal"))) CC("or") SG(VP(x2: VP-C(x3: PP(IN("in") NP-C(NPB(NNP("yangzhou") NNP("city"))))))) COLON(";") NP(NPB(DT("the") NN("majority")) PP(IN("of") NP-C(NP(NPB(NPB(DT("the") NN("city") x4:) NN("name") NN("brand") x5:)) x6: x7:))))))) COMMA(",") CC("and") S(ADVP(RB("externally")) NP-C(NPB(JJ("oriented") x8:)) VP(VP(VBP("are") VP-C(VBN("scattered") PP(x9: NP-C(NPB(x10: NN("canal")))))) COMMA(",") CC("and") VP(VBP("have") VP-C(VBN("become") NP-C(NPB(x11: NNS("points"))) PP(IN("for") NP-C(NPB(x12: x13: NN("growth"))))))))) -> "扬州" "市" "傍" "河" qVBG.x2 qVBN.x3 qDT.x1 qNP-C.x0 "," "该" "市" qPOS.x4 "名牌" qNNS.x5 qCOMMA.x6 qNP.x7 "," "外向" "型" qNNS.x8 "大多" qIN.x9 "河" "分布" "," "成为" qNPB.x12 qJJ.x13 qJJ.x11 qDT.x10 "生长点" 
+qS.S(S(NP-C(NPB(NN("light") NNS("textiles"))) VP(x0: NP-C(NPB(DT("the") JJ("major") x1: x2: x3: x4: NN("product"))))) COLON(";") S(PP(IN("of") NP-C(NPB(DT("these")))) COMMA(",") x5: VP(x6: NP-C(NPB(DT("the") JJS("largest"))) PP(IN("among") NP-C(NPB(x7: x8: NNS("products")))) x9: S(NP-C(NPB(x10: NN("value"))) VP(VBG("being") S-C(NP-C(NPB(PRP("us"))) NP-C(NPB($("$") CD("7,680,000,000"))))))))) -> qJJ.x1 qNN.x2 qNN.x3 "的" qNN.x4 "商品" qVBD.x0 "以" "轻纺" "产品" "为主" "," "其中" "," qNN.x7 qNN.x8 "最" "大" "的" "商品" qVBD.x6 qNP-C.x5 qCOMMA.x9 qNPB.x10 "为" "七十六" "点" "八" "亿" "美元" 
+qS.S(S(NP-C(NPB(NNP("gansu") NNP("province"))) x0: x1:) x2: x3: x4: S(NP-C(NPB(x5: x6:) PP(x7: NP-C(NPB(x8: x9:)))) VP(x10: NP-C(NPB(NNP("rmb") CD("10,000,000"))))) COLON(";") S(NP-C(NPB(PRP("it"))) x11:) COLON(";") S(NP-C(NPB(PRP("it"))) VP(VBD("became") NP-C(NPB(DT("the") RB("northwest") NPB(NNP("china") x12:) x13: NN("participant") x14:)) PP(IN("in") x15:)))) -> "甘肃省" qADVP.x0 qVP.x1 qCOLON.x2 qS.x3 qPRP$.x5 qVBD.x10 qNN.x9 qCOLON.x4 qNN.x6 qIN.x7 qNN.x8 "金额" "达" "一千" "万" "元" "," qVP.x11 "," "成为" "西北" qPOS.x12 qVBG.x13 "参与" qNP-C.x15 qNN.x14 
+qS.S(S(NP-C(NPB(NPB(DT("the") NNP("world") x0: x1: POS("'s")) NNP("yindarutai") x2:)) VP(x3: NP-C(NPB(NPB(DT("the") NN("nation") POS("'s")) JJS("longest") JJ("free") JJ("flowing") x4: NN("water") NN("conservancy") x5:)))) COLON(";") S(NP-C(NPB(DT("the") NNP("gansu") NNP("province") NNP("life") NNP("insurance") x6:)) VP(x7: NP-C(x8: PP(IN("of") NP-C(NPB(x9: x10: x11:) VP(x12: NP-C(NPB(NN("coverage")) PP(IN("for") x13:) COMMA(",") PP(VBG("totalling") NP-C(NPB(NNP("rmb") CD("6,930,000,000")))))))))))) -> "世界" qNNP.x0 qNNP.x1 "的" "引" "大" "入" "秦" qNN.x2 qVBZ.x3 "全" "国" "最" "长" "的" "自流" qNN.x4 "水利" qNN.x5 "," "甘肃省" "人保" qNNP.x6 qVBD.x7 qNPB.x8 qCD.x9 "家" qADJP.x10 qNNS.x11 qVBG.x12 qNP-C.x13 "保障" "额" "达" "六" "点" "九三" "亿" "元" 
+qS.S(S(PP(IN("at") NP(NPB(NN("present")))) NP-C(NPB(EX("there"))) VP(VBP("are") x0: x1:)) COLON(";") S(SBAR(WHNP(WP("what")) SG-C(VP(x2: NP-C(NPB(JJR("more")))))) COMMA(",") NP-C(NPB(DT("the") x3: CC("and") x4: x5:) PP(IN("of") NP-C(x6: PP(IN("of") NP-C(NPB(JJ("foreign") x7: x8:) PP(x9: IN("in") NP-C(NPB(NNP("china"))))))))) x10:)) -> "目前" "," qADVP.x0 "有" qNP-C.x1 "," "而且" "这些" qADVP.x9 qVBZ.x2 "外商" qNN.x7 qNNS.x8 qNPB.x6 qNN.x3 qNN.x4 qNNS.x5 qVP.x10 
+qS.S(S(PP(x0: NP(NPB(NPB(DT("the") NN("canal") POS("'s")) NN("dredging")))) x1: NP-C(NPB(NNP("jiangsu") x2:)) VP(VBD("set") PRT(RP("up")) NP-C(NPB(DT("a") JJ("new") NN("plant") NN("site"))) PP(x3: NP-C(NPB(DT("the") VBG("opposing") NN("shore")))))) COLON(";") S(ADVP(RB("furthermore")) x4: NP-C(NPB(PRP("it"))) VP(VBD("raised") NP-C(NPB(PRP$("its") JJ("own") x5:) SBAR(SG-C(VP(TO("to") VP-C(x6: NP-C(NPB(DT("a") NN("bridge"))) PP(x7: NP-C(NPB(DT("the") x8:))) SG(VP(x9: VP-C(VB("connect") NP-C(NPB(DT("the") JJ("new") NN("factory"))) x10:))))))))))) -> "运河" "整治" qVBG.x0 qCOMMA.x1 "苏" qNNP.x2 qIN.x3 "运河" "对岸" "建" "了" "新" "厂区" qCOMMA.x4 "并" "自" "筹" qNN.x5 qVB.x6 "了" "一" "座" qIN.x7 qNN.x8 "大" "桥" qTO.x9 "把" "新" "厂" qPP.x10 "连" "为" "一体" 
+qS.S(S(S(PP(x0: NP-C(NPB(x1: NN("dredging")) PP(IN("of") NP-C(NPB(DT("the") NNP("grand") NNP("canal")))))) x2: NP-C(NPB(NPB(DT("the") x3: POS("'s")) NN("navagability"))) x4:) x5: S(NP-C(NPB(PRP("one")) PP(IN("after") NP-C(NPB(DT("another")))) NP(NPB(x6: NNS("businesses")))) VP(VP(VP(VBD("looked") ADVP(RB("favorably")) PP(IN("upon") NP-C(NPB(x7: x8: x9:)))) x10: VP(x11: x12: x13:)) CC("and") VP(x14: NP-C(x15: ADVP(RB("there"))))))) COLON(";") S(NP-C(NPB(NNS("businesses"))) VP(VBP("are") VP-C(VBN("scattered") PP(IN("like") NP-C(NPB(NNS("stars")) PP(x16: NP-C(NPB(DT("the") NN("canal")))))))))) -> qIN.x0 qNPB.x1 "大" "运河" "的" "整治" qCOMMA.x2 qNN.x3 "航道" "状况" "得到" qVP.x4 qCOLON.x5 qJJ.x6 "企业" "纷纷" "看" "好" qDT.x7 "条" qNNP.x8 qNNP.x9 qCC.x10 qADVP.x11 qPP.x13 "此" qVBN.x12 qVBD.x14 qNPB.x15 "," qIN.x16 "河" "企业" "星罗棋布" 
+qS.S(S(x0: x1: NP-C(NP(NPB(NN("income")) PP(IN("from") NP-C(NPB(NPB(DT("the") JJ("economic") NN("zone") POS("'s")) NN("technology") COMMA(",") NN("industry"))))) CC("and") NP(NPB(NN("trade")))) VP(VBD("reached") NP-C(NPB(NNP("rmb") CD("3,000,000,000"))))) x2: S(x3: VP(VBD("were") NP-C(NPB(NNP("rmb") CD("400,000,000"))))) COLON(";") CC("and") S(x4: VP(VBD("generated") NP-C(NPB(NNP("us"))) NP(NPB($("$") CD("20,000,000")) PP(IN("in") NP-C(NPB(JJ("foreign") NN("exchange")))))))) -> qNP.x0 qCOMMA.x1 "开发区" "技" "工" "贸" "总" "收入" "达" "三十" "亿" "元" qCOLON.x2 qNP-C.x3 "4" "亿" "元" "," qNP-C.x4 "创汇" "二千" "万" "美元" 
+qS.S(S(x0: VP(VBD("brought") NP-C(NPB(DT("the") NN("system"))) PP(IN("on") NP-C(NPB(NN("track")))) PP(IN("with") NP-C(NPB(DT("the") NN("rest")) PP(IN("of") NP-C(NPB(DT("the") NN("nation")))))))) x1: S(NP-C(NPB(DT("the") NN("system")) SBAR(SG-C(VP(TO("to") VP-C(VB("finalize") NP-C(NP(NPB(NNS("sales"))) x2: NP(NPB(x3: x4: x5:) PP(IN("for") SG-C(VP(VBG("verifying") CC("and") VBG("cancelling"))))))))))) VP(VBD("were") VP-C(x6: x7: COMMA(",") PP(IN("with") NP-C(x8: SBAR(IN("that") S-C(NP-C(NPB(PRP("they"))) VP(x9: SBAR-C(S-C(x10: VP(VBZ("runoffs"))))))))))))) -> qNP-C.x0 "实现" "了" "与" "全" "国" "接轨" qCOLON.x1 "结" "售" "制度" qCC.x2 qJJ.x4 qDT.x3 "核销" qNN.x5 qPP.x7 qVBN.x6 "," qNPB.x8 "地" qVBD.x9 qNP-C.x10 "流失" 
+qS.S(S(x0: VP(VBD("transformed") S-C(NP-C(NPB(x1: x2:)) VP(x3: S(NP-C(NPB(NN("silicon") x4: x5:)) VP(NP(NPB(x6: NN("extraction") x7:)) x8: NP-C(NPB(DT("a") x9: NN("winner")) x10:) COMMA(",") PP(IN("into") NP-C(NPB(DT("an") x11: NN("product")) PP(x12: NP-C(NPB(x13: ADJP(JJ("domestic") CC("and") JJ("foreign")) NNS("products")))))))))))) x14: S(x15: COLON(";") S(S(NP-C(NPB(PRP("it"))) VP(VBZ("is") NP-C(NPB(NN("number") CD("one"))) ADVP(RB("nationally")))) x16: x17:))) -> qJJ.x9 "荣获" qPP.x10 "以" qJJ.x1 "作" qVBN.x3 qNN.x2 qJJ.x6 "拉" "硅" qJJ.x4 qNN.x5 qNN.x7 qCOMMA.x8 "已" qNP-C.x0 "转化" "为" "国内外" "同" qJJ.x13 "产品" qIN.x12 "的" qJJ.x11 qCOLON.x14 qS.x15 "," "居" "全" "国" "第一" qCC.x16 qS.x17 
+qS.S(S(x0: VP(VBZ("has") VP-C(VBN("been") ADJP(JJ("bustling")) PP(IN("since") NP(NPB(JJ("ancient") NNS("times"))))))) COLON(";") S(NP-C(x1: VP(x2: PP(IN("in") NP-C(NPB(JJ("great") NNS("numbers")) PP(IN("on") NP-C(NPB(x3: x4: x5: x6:))))))) x7:)) -> qNP-C.x0 "古来" "繁华" "," qDT.x3 qNNS.x4 qNPB.x1 qVBN.x2 qCC.x5 qNN.x6 qVP.x7 
+qS.S(S(x0: VP(VBZ("is") NP-C(NPB(x1: JJ("large") NN("water") NN("transport") NN("artery")) SBAR(WHNP(WDT("which")) SG-C(VP(VBZ("provides") NP-C(NPB(DT("the") NNS("conveniences")) PP(IN("of") NP-C(NPB(x2: x3: NN("waste") NN("water") NN("disposal"))))) PP(x4: x5:) x6:)))))) COLON(";") S(NP-C(NPB(PRP("it"))) VP(VBZ("has") VP-C(VBN("become") NP-C(NPB(DT("a") x7: x8:) PP(IN("for") x9:)))))) -> qNP-C.x0 qDT.x1 "条" "水运" "大" "动脉" "," "为" qPP.x6 qNP-C.x5 "提供" "了" qNN.x2 qCC.x3 qTO.x4 "排水" "之" "便" "," "成为" qNP-C.x9 "的" qJJ.x7 qNN.x8 
+qS.S(S(x0: VP(x1: NP-C(NPB(DT("a") NN("project")) SBAR(WHNP(WDT("which")) SG-C(VP(VBD("straddled") x2: SG(VP(TO("to") VP-C(VB("advance") NP-C(NPB(NAC(x3: PP(x4: NP-C(NPB(DT("a") NN("center")) PP(IN("of") x5:)))) x6: x7: x8: x9:))))))))))) COLON(";") S(PP(IN("because") IN("of") NP-C(NPB(DT("this")))) COMMA(",") NP-C(NPB(EX("there"))) VP(VBD("arose") NP-C(NPB(JJ("many") x10: x11: x12: x13:) x14:)))) -> qNP-C.x0 qVBD.x1 "一" "项" "振兴" qNNP.x3 qIN.x4 qNP-C.x5 qCOMMA.x6 qNN.x7 qCC.x8 qNN.x9 "中心" "的" "跨" qNP-C.x2 "工程" "," "因此" "大量" "出现" "的" "是" qSBAR.x14 qJJ.x10 qNNS.x11 qCC.x12 "新" qNNS.x13 
+qS.S(S(x0: x1: NP-C(NPB(DT("every") NN("area")) PP(IN("of") NP-C(x2: PP(IN("throughout") NP-C(NPB(DT("the") NNP("region"))))))) VP(x3: NP-C(NPB(NNP("rmb") CD("7,163,000,000") x4: CD("41.78") NN("percent"))) x5:)) x6: S(PP(IN("among") NP-C(NPB(DT("these")))) x7: NP-C(NPB(x8: x9:)) VP(VBD("increased") NP(NPB(NNP("rmb") CD("1,937,000,000"))) x10: x11:))) -> qPP.x0 qCOMMA.x1 "全" "区" "各" "项" qNPB.x2 qVBD.x3 "七十一" "点" "六" "三" "亿" "元" qCOMMA.x4 qADVP.x5 "增长" "百分之" "四十一" "点" "七" "八" qCOLON.x6 "其中" qCOMMA.x7 qNPB.x8 "储蓄" qNNS.x9 "为" "十九" "点" "三七" "亿" "元" qCOMMA.x10 "比" qSG.x11 
+qS.S(S(x0: x1: NP-C(NPB(EX("there"))) VP(VBP("are") NP-C(NPB(CD("137") x2: x3:) x4:) x5:)) x6: S(S(x7: VP(VBZ("has") VP-C(VBN("reached") NP-C(NPB(CD("141")))))) COLON(";") S(S(PP(IN("of") NP-C(NPB(DT("these")))) COMMA(",") x8: VP(VBZ("appraoches") NP-C(NPB(NNP("rmb") CD("2,710,000,000"))))) COLON(";") S(NP-C(NPB(DT("the") NN("number")) PP(IN("of") NP-C(NPB(ADJP(JJ("chinese") CC("and") JJ("foreign")) JJ("joint") JJ("capital") x9: x10: x11:)))) x12:)))) -> qPP.x0 qCOMMA.x1 "目前" qPP.x5 qPP.x4 "的" qJJ.x2 qNNS.x3 "已" "有" "一百" "三十七" "家" qCOLON.x6 qNP-C.x7 "达" "一百" "四十一" "项" "," "其中" qNP-C.x8 "达" "二十七" "点" "七" "亿" "元" ":" "中外" "合资" qJJ.x9 "的" qNN.x10 qNNS.x11 qVP.x12 "二千" "家" 
+qS.S(S(x0: x1: NP-C(NPB(EX("there"))) VP(VBP("are") NP-C(NPB(QP(x2: x3:) JJ("+") NNS("businesses"))) PP(x4: NP-C(NPB(NN("shipping") NNS("capacities")))) PP(IN("above") NP-C(NPB(x5: NNS("tons")))))) x6: S(x7: VP(x8: VP-C(ADVP(RB("therefore") RB("not")) VBN("included") PP(IN("in") NP-C(NPB(DT("the") NN("count")))))))) -> qPP.x0 qCOMMA.x1 qRB.x2 "运" "量" qIN.x4 qCD.x5 "吨" "上" "的" "企业" "就" "有" qCD.x3 "多" "家" qCOLON.x6 qNP-C.x7 qVBP.x8 "不计其数" 
+qS.S(S(x0: x1: NP-C(NPB(x2: NN("investment")) x3:) x4:) COLON(";") S(S(S(NP-C(NPB(NN("investment")) PP(IN("in") x5:)) VP(VBP("have") VP-C(VBN("increased")))) COLON(";") S(NP-C(NPB(DT("the") ADJP(JJ("wealthy")) COMMA(",") ADJP(JJ("powerful") CC("and") JJ("grand")) x6: NN("yixzhong"))) VP(NNP("zhushi") NP-C(NP(NPB(NNP("corporation"))) x7: NP(NPB(DT("the") NNP("korean") NNP("dayu") NNP("group"))) COMMA(",") NP(NPB(DT("the") NNP("hong") NNP("kong") x8: NNP("industry") CC("and") NNP("commerce") NNP("group"))))))) COMMA(",") CC("and") S(NP-C(NPB(JJ("other") JJ("large") NNS("corporations"))) VP(VBP("have") VP-C(VBN("come") PP(TO("to") NP-C(NPB(x9: CD("one")))) PP(IN("after") NP-C(NPB(DT("another")))) x10:))))) -> qPP.x0 qCOMMA.x1 qJJ.x2 "投资" qPP.x3 qVP.x4 "," qNP-C.x5 "增多" "," "实力" "雄厚" "的" qJJ.x6 "伊藤忠" "株式会社" qCOMMA.x7 "韩国" "大宇" "集团" "和" "香港" qNNP.x8 "实业" "集团" "等" "大型" "公司" "纷纷" "来" qNNP.x9 qSG.x10 
+qS.S(S(x0: x1: NP-C(x2: x3:) VP(VBD("totalled") NP-C(NPB(NNP("rmb") CD("12,000,000,000"))))) x4: S(S(NP-C(NPB(x5: JJ("old") x6:) PP(x7: NP-C(x8: PP(IN("with") NP-C(NP(NPB(x9: x10: NNS("buildings"))) x11: NP(NPB(JJ("rough") x12:))))))) x13: x14:) x15: S(NP-C(NPB(JJ("unclear") x16: x17: x18: x19:)) x20:))) -> qPP.x0 qCOMMA.x1 qPP.x3 "累计" "完成" qNPB.x2 "一百" "二十" "亿" "元" qCOLON.x4 "昔日" qNPB.x8 qDT.x5 "楼" qDT.x9 qJJ.x10 qCOMMA.x11 qNNS.x12 "不" "平" qCOMMA.x13 qVP.x14 "不" "明" qCOMMA.x15 qNN.x16 "不" "清" qCC.x17 qNNS.x19 "不" qJJ.x18 qIN.x7 qNNS.x6 qVP.x20 
+qS.S(S(x0: x1: PP(IN("in") NP-C(NPB(NN("support")) PP(IN("of") NP-C(NPB(DT("the") NN("war")) PP(x2: NP-C(NPB(x3: NN("development")))))))) x4: NP-C(NPB(DT("the") NNP("guanxizhuang") NNP("autonomous") NNP("region") x5:)) VP(x6: NP-C(NPB(JJ("keypoint") x7:)) PP(TO("to") NP-C(NPB(x8: x9: x10: NNS("deployments")))) x11: SG(VP(VBG("moving") x12: x13:)))) COLON(";") S(ADVP(RB("furthermore")) x14: x15: VP(x16: x17: SG(VP(VP(TO("to") VP-C(x18: NP-C(NPB(JJ("foreign") NN("capital"))))) COMMA(",") VP(TO("to") VP-C(x19: NP-C(NPB(x20: x21: NN("coordination")) PP(IN("between") NP-C(NP(NPB(NNS("enterprises")) VP(VBG("belonging") PP(TO("to") NP-C(NPB(JJ("different") NNS("ministries")))))) CC("or") NP(NPB(NNS("industries")))))))) COMMA(",") x22: VP(TO("to") VP-C(VB("delegate") NP-C(NPB(NN("authority")) PP(TO("to") NP-C(NPB(JJR("lower") NNS("levels")))) SG(VP(TO("to") VP-C(VB("deal") PP(IN("with") NP-C(NPB(JJ("foreign") NNS("entities"))))))))))))))) -> qPP.x0 qCOMMA.x1 "广西" "壮族" "自治区" qNN.x5 qIN.x2 "全" "区" qJJ.x3 "发展" "战略" qCOMMA.x4 qNN.x8 qNNS.x9 qCC.x10 "发展" "布局" qVBD.x6 "重大" qNNS.x7 qCOMMA.x11 qADVP.x12 qSG.x13 qCOMMA.x14 qNP-C.x15 qVBD.x16 qVB.x18 "外资" "," qVB.x19 qJJ.x20 qJJ.x21 "联合" qCC.x22 "对" "外" "下放" "权" qNP-C.x17 
+qS.S(S(x0: x1: x2: x3: NP-C(NPB(NPB(NPB(NPB(NNP("china") POS("'s")) x4: x5: POS("'s")) JJ("foreign") COMMA(",") JJ("foreign") NN("partnership") CC("and") ADJP(RB("jointly") VBN("managed")) NN("investment") x6: x7:) NNP("renminbi") x8: NNS("balances"))) VP(VBD("approached") NP-C(NPB(NNP("rmb") CD("90,956,000,000"))))) x9: S(x10: VP(VBD("was") NP-C(x11: PP(IN("of") NP-C(NPB(NNP("rmb") CD("2,033,000,000")))) PP(IN("over") NP(NPB(NPB(DT("the") x12: x13: POS("'s")) NN("end"))))) x14: NP(NPB(DT("an") x15:) x16:)))) -> qPP.x0 qCOMMA.x1 qPP.x2 qCOMMA.x3 "中国" qJJ.x4 qNNS.x5 "对" "三" "资" qNNS.x6 qPOS.x7 "人民币" qNN.x8 "余额" "已" "达" "九百" "九十五" "点" "六" "亿" "元" qCOLON.x9 qNP-C.x10 "比" qJJ.x12 qNN.x13 "末" qNPB.x11 "二百" "零" "三" "点" "三" "亿" "元" qCOMMA.x14 qNN.x15 qPP.x16 
+qS.S(SBAR(IN("among") S-C(NP-C(NPB(DT("these"))) VP(VBP("are") NP-C(x0: VP(VBN("shipped") PP(x1: NP-C(NPB(NNP("xuzhou"))))))))) COLON(";") S(x2: VP(VBZ("is") ADJP(ADJP(NP(NPB(NNP("rmb") x3:)) x4: x5: SG(VP(TO("to") x6:))) PP(x7: PP-C(IN("by") NP-C(NPB(JJ("overland") NN("highway")))))))) COLON(";") S(PP(IN("by") NP-C(NPB(DT("this") NN("factor")) ADVP(RB("alone")))) NP-C(NPB(DT("the") x8: x9:)) VP(VBZ("saves") NP-C(x10: PP(ADVP(ADVP(RBR("more")) PP(IN("than") NP-C(NPB(NNP("rmb") CD("20,000,000")) NP(NPB(DT("a") NN("year")))))) IN("in") x11:))))) -> "其中" qNPB.x0 qIN.x1 "徐州" "运" "来" "," "走" qVP-C.x6 qIN.x7 "走" "陆路" "运费" qPP.x5 qJJR.x4 qCD.x3 "元" qNP-C.x2 "仅" "此" "一" "项" qNNP.x8 qNNP.x9 "每" "年" "就" "为" qNPB.x10 "节约" qNP-C.x11 "二千" "多" "万" "元" 
+qS.S(SBAR(IN("in") NN("order") SG-C(VP(TO("to") VP-C(VP(x0: x1: x2:) x3: x4:)))) x5: NP-C(NPB(NNP("guanxi"))) VP(VBD("implemented") NP-C(x6: PP(IN("of") NP-C(NPB(NNS("policies")) VP(VBG("concerning") x7:)))))) -> "为了" qADVP.x0 qVB.x1 "对" qNP-C.x2 qCC.x3 qVP.x4 qCOMMA.x5 "广西" "出台" qNPB.x6 qNP-C.x7 "政策" 
+qS.S(SBAR(WHADVP(WRB("when")) S(NP-C(NPB(NN("conostruction") x0:)) VP(VBD("entered") NP-C(NPB(DT("the") x1:))))) x2: S(x3: VP(VBD("presented") NP-C(NPB(PRP("them"))) PP(x4: NP-C(NPB(x5: JJ("legal") x6:))))) x7: S(NP-C(NPB(x8: NNS("units"))) ADVP(RB("later")) x9:)) -> "建筑" qNNS.x0 "进" qNN.x1 qCOMMA.x2 qNP-C.x3 "先" "送" "上" qDT.x5 "法规" "性" qNNS.x6 qCC.x7 "然后" qIN.x4 qJJ.x8 "队伍" qVP.x9 
+qS.S(SBAR(x0: S-C(NP-C(NPB(DT("the") NN("number")) x1:) VP(VBD("were") ADJP(ADJP(RB("444") JJR("less")) PP(IN("than") NP-C(NPB(x2: NN("year")))))))) x3: NP-C(NPB(x4: NN("value"))) ADVP(RB("nonetheless")) VP(VBD("increased") PP(IN("by") NP-C(NPB(JJR("more")) PP(IN("than") NP-C(NPB(NNP("us")))))) NP(NPB($("$") CD("130,000,000"))))) -> qIN.x0 qPP.x1 "上" "比" qJJ.x2 "年" "减少" "四百" "四十四" "件" qCOMMA.x3 "但" qNN.x4 "金额" "却" "比" "上" "年" "增加" "一点" "三" "亿" "多" "美元" 
+qS.S(x0: NP-C(NPB(EX("there"))) VP(VBP("are") x1:)) -> qADVP.x0 "有" qNP-C.x1 
+qS.S(x0: x1: x2: x3: x4: x5:) -> qNP.x0 qCOMMA.x1 qNP.x2 qCOMMA.x3 qNP-C.x4 qVP.x5 
+qS.S(x0: x1: x2: x3:) -> qNP.x0 qCOMMA.x1 qNP-C.x2 qVP.x3 
+qS.S(x0: COMMA(",") VP(x1: VP(VBZ("has") S-C(x2: x3:)) CC("but") VP(ADVP(RB("also")) VBZ("has") x4:))) -> qNP-C.x2 qNP-C.x0 qCONJP.x1 qVP.x3 "而且" qVP-C.x4 
+qS.S(x0: ADVP(RB("obviously")) VP(VBP("show") x1:)) -> qNP-C.x0 "还" "显示" qSBAR-C.x1 
+qS.S(x0: x1: x2:) -> qNP-C.x0 qADVP.x1 qVP.x2 
+qS.S(x0: x1: x2:) -> qNP.x1 qNP-C.x0 qVP.x2 
+qS.S(x0: x1:) -> qNP-C.x0 qVP.x1 
+qS.S(x0: x1:) -> qVP.x1 qNP-C.x0 
+qS.S(x0: COMMA(",") NP-C(NPB(EX("there"))) VP(VBP("are") NP-C(x1: PP(IN("in") x2:)) COMMA(",") x3:)) -> qPP.x0 "为止" "," qNP-C.x2 "已" "有" qNPB.x1 "," qSBAR.x3 
+qS.S(x0: COMMA(",") NP-C(NPB(NNP("ministry")) PP(IN("of") NP-C(NP(NPB(NNP("construction"))) x1: NP(NPB(NNP("ministry")) PP(IN("of") NP-C(NPB(NNP("foreign") NNP("economics"))))) CC("and") NP(NPB(NNP("trade"))))) NP(x2: PRN(-LRB-("-LRB-") SG(VP(x3: SG-C(VP(x4: NP-C(NPB(NNS("regulations"))) x5:)))) -RRB-("-RRB-")))) x6:) -> qPP.x0 "建设部" qCC.x1 "外经贸部" qNPB.x2 "的" qVBG.x3 qVBG.x4 qPP.x5 "的" "若干" "规定" "," qVP.x6 
+qS.S(x0: COMMA(",") NP-C(NPB(x1: JJ("square") NNS("kilometers"))) VP(VBP("have") ADVP(RB("already")) VP-C(VBN("opened") x2: SG(VP(VBG("attracting") PP(IN("from") NP-C(NPB(JJ("overseas") JJ("chinese") COMMA(",") ADJP(JJ("joint") CC("and") JJ("foreign")) NN("investment") x3:) COMMA(",") NP(NPB(NNP("us") QP($("$") CD("20,890,000,000"))))))))))) -> qPP.x0 "已" "开发" qJJ.x1 "点" "六" "平方公里" qCOMMA.x2 "引进" "三" "资" qNNS.x3 "二百" "八十七" "家" "," "实际" "利用" "外资" "八" "点" "九" "亿" "美元" 
+qS.S(x0: COMMA(",") PP(IN("on") NP(NPB(DT("the") NNS("heels")) PP(IN("of") NP-C(NP(NPB(NPB(DT("the") JJ("chinese") x1: x2:) JJ("unending") x3:)) x4: NP(NPB(DT("the") x5:) PP(IN("of") NP-C(NPB(NPB(NNP("china") POS("'s")) NN("opening")) PP(TO("to") NP-C(NPB(DT("the") x6: NN("world"))))))))))) x7: NP-C(NPB(NPB(JJ("foreign") NNS("businesses") POS("'s")) x8:) x9:) x10:) -> qPP.x0 "," "近" "几" "年" "," "随着" "中国" qNN.x1 qPOS.x2 "不断" qNN.x3 qCC.x4 "对" qJJ.x6 "开放" "的" "不断" qNN.x5 qCOMMA.x7 "外商" qSG.x9 qNN.x8 qVP.x10 
+qS.S(x0: NP-C(x1: PP(IN("of") NP-C(NPB(NNP("pudong"))))) VP(VBD("gave") NP-C(NPB(NN("birth"))) PP(x2: NP-C(NPB(x3: x4: x5: x6: x7:))) x8:)) -> qPP.x0 "浦东" qNPB.x1 "诞生" qTO.x2 qNPB.x3 qJJ.x4 "家" qJJ.x5 qNN.x6 qNNS.x7 qNP.x8 
+qS.S(x0: x1: NP-C(NPB(EX("there"))) VP(VBP("are") x2:)) -> qPP.x0 qCOMMA.x1 "还" "有" "内" qSBAR-C.x2 
+qS.S(x0: x1: PP(IN("during") NP(NPB(DT("the") x2: JJ(x3: JJ("@-@") JJ("year")) NN("plan")))) NP-C(NPB(DT("the") NNP("gansu") NNP("province") NNP("life") NNP("insurance") x4:)) VP(VP(VBD("took") PRT(RP("on")) NP-C(x5: PP(x6: NP-C(NPB(DT("the") NNP("gansu") NNP("province") x7: x8:) VP(VBN("valued") PP(IN("at") NP-C(NPB(NNP("rmb") CD("7,710,000,000"))))))))) x9: VP(x10: PRT(RP("out")) NP-C(NPB(NNP("rmb") CD("13,855,000"))) PP(IN("in") NP-C(NPB(NNS("compensations")))) x11: SG(ADVP(RB("vigorously")) VP(x12: NP-C(x13: PP(IN("of") NP-C(NPB(NPB(NNP("gansu") NNP("province") POS("'s")) NN("import") NN("export") x14:))))))))) -> qPP.x0 qCOMMA.x1 qJJ.x2 qJJ.x3 "期间" "," "人保" qNNP.x4 qIN.x6 "甘肃省" qJJ.x7 qNN.x8 "承担" qNPB.x5 "金额" "达" "七" "点" "七一" "亿" "元" qCC.x9 qVBD.x10 "赔款" "一千" "三百" "八十五" "点" "五万" "元" qCOMMA.x11 "有力" "地" qVBG.x12 "甘肃省" "进出口" qNN.x14 qNPB.x13 
+qS.S(x0: x1: S(NP-C(NPB(x2: JJ("gross") NN("value")) PP(IN("of") NP-C(NPB(NNS("exports")) x3:))) VP(VBD("was") NP-C(NPB(NNP("us"))) NP(NPB($("$") CD("17,800,000,000")) x4: NP(NPB(DT("a") x5: NN("percent") NN("increase")) PP(IN("over") NP(NPB(JJ("last") x6:))))))) COLON(";") S(NP-C(NPB(JJ("gross") NN("value")) PP(IN("of") NP-C(NPB(NNS("imports"))))) VP(VBD("was") NP-C(NPB(NNP("us"))) NP(NPB($("$") CD("3,100,000,000")) x7: NP(NPB(DT("a") CD("74") NN("percent") NN("increase")) PP(IN("over") NP(NPB(DT("the") JJ("previous") x8:)))))))) -> qPP.x0 qCOMMA.x1 qNPB.x2 qPP.x3 "输出" "值" "为" "一百" "七十八" "亿" "美元" qCOMMA.x4 "比" "上" "一" qNN.x6 "增长" "百分之" qCD.x5 ":" "输入" "值" "为" "三十一" "亿" "美元" qCOMMA.x7 "比" "上" qNN.x8 "增长" "百分之" "七十四" 
+qS.S(x0: x1: x2: NP-C(NPB(x3: NNS("cities"))) VP(x4: NP-C(NPB(JJ("gross") x5: NN("product") NNS("values"))) PP(IN("over") NP-C(NPB(NNP("rmb") CD("19,000,000,000")) COMMA(",") SBAR(WHNP(WDT("which")) SG-C(VP(VBD("was") NP-C(NPB(QP(JJR("more") IN("than") DT("a") CD("90")) NN("percent") NN("increase")) PP(IN("over") NP-C(x6: COMMA(",") NP(x7: SBAR(x8: S(NP-C(NPB(x9: NNS("cities"))) x10:))))))))))))) -> qPP.x0 qCOMMA.x1 qDT.x3 "城市" qNP.x2 qVBD.x4 qJJ.x5 "生产" "总值" "一百" "九十" "多" "亿" "元" "," "比" qVP.x10 qIN.x8 qDT.x9 qNPB.x6 qNPB.x7 "九成" "多" 
+qS.S(x0: x1: x2: x3:) -> qPP.x0 "中" qCOMMA.x1 qVP.x3 qNP-C.x2 
+qS.S(x0: x1: x2: x3:) -> qPP.x0 qCOMMA.x1 qNP-C.x2 "还" qVP.x3 
+qS.S(x0: x1: x2: x3:) -> qPP.x0 qCOMMA.x1 qNP-C.x2 qVP.x3 
+qS.S(x0: x1: x2: COMMA(",") x3: x4:) -> qPP.x0 qCOMMA.x1 qPP.x2 qNP-C.x3 qVP.x4 
+qS.S(x0: x1: x2: COLON(";") S(PP(IN("at") NP(NPB(NN("present")))) COMMA(",") x3: x4:)) -> qPP.x0 qCOMMA.x1 qS.x2 "," "目前" qNP-C.x3 qVP.x4 
+qS.S(x0: x1: x2:) -> qPP.x0 "," qNP-C.x1 qVP.x2 
+qS.S(x0: x1: x2:) -> qPP.x0 qNP-C.x1 qVP.x2 
+qS.S(x0: x1: x2:) -> qNP-C.x1 qPP.x0 qVP.x2 
+qS.S(x0: COLON(";") S(NP-C(NPB(DT("the") x1:) COMMA(",") x2:) x3: x4: x5:)) -> qS.x0 "," qNN.x1 qVP.x2 qCOMMA.x3 qADVP.x4 qVP.x5 
+qS.S(x0: COLON(";") S(NP-C(NPB(PRP("it"))) VP(VBD("was") x1: x2:))) -> qS.x0 "," "是" qPP.x1 qSBAR-C.x2 
+qS.S(x0: COLON(";") S(NP-C(x1: SBAR(WHPP(IN("at") WHNP(WDT("which"))) x2:)) x3:)) -> qS.x0 "," qS-C.x2 qVP.x3 qNPB.x1 
+qS.S(x0: COLON(";") S(PP(IN("during") x1:) NP-C(NPB(EX("there"))) VP(VBD("were") x2:))) -> qS.x0 "," qNP.x1 "有" qNP-C.x2 
+qS.S(x0: x1: x2:) -> qS.x0 qCOLON.x1 qS.x2 
+qS.S(x0: COMMA(",") PP(IN("in") NP-C(NPB(PRP$("its") NN("operation")) PP(TO("to") NP(NPB(NN("date")))))) x1: NP-C(NPB(PRP("it"))) VP(VBZ("has") VP-C(VBN("concluded") NP-C(NPB(NNS("deals"))) PP(IN("in") NP-C(NPB(NN("excess")) PP(IN("of") NP-C(NPB(CD("100,000,000") NN("yuan")) SBAR(S-C(NP-C(NP(NPB(NNP("rmb"))) x2: NP(NPB(x3: DT("a") JJ("single") NN("kickback")))) VP(VBD("was") VP-C(VBN("discovered")))))))))))) -> qSBAR.x0 "," "运转" "至今" qCOMMA.x1 "成交" "药品" "一亿" "多" "元" qCC.x2 qRB.x3 "发现" "一" "例" "回扣" 
+qS-C.S-C(NP-C(NP(NPB(CD("5,100") x0:) VP(VBN("backed") PP(IN("by") NP-C(NPB(JJ("joint") NNS("investments")))) PP(IN("with") NP-C(NPB(JJ("concerned") NNS("departments")))) PP(IN("at") NP-C(NPB(JJ("various") NNS("levels")))))) x1: NP(NPB(CD("175") x2: x3:))) VP(VBP("have") ADVP(RB("already")) VP-C(VBN("gone") PP(IN("into") NP-C(NPB(NN("production"))))))) -> "联" qNNS.x0 "五千" "一百" "家" qCC.x1 "已" "投产" qJJ.x2 qNNS.x3 "一百" "七十五" "个" 
+qS-C.S-C(NP-C(NPB(x0: x1: x2: x3:) x4:) COMMA(",") PP(PP(x5: x6:) x7:) x8:) -> qNPB.x0 qNN.x1 qNN.x2 qIN.x5 qNN.x3 qPP.x4 qSG-C.x6 qPP.x7 qVP.x8 
+qS-C.S-C(x0: x1:) -> qNP-C.x0 qVP.x1 
+qS-C.S-C(x0: x1: x2: x3: x4:) -> qPP.x0 qCOMMA.x1 qS.x2 qCOLON.x3 qS.x4 
+qSBAR.SBAR(WHNP(WDT("which")) SG-C(VP(VBZ("has") VP-C(VBN("taken") NP-C(NPB(NN("shape"))) PP(IN("as") NP-C(NPB(DT("the") NNP("grand") NNP("canal") NNP("economic") NNP("zone")))))))) -> "形成" "了" "大" "运河" "经济带" 
+qSBAR.SBAR(WHNP(x0: WHPP(IN("of") WHNP(WDT("which")))) SG-C(VP(VBP("support") NP-C(NPB(DT("the") x1: NN("economy")))))) -> qWHNP.x0 "为" qJJ.x1 "经济" "支柱" 
+qSBAR.SBAR(WHPP(IN("of") WHNP(WDT("which"))) S-C(NP-C(NPB(CD("223"))) VP(VBP("are") NP-C(NPB(x0: CC("and") x1: x2: NNS("producers")))))) -> "被" "认定" "为" qJJ.x0 qJJ.x1 qNN.x2 "产业" "的" "有" "二百二" "十三" "家" 
+qSBAR.SBAR(x0: IN("because") S-C(NP-C(NPB(PRP("it"))) x1:)) -> qADVP.x0 "因为" qVP.x1 
+qSBAR.SBAR(x0: x1:) -> qIN.x0 qS.x1 
+qSBAR.SBAR(x0: SG-C(VP(VBD("was") ADJP(JJ("consistent") PP(x1: NP-C(NPB(DT("the") x2: x3: NN("rating")) x4:)))))) -> qIN.x1 qVP.x4 qJJ.x2 qNN.x3 "等级" qWHNP.x0 "评" "级" "一致" 
+qSBAR.SBAR(x0: x1:) -> qSG-C.x1 qWHNP.x0 
+qSBAR-C.SBAR-C(IN("that") x0:) -> qS-C.x0 
+qSBAR-C.SBAR-C(x0: x1:) -> qIN.x0 qS-C.x1 
+qSBAR-C.SBAR-C(x0:) -> qS-C.x0 
+qSG.SG(ADVP(RB("thereby")) VP(VBG("assuring") x0: x1:)) -> "确保" "了" qPP.x1 "的" qNP-C.x0 
+qSG.SG(x0:) -> qVP.x0 
+qSG-C.SG-C(x0: x1:) -> qADVP.x0 qVP.x1 
+qSG-C.SG-C(x0:) -> qVP.x0 
+qSINV.SINV(PP(x0: NP-C(NPB(NPB(NNP("changzhou") POS("'s")) x1: JJ("top") NN("keypoint") NN("growth") NN("support") x2:))) VP(x3: NP-C(NPB(DT("the") NN("power") NN("generating")))) NP(NPB(x4: x5: x6: x7: x8: x9: x10: x11: x12: x13: NN("power") x14: CC("and") x15: x16: x17: CC("and") x18: JJ("other") x19: NNS("industries"))) COLON(";") S(NP-C(NPB(DT("all"))) VP(VBP("are") VP-C(VBN("spread") PP(x20: NP-C(NPB(DT("the") NN("canal") NNS("shores")))))))) -> qIN.x0 "常州" "重点" "培育" "的" qCD.x1 "大" "支柱" qNNS.x2 "中" qVBP.x3 "动力" qNN.x4 qNN.x5 qCOMMA.x6 qNN.x7 qNN.x8 qCOMMA.x9 qNN.x10 qNN.x11 qNN.x12 qCOMMA.x13 qNN.x14 qVBG.x15 qJJ.x16 qNN.x17 "工业" "等" qCD.x18 qJJ.x19 "产业" "均" qIN.x20 "河" "分布" 
+qTO.TO("to") -> "," 
+qTO.TO("to") -> "为" 
+qTO.TO("to") -> "到" 
+qTO.TO("to") -> "对" 
+qTO.TO("to") -> "方式" "向" 
+qTO.TO("to") -> "的" 
+qTO.TO("to") -> "给" 
+qUCP.UCP(x0: CC("and") JJ("other")) -> qNN.x0 "等" 
+qVB.VB("assure") -> "确保" 
+qVB.VB("attract") -> "引进" 
+qVB.VB("construct") -> "建设" 
+qVB.VB("create") -> "创造" 
+qVB.VB("establish") -> "设立" 
+qVB.VB("expand") -> "扩大" 
+qVB.VB("expedite") -> "加快" 
+qVB.VB("invest") -> "投资" 
+qVB.VB("manage") -> "办" 
+qVB.VB("promote") -> "推动" 
+qVB.VB("reach") -> "达到" 
+qVB.VB("strengthen") -> "加强" 
+qVB.VB("undertake") -> "进行" 
+qVBD.VBD("allowed") -> "使" 
+qVBD.VBD("approved") -> "批准" "了" 
+qVBD.VBD("approved") -> "批准" 
+qVBD.VBD("attained") -> "取得" 
+qVBD.VBD("attained") -> "完成" 
+qVBD.VBD("built") -> "建" 
+qVBD.VBD("completed") -> "完成" "了" 
+qVBD.VBD("created") -> "创造" 
+qVBD.VBD("decided") -> "决定" 
+qVBD.VBD("determined") -> "确定" 
+qVBD.VBD("drafted") -> "制定" "了" 
+qVBD.VBD("engaged") -> "聘请" 
+qVBD.VBD("flourished") -> "发达" 
+qVBD.VBD("implemented") -> "实行" 
+qVBD.VBD("improved") -> "改善" 
+qVBD.VBD("increased") -> "加大" 
+qVBD.VBD("invested") -> "投资" 
+qVBD.VBD("made") -> "作" "了" 
+qVBD.VBD("paid") -> "支付" 
+qVBD.VBD("prevented") -> "防止" "了" 
+qVBD.VBD("promulgated") -> "颁布" 
+qVBD.VBD("provided") -> "提供" "了" 
+qVBD.VBD("reached") -> "达" 
+qVBD.VBD("remained") -> "仍" 
+qVBD.VBD("revised") -> "调整" 
+qVBD.VBD("rose") -> "上升" "之" "势" 
+qVBD.VBD("stayed") -> "坚持" 
+qVBD.VBD("strengthened") -> "加强" 
+qVBD.VBD("totalled") -> "共" 
+qVBD.VBD("was") -> "为" 
+qVBD.VBD("was") -> "是" 
+qVBD.VBD("were") -> "," 
+qVBD.VBD("were") -> "则" 
+qVBD.VBD("were") -> "被" 
+qVBG.VBG("advancing") -> "促进" 
+qVBG.VBG("allowing") -> "使" 
+qVBG.VBG("approaching") -> "近" 
+qVBG.VBG("being") -> "而" 
+qVBG.VBG("branching") -> "分设" 
+qVBG.VBG("entering") -> "进入" "商品化" 
+qVBG.VBG("entering") -> "进入" 
+qVBG.VBG("establishing") -> "设立" 
+qVBG.VBG("exceeding") -> "超" 
+qVBG.VBG("expanding") -> "扩大" 
+qVBG.VBG("following") -> "后" 
+qVBG.VBG("gratifying") -> "可喜" 
+qVBG.VBG("huaxing") -> "华兴" 
+qVBG.VBG("improving") -> "改善" 
+qVBG.VBG("including") -> "包括" 
+qVBG.VBG("increasing") -> "增长" 
+qVBG.VBG("leading") -> "家" 
+qVBG.VBG("providing") -> "提供" 
+qVBG.VBG("realizing") -> "实现" 
+qVBG.VBG("regarding") -> "关于" 
+qVBG.VBG("relating") -> "涉及" 
+qVBG.VBG("rising") -> "崛起" 
+qVBG.VBG("satisfying") -> "满足" 
+qVBG.VBG("supporting") -> "支持" 
+qVBG.VBG("transforming") -> "变" 
+qVBN.VBN("approved") -> "批准" 
+qVBN.VBN("approved") -> "核准" 
+qVBN.VBN("attained") -> "得到" "了" 
+qVBN.VBN("been") -> "曾" 
+qVBN.VBN("built") -> "建" 
+qVBN.VBN("contracted") -> "承包" 
+qVBN.VBN("entered") -> "进入" 
+qVBN.VBN("expanded") -> "扩展" 
+qVBN.VBN("gathered") -> "云集" 
+qVBN.VBN("implemented") -> "全面" "实施" 
+qVBN.VBN("increased") -> "增长" 
+qVBN.VBN("invested") -> "投资" 
+qVBN.VBN("linked") -> "衔接" 
+qVBN.VBN("opened") -> "开放" 
+qVBN.VBN("protected") -> "保护" 
+qVBN.VBN("reached") -> "达" 
+qVBN.VBN("run") -> "开办" 
+qVBN.VBN("scattered") -> "分布" 
+qVBN.VBN("strengthened") -> "加强" 
+qVBP.VBP("achieve") -> "取得" 
+qVBP.VBP("are") -> "," 
+qVBP.VBP("are") -> "则" 
+qVBP.VBP("are") -> "已" 
+qVBP.VBP("are") -> "是" 
+qVBP.VBP("have") -> "已" "有" 
+qVBP.VBP("have") -> "已" 
+qVBP.VBP("involve") -> "涉及" 
+qVBZ.VBZ("'s") -> "的" 
+qVBZ.VBZ("develops") -> "发展" 
+qVBZ.VBZ("exceeds") -> "突破" 
+qVBZ.VBZ("has") -> "已" 
+qVBZ.VBZ("is") -> "是" 
+qVP.VP(ADVP(RB("thereby")) VBG("facilitating") x0:) -> "以便" qSG-C.x0 
+qVP.VP(TO("to") VP-C(VB("come") PP(TO("to") x0:) SG(VP(TO("to") x1:)))) -> "来" qNP-C.x0 qVP-C.x1 
+qVP.VP(TO("to") x0:) -> qVP-C.x0 
+qVP.VP(VBD("began") PP(IN("in") NP(NPB(DT("the") x0:)))) -> "始" "于" qCD.x0 
+qVP.VP(VBD("broke") PP(IN("through") NP-C(NPB(DT("the") JJ(x0: JJ("@-@") JJ("end")) NNP("rmb") CD("2,000,000,000") NN("barrier"))))) -> "突破" "了" qJJ.x0 "净" "增" "二十" "亿" "元" "大关" 
+qVP.VP(VBD("carried") PRT(RP("out")) x0:) -> "进行" qNP-C.x0 
+qVP.VP(VBD("had") ADVP(RB("never") RB("before")) VP-C(x0: VP-C(VBN("encountered")))) -> "以前" "不" qVBN.x0 "遇到" "过" 
+qVP.VP(VBD("moved") PP(IN("at") NP-C(NPB(DT("an") ADJP(RB("increasingly") JJ("rapid")) NN("pace"))))) -> "步伐" "加快" 
+qVP.VP(VBD("participated") PP(IN("in") x0:)) -> "参与" qSG-C.x0 
+qVP.VP(VBD("received") NP-C(NPB(DT("an") JJ("aa1") NN("bond") NN("credit") NN("rating")) x0:)) -> qPP.x0 "取得" "债券" "信用" "等级" "aa" ":" 
+qVP.VP(VBD("totalled") S(NP-C(NPB(NNP("rmb") CD("1,441,000,000"))) x0: VP(NP-C(NPB(JJR("more")) PP(IN("than") NP-C(NPB(NNP("rmb") CD("800,000,000"))))) PP(IN("over") x1:)))) -> "十四" "点" "四" "一亿" "元" qCOMMA.x0 "比" qNP.x1 "增加" "八" "亿" "多" "元" 
+qVP.VP(VBD("was") x0: PP(IN("from") NP-C(NPB(DT("the") NN("outset"))))) -> "一" "开始" "就" qADJP.x0 
+qVP.VP(VBD("were") x0:) -> qNP-C.x0 
+qVP.VP(VBD("were") x0:) -> qVP-C.x0 
+qVP.VP(VBG("bordering") NP-C(NPB(DT("the") NN("canal")))) -> "运河" "沿岸" 
+qVP.VP(VBG("bordering") x0: PP(IN("in") NP-C(NPB(NNP("wuxi") x1:)))) -> "无锡" qNNP.x1 qNP-C.x0 
+qVP.VP(VBG("coming") PP(TO("to") x0:) x1:) -> "到" qNP-C.x0 qPP.x1 
+qVP.VP(VBG("doing") NP-C(NPB(NN("business")))) -> "开业" 
+qVP.VP(VBG("entering") NP-C(NPB(DT("the") x0:))) -> "进" qNN.x0 
+qVP.VP(VBG("insuring") NP-C(NPB(NN("satellite") x0:))) -> "卫星" qNNS.x0 
+qVP.VP(VBG("listing") PP(IN("in") x0:)) -> "列入" qNP-C.x0 
+qVP.VP(VBN("developed") PP(x0: NP-C(NPB(NN("importance")))) PP(IN("by") SG-C(VP(VBG("serving") PP(IN("as") NP-C(NPB(DT("a") x1: NN("link")) PP(IN("between") NP-C(NPB(NN("north") CC("and") NN("south")))))))))) -> qIN.x0 "贯通" "南北" qNN.x1 "发挥" "重要" "作用" "," 
+qVP.VP(VBN("given") PP(TO("to") NP-C(NPB(NNP("china")))) PP(IN("by") NP-C(NPB(NPB(DT("the") x0: x1: x2: POS("'s")) JJ("domestic") NN("department"))))) -> qJJ.x0 qNN.x1 qNN.x2 "内部" "对" "中国" 
+qVP.VP(VBN("increased") PP(IN("by") NP-C(NPB(CD("61.38") NN("percent"))))) -> "增幅" "为" "百分之" "六十一" "点" "八" "三" 
+qVP.VP(VBN("spread") PP(IN("over") x0:)) -> "遍布" "在" qNP-C.x0 
+qVP.VP(VBP("are") ADJP(JJ("notable"))) -> "成效" "显著" 
+qVP.VP(VBP("are") ADJP(RB("quite") x0:)) -> "较" qJJ.x0 
+qVP.VP(VBP("are") x0: x1:) -> qPP.x1 qADJP.x0 
+qVP.VP(VBP("dim") NP-C(NPB(NNS("lights")))) -> "灯" 
+qVP.VP(VBP("have") x0:) -> qVP-C.x0 
+qVP.VP(VBP("indicate") SBAR-C(IN("that") x0:)) -> "表明" "," qS-C.x0 
+qVP.VP(VBZ("gets") NP-C(NPB(JJ("high") x0: NN("credit") NN("rating")) x1:)) -> qPP.x1 "获" qNN.x0 "信用" "高等" "级" 
+qVP.VP(VBZ("has") NP-C(NP(NPB(QP(CD("one") x0: x1:) x2:)) CC("and") x3: x4: x5:)) -> "都" "有" "一" qCC.x0 qJJR.x1 qNN.x2 qNP.x3 qCC.x4 qNP.x5 
+qVP.VP(VBZ("has") VP-C(VBN("become") x0:)) -> "成为" qNP-C.x0 
+qVP.VP(VBZ("has") VP-C(VBN("concluded") NP-C(NPB(JJR("more")) PP(IN("than") NP-C(NP(NPB(DT("a") CD("thousand") x0: x1:)) x2: NP(NPB(NN("capital") x3:)) ADJP(JJ("worth")) NP(NPB(JJ("several") NNS("tens")) PP(IN("of") NP-C(NPB(NNS("billions")) PP(IN("of") NP-C(x4: PP(x5: NP-C(NPB(DT("the") CD("four") x6: x7:)))))))) CC("and") x8:))))) -> qIN.x5 qJJ.x6 qNNS.x7 qNP.x8 "实施" "了" "一千多" "个" qJJ.x0 qNNS.x1 qCC.x2 qNNS.x3 "资金" "数十亿" qNPB.x4 
+qVP.VP(VBZ("has") x0:) -> qVP-C.x0 
+qVP.VP(VBZ("is") ADJP(JJ("extreme"))) -> "十分" 
+qVP.VP(VBZ("is") ADJP(RB("very") x0:)) -> "很" qJJ.x0 
+qVP.VP(VBZ("is") ADVP(RB("just") RB("now")) x0:) -> "正" qVP-C.x0 
+qVP.VP(VBZ("is") VP-C(VBN("located") PP(IN("in") x0:))) -> "位于" qNP-C.x0 
+qVP.VP(VBZ("is") x0:) -> qVP-C.x0 
+qVP.VP(VBZ("relies") PP(IN("on") x0:) x1: x2:) -> qADVP.x2 "要" "靠" qNP-C.x0 qPP.x1 
+qVP.VP(VBZ("serves") NP-C(NPB(DT("a") JJ("prominent") NN("function")) x0:)) -> qPP.x0 "中" "发挥" "了" "显著" "作用" 
+qVP.VP(VP(x0: NP-C(NPB(CD("130,000,000,000") NN("yuan")) x1: x2:)) x3: CC("and") VP(x4: x5: SG(VP(x6: VP-C(VB("expand") NP-C(NPB(NN("development")) PP(IN("of") NP-C(NPB(JJ("foreign") NNS("contacts")))))))))) -> qVBD.x0 "一千" "三百多" "个" "亿" qCOMMA.x1 qVP.x2 qCOMMA.x3 qTO.x6 "扩大" "对" "外" "开放" qVBD.x4 qNP-C.x5 
+qVP.VP(x0: VBD("sought") PRT(RP("out")) x1:) -> qADVP.x0 "探索" qNP-C.x1 
+qVP.VP(x0: x1: x2: COLON(";") SBAR(IN("in") NN("order") SG-C(VP(TO("to") VP-C(x3: NP-C(NPB(NN("investment")) PP(IN("in") NP-C(NP(NP(NPB(NN("agriculture"))) CC("and") NP(NPB(NN("animal") NN("husbandry"))) CC("and") NP(NPB(JJ("other") x4: x5:) SBAR(S-C(x6: VP(x7: NP-C(NPB(x8: x9: x10:) PP(IN("of") NP-C(NPB(NN("investment") x11:) x12:)))))))) x13: x14: x15: x16:)))))))) -> qADVP.x0 qVBD.x1 qNP-C.x2 "," "以" qVB.x3 "农牧业" "生产" "等" qJJ.x4 qNNS.x5 "的" "投入" qNP-C.x6 qVBD.x7 qPP.x12 qCOMMA.x13 qNP.x14 qCOMMA.x15 qNP.x16 qDT.x8 qJJ.x9 qNN.x11 qNN.x10 
+qVP.VP(x0: x1:) -> qVB.x0 qNP-C.x1 
+qVP.VP(x0: NP-C(NPB(DT("the") x1: JJ("negotiable") x2: x3:)) PP(IN("for") NP-C(NPB(JJ("advisory") NNS("services")))) SG(VP(TO("to") VP-C(VB("request") NP-C(NPB(DT("a") x4: x5:) PP(IN("from") NP-C(NPB(DT("the") JJ("famous") NN("rating") NN("organization")) x6: NP(NPB(x7: NNP("japan") NNP("corporate") NNP("debt") NNP("reasearch") x8:))))))))) -> qVBD.x0 qNNP.x1 "野村" qNNPS.x2 qNNP.x3 "作" "顾问" qCOMMA.x6 qDT.x7 "日本" "著名" "的" "评" "级" "机构" "日本" "公社" "债" qNNP.x8 "提出" qJJ.x4 qNN.x5 "申请" 
+qVP.VP(x0: NP-C(x1: PP(IN("of") NP-C(NPB(NNP("us"))))) NP(NPB(x2: CD("190,000,000"))) PP(x3: NP-C(NPB(DT("the") NNP("lanzhou") NNP("chemical") NNP("factory") NNP("renovation") CC("and") NNP("expansion") NNP("project")) COMMA(",") x4:))) -> qIN.x3 qNP.x4 "兰" "化" "化肥厂" "改" "扩建" "工程" qVBD.x0 "一点" "九" "亿" q$.x2 "的" qNPB.x1 
+qVP.VP(x0: PRT(RP("out")) NP-C(NPB(NNS("compensations")) PP(IN("of") NP-C(NPB(NNP("rmb") x1:))))) -> qVBD.x0 "赔款" qCD.x1 
+qVP.VP(x0: VP-C(x1: NP-C(NPB(x2: x3: x4:)) x5:)) -> qPP.x5 qJJ.x2 qNN.x3 qVBD.x0 qVBG.x1 qNNS.x4 
+qVP.VP(x0: x1:) -> qVBD.x0 qADJP.x1 
+qVP.VP(x0: x1:) -> qADVP.x1 qVBD.x0 
+qVP.VP(x0: x1: x2: x3: x4:) -> qVBD.x0 qPP.x2 qNP-C.x1 qCOMMA.x3 qSG.x4 
+qVP.VP(x0: x1: x2:) -> qVBD.x0 qNP-C.x1 qSG.x2 
+qVP.VP(x0: x1:) -> qVBD.x0 "了" qNP-C.x1 
+qVP.VP(x0: x1:) -> qVBD.x0 qNP-C.x1 
+qVP.VP(x0: x1:) -> qPP.x1 qVBD.x0 
+qVP.VP(x0: x1:) -> qVBD.x0 qS-C.x1 
+qVP.VP(x0: x1: x2: x3:) -> qVBD.x0 qSG-C.x1 qCOMMA.x2 qSG.x3 
+qVP.VP(x0: x1:) -> qVBD.x0 qVP-C.x1 
+qVP.VP(x0:) -> qVBD.x0 
+qVP.VP(x0: NP-C(NPB(DT("a") NN("change")) x1:) PP(x2: NP-C(NPB(DT("a") x3: x4: NN("scheme")))) PP(x5: NP-C(NPB(DT("an") JJ("intensive") NN("management") NN("scheme"))))) -> qVBG.x0 qPP.x1 qIN.x2 qADJP.x3 "型" qNN.x4 qTO.x5 "集约" "型" "经营" "方式" "转变" 
+qVP.VP(x0: NP-C(NPB(x1: NN("percent"))) PP(IN("over") x2:)) -> qNP.x2 qVBG.x0 "百分之" qCD.x1 "点" "二" 
+qVP.VP(x0: x1:) -> qADVP.x1 qVBG.x0 
+qVP.VP(x0: x1: x2:) -> qVBG.x0 qNP-C.x1 qSG.x2 
+qVP.VP(x0: x1:) -> qVBG.x0 "了" qNP-C.x1 
+qVP.VP(x0: x1:) -> qVBG.x0 qNP-C.x1 
+qVP.VP(x0: x1:) -> qVBG.x0 qPP.x1 
+qVP.VP(x0: x1:) -> qVBN.x0 qNP-C.x1 
+qVP.VP(x0: x1: x2:) -> qNP.x2 qPP.x1 qVBN.x0 
+qVP.VP(x0: x1:) -> qVBN.x0 qPP.x1 
+qVP.VP(x0: x1: x2: x3:) -> qVBP.x0 qNP-C.x1 qCOMMA.x2 qSBAR.x3 
+qVP.VP(x0: x1:) -> qNP-C.x1 "," qVBP.x0 
+qVP.VP(x0: x1:) -> qVBP.x0 qVP-C.x1 
+qVP.VP(x0: NP-C(NPB(DT("the") x1: NN("transformation")) x2:) PP(IN("into") x3:)) -> qPP.x2 qJJ.x1 "转化" "为" qNP-C.x3 "," qVBZ.x0 
+qVP.VP(x0: x1: NP-C(x2: VP(VBN("given") PP(TO("to") x3:) x4:))) -> qVBZ.x0 qPP.x4 qADVP.x1 "对" qNP-C.x3 qNPB.x2 
+qVP.VP(x0: x1:) -> qVBZ.x0 qADVP.x1 
+qVP.VP(x0: x1:) -> qVBZ.x0 qNP-C.x1 
+qVP.VP(x0: x1:) -> qVBZ.x0 qVP-C.x1 
+qVP.VP(x0: CC("and") x1: x2: x3:) -> qVP.x0 qVP.x1 qCOMMA.x2 qSG.x3 
+qVP.VP(x0: x1: x2:) -> qVP.x0 qCC.x1 qVP.x2 
+qVP-C.VP-C(VB("obtain") NP-C(NPB(DT("a") x0: x1:) x2:) x3:) -> qPP.x2 "取得" qNN.x0 qNN.x1 "是" qPP.x3 
+qVP-C.VP-C(VB("ship") PP(IN("by") NP(NPB(NN("canal"))))) -> "运河" 
+qVP-C.VP-C(VBG("starting") SG-C(VP(TO("to") VP-C(VB("take") NP-C(NPB(NN("shape"))))))) -> "初" "具" "规模" 
+qVP-C.VP-C(VBG("tending") PP(IN("toward") x0:)) -> "趋向" qNP-C.x0 
+qVP-C.VP-C(VBN("been") ADJP(RB("rather") x0:)) -> "相当" qJJ.x0 
+qVP-C.VP-C(VBN("been") x0:) -> qADJP.x0 
+qVP-C.VP-C(VBN("given") NP-C(NPB(NN("rise")) x0:)) -> "带动" "起" qPP.x0 
+qVP-C.VP-C(x0: x1: x2: x3: SBAR(IN("with") S-C(NP-C(x4: PP(IN("of") NP-C(NPB(JJ("foreign") NN("capital")) PP(IN("in") NP-C(x5: PP(IN("of") NP-C(NPB(NNP("us"))))))))) NP-C(NPB(x6: CD("135,400,000,000")))))) -> qADVP.x0 qVBN.x1 qNP-C.x2 "点" "九" "万" "个" qCOMMA.x3 qNPB.x4 "外资" qNPB.x5 "一千" "三百" "五十四" "亿" q$.x6 
+qVP-C.VP-C(x0: x1: x2:) -> qVB.x0 qNP-C.x1 qNP.x2 
+qVP-C.VP-C(x0: x1:) -> qVB.x0 qNP-C.x1 
+qVP-C.VP-C(x0: x1:) -> qNP-C.x1 qVB.x0 
+qVP-C.VP-C(x0:) -> qVB.x0 
+qVP-C.VP-C(x0:) -> qVBG.x0 
+qVP-C.VP-C(x0: x1:) -> qVBN.x0 qNP-C.x1 
+qVP-C.VP-C(x0: x1:) -> qVBN.x0 qPP.x1 
+qVP-C.VP-C(x0: x1:) -> qVBN.x0 qS-C.x1 
+qVP-C.VP-C(x0:) -> qVBN.x0 
+qWDT.WDT("which") -> "的" 
+qWHNP.WHNP(x0:) -> qJJS.x0 
+qWHNP.WHNP(x0:) -> qWDT.x0 
+q.x0: -> qNPB.x0
+q.x0: -> qRB.x0
+q.x0: -> qNN.x0
+q.x0: -> qVP.x0
+q.x0: -> qPOS.x0
+q.x0: -> qNNS.x0
+q.x0: -> qVBD.x0
+q.x0: -> qVB.x0
+q.x0: -> qS-C.x0
+q.x0: -> q-RRB-.x0
+q.x0: -> qCC.x0
+q.x0: -> qIN.x0
+q.x0: -> qJJ.x0
+q.x0: -> qS.x0
+q.x0: -> qADJP.x0
+q.x0: -> qSG.x0
+q.x0: -> qSINV.x0
+q.x0: -> qCOMMA.x0
+q.x0: -> qUCP.x0
+q.x0: -> qJJS.x0
+q.x0: -> qSBAR.x0
+q.x0: -> qVBN.x0
+q.x0: -> qPRP.x0
+q.x0: -> qSBAR-C.x0
+q.x0: -> qVBZ.x0
+q.x0: -> qNP.x0
+q.x0: -> qDT.x0
+q.x0: -> qJJR.x0
+q.x0: -> qVBP.x0
+q.x0: -> qVP-C.x0
+q.x0: -> qNAC.x0
+q.x0: -> qADVP.x0
+q.x0: -> qCD.x0
+q.x0: -> qNNPS.x0
+q.x0: -> qTO.x0
+q.x0: -> q-LRB-.x0
+q.x0: -> qPERIOD.x0
+q.x0: -> qQP.x0
+q.x0: -> qPRP$.x0
+q.x0: -> qPP.x0
+q.x0: -> qWHNP.x0
+q.x0: -> q$.x0
+q.x0: -> qWDT.x0
+q.x0: -> qNNP.x0
+q.x0: -> qVBG.x0
+q.x0: -> qNP-C.x0
+q.x0: -> qPRN.x0
+q.x0: -> qSG-C.x0
+q.x0: -> qCOLON.x0
+q.x0: -> qCONJP.x0

@@ -1,0 +1,24 @@
+import sbmt-util ;
+
+project unknowns ;
+
+exe unknown_word_rules 
+  : unknown_word_rules.cpp
+    /sbmt_decoder//sbmt
+    /boost/program_options
+    /boost/filesystem
+    /graehl//graehl
+    /xrsparse
+  ;
+  
+exe unknown_words
+: unknown_words.cpp
+  /sbmt_decoder//sbmt
+  /gusc//gusc
+  /boost/iostreams
+  /boost/program_options
+  /boost/filesystem
+;
+
+sbmt-util.install install : : unknown_word_rules unknown_words ;
+

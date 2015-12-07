@@ -1,0 +1,11 @@
+2005-09-01  Liang Huang  <lhuang3@caelum.cis.upenn.edu>
+
+	* binal.cc: Filtering mode:
+			cat rules | bin/binal -f >rules.bin 2>rules.log
+		    
+		    The .bin file will contain the binarizable rules from input while the .log file record the non-binarizable rules and wrong rules.
+		    At the end of .log file there is also a line of statistics.
+
+		    * Use "long long" for statistics variables (totalRules, bin, nonbin). 
+		    * Changed NOOUTPUT to filteringMode.
+		    * If caught exception (wrong rules), continue in both modes, but output the message to .log if in filtering mode. 

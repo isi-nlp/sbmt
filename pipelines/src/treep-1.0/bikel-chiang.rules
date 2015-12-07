@@ -1,0 +1,89 @@
+# Head and argument rules used by Bikel and Chiang in "Two statistical
+# parsing models applied to the Chinese Treebank," _Proceedings of the
+# Second Chinese Language Processing Workshop_, 2000, pages
+# 1-6. Originally adapted from F. Xia, _Automatic grammar generation
+# from two different perspectives_. Ph.D. dissertation, Univ. of
+# Pennsylvania, 2001.
+
+head := "-H";
+arg := "-A";
+
+# These rules illustrate how one might mark heads and arguments at the
+# same time. It's more complicated this way but all fits into one
+# file.
+
+adj := "-ADV";
+anyarg := ("-SBJ","-OBJ","-IO","-PRD")&!adj;
+cparg := (anyarg,IP,CP)&!adj;
+vparg := (anyarg,IP,CP,VP)&!adj;
+pparg := (anyarg,NP,LCP,QP,DP,IP,CP,UCP)&!adj;
+dnparg := (anyarg,DP,QP,NP,LCP,PP,ADJP,UCP)&!adj;
+dvparg := (anyarg,DP,QP,NP,VP,ADVP,UCP)&!adj;
+lcparg := (anyarg,NP,QP,DP,LCP,PP,IP,UCP)&!adj;
+verb := VV,VA,VC,VE;
+
+ADJP -> ((anyarg+arg|.)* < (ADJP,JJ|AD,NN,CS|.)+head) > (anyarg+arg|.)*;
+
+ADVP -> ((anyarg+arg|.)* < (ADVP,AD|.)+head) > (anyarg+arg|.)*;
+
+CLP  -> ((anyarg+arg|.)* < (CLP,M|.)+head) > (anyarg+arg|.)*;
+
+CP   -> (cparg+arg|.)* > (DEC,SP)+head > (cparg+arg|.)*
+      | (cparg+arg|.)* < (ADVP,CS)+head < (cparg+arg|.)*
+      | ((cparg+arg|.)* < (CP,IP|.)+head) > (cparg+arg|.)*;
+
+DNP  -> ((dnparg+arg|.)* < (DNP,DEG|DEC|.)+head) > (dnparg+arg|.)*;
+
+DVP  -> ((dvparg+arg|.)* < (DVP,DEV|.)+head) > (dvparg+arg|.)*;
+
+DP   -> (anyarg+arg|.)* < ((DP,DT|.)+head > (anyarg+arg|.)*);
+
+FRAG -> ((anyarg+arg|.)* < (VV,NR,NN|.)+head) > (anyarg+arg|.)*;
+
+INTJ -> ((anyarg+arg|.)* < (INTJ,IJ|.)+head) > (anyarg+arg|.)*;
+
+LST  -> (anyarg+arg|.)* < ((LST,CD,OD|.)+head > (anyarg+arg|.)*);
+
+IP   -> ((anyarg+arg|.)* < (IP,VP|VV|.)+head) > (anyarg+arg|.)*;
+
+LCP  -> ((lcparg+arg|.)* < (LCP,LC|.)+head) > (lcparg+arg|.)*;
+
+NP   -> ((anyarg+arg|.)* < (NP,NN,NT,NR,QP|.)+head) > (anyarg+arg|.)*;
+
+PP   -> (pparg+arg|.)* < ((PP,P|.)+head > (pparg+arg|.)*);
+
+PRN  -> ((anyarg+arg|.)* < (NP,IP,VP,NT,NR,NN|.)+head) > (anyarg+arg|.)*;
+
+QP   -> ((anyarg+arg|.)* < (QP,CLP,CD,OD|.)+head) > (anyarg+arg|.)*;
+
+VP   -> (vparg+arg|.)* < ((VP,verb,BA,LB,VCD,VSB,VRD,VNV,VCP|.)+head > (vparg+arg|.)*);
+
+VCD  -> ((anyarg+arg|.)* < (VCD,verb|.)+head) > (anyarg+arg|.)*;
+
+VRD  -> ((anyarg+arg|.)* < (VRD,verb|.)+head) > (anyarg+arg|.)*;
+
+VSB  -> ((anyarg+arg|.)* < (VSB,verb|.)+head) > (anyarg+arg|.)*;
+
+VCP  -> ((anyarg+arg|.)* < (VCP,verb|.)+head) > (anyarg+arg|.)*;
+
+VNV  -> ((anyarg+arg|.)* < (VNV,verb|.)+head) > (anyarg+arg|.)*;
+
+VPT  -> ((anyarg+arg|.)* < (VPT,verb|.)+head) > (anyarg+arg|.)*;
+
+UCP  -> (anyarg+arg|.)* .+head;
+
+WHNP -> ((anyarg+arg|.)* < (WHNP,NP,NN,NT,NR,QP|.)+head) > (anyarg+arg|.)*;
+
+WHPP -> (anyarg+arg|.)* < ((WHPP,PP,P|.)+head > (anyarg+arg|.)*);
+
+# Top node
+"" -> .;
+
+# Parts of speech
+AD,AS,BA,CC,CD,CS,DEC,DEG,DER,DEV,
+	DT,ETC,FW,IJ,JJ,LB,LC,M,MSP,NN,
+	NR,NT,OD,ON,P,PN,PU,SB,SP,VA,
+	VC,VE,VV,X,"-LRB-","-RRB-","-LCB-","-RCB-","-LSB-","-RSB-" -> .;
+
+# Empty nodes
+"-NONE-" -> .;

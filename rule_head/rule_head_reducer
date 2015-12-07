@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+
+# produce count distribution of head word and pos tag for a rule and for each of its variable children
+
+import sys, itertools, optparse, math
+from collections import defaultdict
+import constants_hpp as cnsts
+
+
+# TODO: limit elements returned
+ 
+def dist_str(dist):
+    '''returns space separated sequence of words followed by counts, in descending order from the counts '''
+    return ' '.join(map(lambda x: ' '.join((x[0], str(x[1]))), sorted(dist.items(), key=lambda x: x[1], reverse=True)))
+
+def keyval(input):
+    for line in input:
+        line = line.strip()
+        yield line.split('\t')
+
+def reducer(input):
+    # split on rule but include field count for setup
+    for keylen, records in itertools.groupby(keyval(input), lambda x: (x[0], len(x[1].split(' ')))):
+        key, sz = keylen
+        # word and tag distro for rule head and each of the variable children
+        wdist = []
+        tdist = []
+        for x in range(0,sz):
+            wdist.append(defaultdict(int))
+            tdist.append(defaultdict(int))
+
+        for ignore, wordvec, tagvec in records:
+            for slot, word in enumerate(wordvec.strip().split(' ')):
+                wdist[slot][word] += 1
+            for slot, tag in enumerate(tagvec.strip().split(' ')):
+                tdist[slot][tag] += 1
+
+        sys.stdout.write(key  + '\t')
+        # TODO: unify with max_count_feature/root_hw_count which has matching hard code
+        sys.stdout.write('hwdist={{{'+dist_str(wdist[0])+'}}} ')
+        sys.stdout.write('htdist={{{'+dist_str(tdist[0])+'}}} ')
+        sys.stdout.write(cnsts.VARIABLE_HEAD_WORD_DISTRIBUTION_FEATURE+'={{{'+' ||| '.join(map(dist_str, wdist[1:]))+'}}} ')
+        sys.stdout.write(cnsts.VARIABLE_HEAD_TAG_DISTRIBUTION_FEATURE+'={{{'+' ||| '.join(map(dist_str, tdist[1:]))+'}}} ')
+        sys.stdout.write('\n')
+
+if __name__ == "__main__":
+    desc = optparse.OptionParser()
+    opts,ignore = desc.parse_args(sys.argv[1:])
+
+    reducer(sys.stdin)
+
+

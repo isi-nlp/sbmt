@@ -1,0 +1,50 @@
+# Argument rules for the Penn Chinese Treebank from Xia's LexTract
+# system. Source: F. Xia, _Automatic grammar generation from two
+# different perspectives_. Ph.D. dissertation, Univ. of Pennsylvania,
+# 2001.
+
+adj := "-ADV";
+nplike := (NP,LCP,QP,DP,UCP);
+sbj := (nplike,IP,CP)&"-SBJ"&!adj;
+obj := (nplike&"-OBJ",IP,CP)&!adj;
+objprd := obj,(nplike,PP,DNP)&"-PRD"&!adj;
+objio := obj,(NP,LCP,UCP)&"-IO"&!adj;
+
+head := "-H";
+arg := "-A";
+
+# Look for arguments starting from the head rightward, or from the
+# head leftward. Some categories can have at most one argument, some
+# can have up to two.
+
+. -> .* < VA&head .* < NP&"-OBJ"&!adj+arg .*
+
+   | .* < VC&head .* < objprd+arg .*
+
+   | .* < (VV,VCD,VSB,VCP,VRD,VNV)&head .* < objio+arg .* < (objio+arg .*)?
+
+   | .* < VE&head .* < obj+arg .* < (obj+arg .*)?
+
+   | .* < BA&head IP&!adj+arg .*
+
+   | .* < LB&head (IP,CP)&!adj+arg .*
+
+   | .* sbj+arg VP&head > .*
+
+   | .* < P&head (nplike,IP,CP)&!adj+arg .*
+
+   | .* (nplike,PP,ADJP)&!adj+arg DEG&head > .*
+
+   | .* (DP,NP,QP,VP,ADVP,UCP)&!adj+arg DEV&head > .*
+
+   | .* (nplike,PP,IP)&!adj+arg LC&head > .*
+
+# This is from Xia's files but not in the thesis
+
+   | .* < VPT&head .* < objio+arg .* < (objio+arg .*)?
+
+# Catch-all
+
+   | .*;
+
+

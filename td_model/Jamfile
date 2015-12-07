@@ -1,0 +1,6 @@
+project td_model ;
+
+lib td_model 
+  : td_model.cpp
+    /sbmt_decoder//sbmt
+  ;

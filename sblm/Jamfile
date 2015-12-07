@@ -1,0 +1,17 @@
+import sbmt-util ;
+
+project sblm ;
+
+#exe sblm_test
+#    : sblm.cpp
+#    /sbmt_decoder//sbmt
+#    ;
+
+lib sblm
+  : sblm_info.cpp
+    sblm_constructor.cpp
+    /sbmt_decoder//sbmt
+  ;
+
+sbmt-util.install install : : sblm ;
+

@@ -1,0 +1,6 @@
+NPB(JJ("FOREIGN") JJ("MILITARY") NNS("FORCES")) -> "c4" "c5" ### id=122 gt_prob=e^-0.8 count=1
+NN("PRESENCE") -> "c6" ### id=124 gt_prob=e^-.012 count=1
+NP-C(NPB(PRP$("ITS") X0:NNP) PP(TO("TO") x1:NP-C)) -> x0 x1 ### id=131 gt_prob=e^-0.01 count=1
+S(x0:NPB PP(IN("OF") x1:NP-C)) -> x1 x0 ### id=127 gt_prob=e^-0.7 count=1
+NP-C(x0:NPB) -> x0 ### id=123 gt_prob=e^-.01 count=1
+NPB(DT("THE") x0:NN) -> x0 ### start=5 end=6 id=126 gt_prob=e^-0.8 count=1

@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+
+######################################################
+# Create probability files from merged counts.
+# These files can then be loaded by 'extract' to 
+# extract Viterbi derivations.
+######################################################
+
+use strict;
+use POSIX;
+use vars 
+  qw($BASEDIR $BINDIR $SCRDIR $LIMITS $OUTDIR $DBDIR $N_PAR $ARG_LIM $TMPDIR);
+
+######################################################
+# Determine here what configuration file to use.
+# There should be either 0 or one argument to $0.
+######################################################
+
+my $CONFIG = '../configs/tiny.cfg';
+$CONFIG = $ARGV[0] if($#ARGV == 0);
+require $CONFIG;
+
+my $CREATEP="$SCRDIR/create_prob_file";
+my $IN="$DBDIR/normalized.merged";
+
+# count=count norm=lhs
+print `$CREATEP < $IN 0 0 | gzip -c > $DBDIR/p_rhs_lhs_count.gz`
+  unless -f "$DBDIR/p_rhs_lhs_count.gz";
+# count=fraccount norm=lhs
+print `$CREATEP < $IN 1 0 | gzip -c > $DBDIR/p_rhs_lhs_fraccount.gz`
+  unless -f "$DBDIR/p_rhs_lhs_fraccount.gz";
+# count=count norm=root
+print `$CREATEP < $IN 0 1 | gzip -c > $DBDIR/p_r_root_count.gz`
+  unless -f "$DBDIR/p_r_root_count.gz";
+# count=fraccount norm=root
+print `$CREATEP < $IN 1 1 | gzip -c > $DBDIR/p_r_root_fraccount.gz`
+  unless -f "$DBDIR/p_r_root_fraccount.gz";

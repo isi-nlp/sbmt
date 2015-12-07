@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+import sys, os, re
+
+tildawtre = re.compile(r'~[0-9]+~[0-9]+ [0-9.-]+')
+fparenre = re.compile(r' ([^ ]+)\) ')
+bparenre = re.compile(r'\(([^ "]+)[ ]*')
+pparenre = re.compile(" \)")
+empties = False
+if sys.argv[1] == '-e':
+    empties = True
+
+def transform_lhs(lhs):
+    wds = [0]
+    def ld(x,w):
+        w[0] += 1
+        return ' "%s") ' % x.group(1)
+    lhs = tildawtre.sub('',lhs)
+    #print >> sys.stderr, lhs
+    lhs = fparenre.sub(lambda x : ld(x,wds),lhs)
+    #print >> sys.stderr, lhs
+    lhs = bparenre.sub(lambda x : x.group(1) + "(",lhs)
+    #print >> sys.stderr, lhs
+    lhs = pparenre.sub(")",lhs)
+    return (wds[0],lhs)
+
+def transform_rhs(rhs):
+    rhs = rhs.rstrip().split()
+    return (len(rhs),' '.join('"%s"' % s for s in rhs))
+
+def transform_align(align,nrhs,nlhs):
+    align = [reversed(a.split('-')) for a in align.rstrip().split()]
+    return "align={{{[ #s=%s #t=%s %s ]}}}" % (nrhs,nlhs,' '.join(','.join(a) for a in align))
+
+def main():
+  try:
+    for line in sys.stdin:
+        lhs,rhs,align = line.rstrip('\n').split('\t')
+        if lhs.strip() == '' or lhs.strip() == '0' or rhs.strip() == '' or align.strip() == '':
+            print >> sys.stderr, 'skipping', line
+            if empties:
+                print ''
+            continue
+        nlhs,lhs = transform_lhs(lhs)
+        nrhs,rhs = transform_rhs(rhs)
+        align = transform_align(align,nrhs,nlhs)
+        print "%s -> %s ### %s" % (lhs,rhs,align)
+  except IOError:
+    pass
+
+if __name__ == '__main__':
+    main()
+

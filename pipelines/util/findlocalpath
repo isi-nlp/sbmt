@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+
+import os, sys
+
+def findbasename(p):
+    p = os.path.abspath(p)
+    d = os.path.dirname(p)
+    dold = ''
+    b = os.path.basename(p)
+    r = os.path.abspath(os.pathsep)
+    while not os.path.exists(os.path.join(d,b)) and d != dold and d != r:
+        dold = d
+        d = os.path.abspath(os.path.join(d,os.pardir))
+    p = os.path.join(d,b)
+    if not os.path.exists(p):
+        print >> sys.stderr, 'could not find %s in directory path' % b
+        sys.exit(1)
+    return os.path.realpath(p)
+
+
+if __name__ == '__main__':
+    print findbasename(sys.argv[1])

@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+import itertools
+import collections
+import cfg
+import argparse
+import sys
+import os.path
+import re
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--tag',action='store_true')
+args = cfg.parse_args(parser)
+
+hp = args.hadoop
+
+flag = ''
+wt = 'word'
+if args.tag:
+    flag = ' -t'
+    wt = 'tag'
+
+hp.mapreduce( mapper='cut -f2'
+            , output='training.etrees' 
+            , input='training' )
+
+hp.mapreduce( mapper=os.path.join(args.config['variables']['rhbin'],'nt_head_mapper') + flag
+            , reducer=os.path.join(args.scriptdir,'count') + " -k2"
+            , output='counts.symbol.head' + wt
+            , input='training.etrees' 
+            , compress=False
+            , sortkeys=2
+            , partitionkeys=1 )
+
+hp.remove('training.etrees')

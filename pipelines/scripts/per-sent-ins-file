@@ -1,0 +1,32 @@
+#!/usr/bin/env perl
+#
+# given the name of a rule file and a lattice on stdin, 
+# create the instruction file snippet.
+#
+use 5.006;
+use strict;
+
+die "FATAL: Need at least 1 base filename as argument\n"
+    unless @ARGV >= 1; 
+
+my %known = ( brf => 'brf',
+	      gar => 'archive', 
+	      far => 'fat-archive',
+	      txa => 'text-archive',
+	      fta => 'fat-text-archive' );
+my $known = join('|',keys %known);
+
+foreach my $fn ( @ARGV ) {
+    if ( $fn =~ /\.($known)(\.gz)?$/ ) {
+	print "push-grammar ", $known{$1}, " \"$fn\";\n";
+    } else {
+	print "push-grammar ", "brf", " \"$fn\";\n"; 
+    }
+}
+while ( <STDIN> ) {
+    print ;
+}
+foreach ( @ARGV ) {
+    print "pop-grammar;\n";
+}
+print "\n";

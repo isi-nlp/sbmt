@@ -1,0 +1,29 @@
+#!/usr/bin/perl
+
+use strict;
+
+# Compute rule probabilities based 
+# on counts:
+
+print "p(RHS|LHS) table\n";
+print "Rule:\tcount\tfraccount(1/k)\n";
+while(<STDIN>) {
+  if(/^\$\$\$/ or /^%/) {
+    print;
+	 next;
+  }
+  /^(.*) -> (.*) ### (.*)/;
+  my ($LHS,$RHS,$ATTR) = ($1,$2,$3);
+  my @ATTR = split(/\s/,$ATTR);
+  my %ATTR;
+  foreach(@ATTR) {
+    my ($a,$v) = split(/=/);
+	 $ATTR{$a} = $v;
+  }
+  print "$LHS -> $RHS ### $ATTR ";
+  printf("p_lhs=%.8g ", $ATTR{count}/$ATTR{lhscount});
+  printf("pf_lhs=%.8g ", $ATTR{fraccount}/$ATTR{lhsfraccount});
+  printf("p_root=%.8g ", $ATTR{count}/$ATTR{rootcount});
+  printf("pf_root=%.8g ", $ATTR{fraccount}/$ATTR{rootfraccount});
+  print "\n";
+}

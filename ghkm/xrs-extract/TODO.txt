@@ -1,0 +1,11 @@
+* Speed up the last step of rule extraction:
+  - read/write binary count files (instead of plain text)
+  - reduce the number of passes through the DB from 4 to 2:
+    * merge add_weight, add_norm_count, print_rules.
+	 * this would prevent having both count and fraccount.
+  
+* More options to define of rule size, e.g.:
+  1) # of PTB CFG productions in LHS
+     (default, as in previous versions)
+  2) # of non-terminal in LHS (same as 1, but includes pre-terminals)
+  3) # of terminals and non-terminal in LHS

@@ -1,0 +1,209 @@
+<html><head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title> Waiting for events</title>
+<link rel="stylesheet" href="files/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.70.1">
+<link rel="start" href="index.html" title="Chapter&nbsp;1.&nbsp;Boost.Coroutine">
+<link rel="up" href="tutorial.html" title=" Tutorial">
+<link rel="prev" href="multitasking.html" title=" Multitasking">
+<link rel="next" href="advanced.html" title=" Advanced concepts">
+</head><body link="#0000ff" alink="#0000ff" bgcolor="white" text="black" vlink="#840084">
+<table width="100%" cellpadding="2">
+<tbody><tr><td valign="top"><img alt="boost.png (6897 bytes)" src="files/boost.png" width="277" height="86"></td>
+<td align="center"><a href="http://www.boost.org/">Home</a></td>
+<td align="center"><a href="http://www.boost.org/doc/libs">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="http://www.boost.org/users/index.html">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="multitasking.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="tutorial.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="advanced.html"><img src="files/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="coroutine.events_simple"></a> Waiting for events</h3></div></div></div>
+<p>
+In the first <a href="multitasking.html" title=" Multitasking">scheduling example</a>, when a
+task is suspended, it is always added to the back task queue. We will
+now let a task decide whether be automatically rescheduled or
+not. This way a task can wait to be rescheduled at a latter time, when
+an event arrives.</p>
+<p>
+We slightly modify <code class="computeroutput"><span class="identifier">scheduler</span><span class="special">::</span><span class="identifier">run</span><span class="special">()</span></code>:</p>
+<pre class="programlisting"><code class="literal"><span class="special">...</span><span class="keyword">
+void</span><span class="identifier"> run</span><span class="special"> ()</span><span class="special"> {</span><span class="keyword">
+  while</span><span class="special">(!</span><span class="identifier">m_queue</span><span class="special">.</span><span class="identifier">empty</span><span class="special">())</span><span class="special"> {</span><span class="identifier">
+    current</span><span class="special">()(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">nothrow</span><span class="special">);</span><span class="identifier">	
+    m_queue</span><span class="special">.</span><span class="identifier">pop</span><span class="special">();</span><span class="special">
+  }</span><span class="special">
+}</span><span class="special">
+...</span></code></pre>
+<p>
+The line <code class="computeroutput"><span class="identifier">add</span><span class="special">(</span><span class="identifier">current</span><span class="special">()):</span></code> has been removed.<br>
+ The <code class="computeroutput"><span class="identifier">reschedule</span><span class="special">()</span></code> member function:</p>
+<pre class="programlisting"><code class="literal"><span class="special">...</span><span class="keyword">
+void</span><span class="identifier"> reschedule</span><span class="special">(</span><span class="identifier">job_type</span><span class="special">::</span><a href="">self</a><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+  add</span><span class="special">(</span><span class="identifier">current</span><span class="special">());</span><span class="identifier">
+  self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="special">
+}</span><span class="special">
+...</span></code></pre>
+<p>
+is added to <code class="computeroutput"><span class="identifier">scheduler</span></code>. It is used by a task to 
+reschedule itself. We will define a message queue class now:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">class</span><span class="identifier"> message_queue</span><span class="special"> {</span><span class="keyword">
+public</span><span class="special">:</span><span class="identifier">
+  std</span><span class="special">::</span><span class="identifier">string</span><span class="identifier"> pop</span><span class="special">(</span><span class="identifier">job_type</span><span class="special">::</span><a href="">self</a><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+    while</span><span class="special">(</span><span class="identifier">m_queue</span><span class="special">.</span><span class="identifier">empty</span><span class="special">())</span><span class="special"> {</span><span class="identifier">
+      m_waiters</span><span class="special">.</span><span class="identifier">push</span><span class="special">(</span><span class="identifier">m_scheduler</span><span class="special">.</span><span class="identifier">current</span><span class="special">());</span><span class="identifier">
+      self</span><span class="special">.</span><a href="">yield</a><span class="special">();</span><span class="special">      
+    }</span><span class="identifier">
+    std</span><span class="special">::</span><span class="identifier">string</span><span class="identifier"> res</span><span class="special"> =</span><span class="identifier"> m_queue</span><span class="special">.</span><span class="identifier">front</span><span class="special">();</span><span class="identifier">
+    m_queue</span><span class="special">.</span><span class="identifier">pop</span><span class="special">();</span><span class="keyword">
+    return</span><span class="identifier"> res</span><span class="special">;</span><span class="special">
+  }</span><span class="keyword">
+
+  void</span><span class="identifier"> push</span><span class="special">(</span><span class="keyword">const</span><span class="identifier"> std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&amp;</span><span class="identifier"> val</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+    m_queue</span><span class="special">.</span><span class="identifier">push</span><span class="special">(</span><span class="identifier">val</span><span class="special">);</span><span class="keyword">
+    while</span><span class="special">(!</span><span class="identifier">m_waiters</span><span class="special">.</span><span class="identifier">empty</span><span class="special">())</span><span class="special"> {</span><span class="identifier">
+      m_scheduler</span><span class="special">.</span><span class="identifier">add</span><span class="special">(</span><span class="identifier">m_waiters</span><span class="special">.</span><span class="identifier">front</span><span class="special">());</span><span class="identifier">
+      m_waiters</span><span class="special">.</span><span class="identifier">pop</span><span class="special">();</span><span class="special">
+    }</span><span class="special">
+  }</span><span class="identifier">
+
+  message_queue</span><span class="special">(</span><span class="identifier">scheduler</span><span class="special">&amp;</span><span class="identifier"> s</span><span class="special">)</span><span class="special"> :</span><span class="identifier">
+    m_scheduler</span><span class="special">(</span><span class="identifier">s</span><span class="special">)</span><span class="special"> {}</span><span class="keyword">
+
+private</span><span class="special">:</span><span class="identifier">
+  std</span><span class="special">::</span><span class="identifier">queue</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;</span><span class="identifier"> m_queue</span><span class="special">;</span><span class="identifier">
+  std</span><span class="special">::</span><span class="identifier">queue</span><span class="special">&lt;</span><span class="identifier">job_type</span><span class="special">&gt;</span><span class="identifier"> m_waiters</span><span class="special">;</span><span class="identifier">
+  scheduler</span><span class="special"> &amp;</span><span class="identifier"> m_scheduler</span><span class="special">;</span><span class="special">
+};</span></code></pre>
+<p>
+A task can wait for a message to arrive by calling
+<code class="computeroutput"><span class="identifier">message_queue</span><span class="special">::</span><span class="identifier">pop</span><span class="special">()</span></code>. This function returns the first element in the
+internal queue; if the queue is empty adds the current task to an internal wait
+queue and yields control to the scheduler. When <code class="computeroutput"><span class="identifier">message_queue</span><span class="special">::</span><span class="identifier">pop</span><span class="special">()</span></code>
+is called, if the wait queue is not empty, its top element is removed
+and rescheduled. Note that we use a <code class="computeroutput"><span class="keyword">while</span></code> loop instead of a simple
+<code class="computeroutput"><span class="keyword">if</span></code> to check for the emptiness of the message queue. This is to
+correctly handle spurious wakeups. Consider this scenario:</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<span class="emphasis"><em>Consumer 1</em></span> calls <code class="computeroutput"><span class="identifier">pop</span><span class="special">()</span></code>. Message queue is empty, so it sleeps waiting for
+data.
+</li>
+<li>
+<span class="emphasis"><em>Consumer 2</em></span> calls <code class="computeroutput"><span class="identifier">pop</span><span class="special">()</span></code>. Message queue is empty, so it sleeps waiting for data.
+</li>
+<li>
+<span class="emphasis"><em>Producer 1</em></span> insert data and signals 1.
+</li>
+<li>
+<span class="emphasis"><em>Producer 2</em></span> insert data and signals 2.
+</li>
+<li>
+<span class="emphasis"><em>Consumer 1</em></span> wakes up, consumes data produced by <span class="emphasis"><em>Consumer 1</em></span>, then
+recall <code class="computeroutput"><span class="identifier">pop</span><span class="special">()</span></code>
+without yielding control. Message queue is not empty, so it consumes
+data produced by <span class="emphasis"><em>Consumer 2</em></span>. It calls <code class="computeroutput"><span class="identifier">pop</span><span class="special">()</span></code> again. This time the message queue
+is empty and goes to sleep.
+</li>
+<li>
+<span class="emphasis"><em>Consumer 2</em></span> wakes up, re-test the condition variable, see that the
+message queue is empty and goes to sleep. If an <code class="computeroutput"><span class="keyword">if</span></code> where used
+instead, the test wouldn't be performed, and <span class="emphasis"><em>Consumer 2</em></span> would try to
+extract an non-existent element from the queue.
+</li>
+</ul></div>
+<p>
+This means that this implementation of the message queue could starve the second consumer
+if the first can always extract an element from the queue. A possible
+solution to the problem would be to to insert an explicit call to
+<code class="computeroutput"><span class="identifier">reschedule</span><span class="special">()</span></code> in <code class="computeroutput"><span class="identifier">pop</span><span class="special">()</span></code> that would give another consume a chance to
+run. This would require extra context switches though. This is a
+matter of preferring fairness or performance.</p>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/note.png"></span> The "wait while message queue is empty" and "signal
+message queue not empty" pattern is reminiscent of condition
+variables used in threaded programming. In fact the idea is the same,
+except that we need not to associate a lock with the condition variable
+given the cooperative behavior of the scheduler.</td></tr></tbody>
+</table></div>
+<p>
+This is our message queue object. Again a global for simplicity:</p>
+<pre class="programlisting"><code class="literal"><span class="identifier">message_queue</span><span class="identifier"> mqueue</span><span class="special">(</span><span class="identifier">global_scheduler</span><span class="special">);</span></code></pre>
+<p>
+Now we will create some jobs:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">void</span><span class="identifier"> producer</span><span class="special">(</span><span class="identifier">job_type</span><span class="special">::</span><a href="">self</a><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword"> int</span><span class="identifier"> id</span><span class="special">,</span><span class="keyword"> int</span><span class="identifier"> count</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+  while</span><span class="special">(--</span><span class="identifier">count</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+    std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="string"> "In producer: "</span><span class="special">&lt;&lt;</span><span class="identifier">id</span><span class="special">&lt;&lt;</span><span class="string">", left: "</span><span class="special">&lt;&lt;</span><span class="identifier">count</span><span class="special"> &lt;&lt;</span><span class="string">"\n"</span><span class="special">;</span><span class="identifier">	
+    mqueue</span><span class="special">.</span><span class="identifier">push</span><span class="special">(</span><span class="string">"message from "</span><span class="special"> +</span><span class="identifier"> boost</span><span class="special">::</span><span class="identifier">lexical_cast</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;(</span><span class="identifier">id</span><span class="special">));</span><span class="identifier">
+    std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="string"> "\tmessage sent\n"</span><span class="special">;</span><span class="identifier">
+    global_scheduler</span><span class="special">.</span><span class="identifier">reschedule</span><span class="special">(</span><span class="identifier">self</span><span class="special">);</span><span class="special">
+  }</span><span class="special"> 
+}</span><span class="keyword">
+
+void</span><span class="identifier"> consumer</span><span class="special">(</span><span class="identifier">job_type</span><span class="special">::</span><span class="identifier">self</span><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword"> int</span><span class="identifier"> id</span><span class="special">)</span><span class="special"> {</span><span class="keyword">
+  while</span><span class="special">(</span><span class="keyword">true</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+    std</span><span class="special">::</span><span class="identifier">string</span><span class="identifier"> result</span><span class="special"> =</span><span class="identifier"> mqueue</span><span class="special">.</span><span class="identifier">pop</span><span class="special">(</span><span class="identifier">self</span><span class="special">);</span><span class="identifier">
+    std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="string">"In consumer: "</span><span class="special">&lt;&lt;</span><span class="identifier">id</span><span class="special">&lt;&lt;</span><span class="string">"\n"</span><span class="special">;</span><span class="identifier">
+    std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="string">"\tReceived: "</span><span class="special">&lt;&lt;</span><span class="identifier">result</span><span class="special">&lt;&lt;</span><span class="string">"\n"</span><span class="special">;</span><span class="special">
+  }</span><span class="special">
+}</span></code></pre>
+<p>
+And add some instances of them to the scheduler:</p>
+<pre class="programlisting"><code class="literal"><span class="identifier">global_scheduler</span><span class="special">.</span><span class="identifier">add</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(</span><span class="identifier">producer</span><span class="special">,</span><span class="identifier"> _1</span><span class="special">,</span><span class="number"> 0</span><span class="special">,</span><span class="number"> 3</span><span class="special">));</span><span class="identifier">
+global_scheduler</span><span class="special">.</span><span class="identifier">add</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(</span><span class="identifier">producer</span><span class="special">,</span><span class="identifier"> _1</span><span class="special">,</span><span class="number"> 1</span><span class="special">,</span><span class="number"> 3</span><span class="special">));</span><span class="identifier">
+global_scheduler</span><span class="special">.</span><span class="identifier">add</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(</span><span class="identifier">producer</span><span class="special">,</span><span class="identifier"> _1</span><span class="special">,</span><span class="number"> 2</span><span class="special">,</span><span class="number"> 3</span><span class="special">));</span><span class="identifier">
+global_scheduler</span><span class="special">.</span><span class="identifier">add</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(</span><span class="identifier">consumer</span><span class="special">,</span><span class="identifier"> _1</span><span class="special">,</span><span class="number"> 3</span><span class="special">));</span><span class="identifier">
+global_scheduler</span><span class="special">.</span><span class="identifier">add</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(</span><span class="identifier">consumer</span><span class="special">,</span><span class="identifier"> _1</span><span class="special">,</span><span class="number"> 4</span><span class="special">));</span></code></pre>
+<p>
+calling <code class="computeroutput"><span class="identifier">global_scheduler</span><span class="special">.</span><span class="identifier">run</span><span class="special">()</span></code> generates the following output:</p>
+<pre class="programlisting"><code class="literal">In producer: 0, left: 3
+        message sent
+In producer: 1, left: 2
+        message sent
+In producer: 2, left: 1
+        message sent
+In consumer: 3
+        Received: message from 0
+In consumer: 3
+        Received: message from 1
+In consumer: 3
+        Received: message from 2
+In producer: 0, left: 2
+        message sent
+In producer: 1, left: 1
+        message sent
+In consumer: 3
+        Received: message from 0
+In consumer: 3
+        Received: message from 1
+In producer: 0, left: 1
+        message sent
+In consumer: 3
+        Received: message from 0
+</code></pre>
+<a name="events_simple.conclusions"></a><h4>
+<a name="id2618296"></a>Conclusions</h4>
+<p>
+While this example is very simple and can't be easily extended to
+support system events (i.e. I/O, alarms and much more), it shows how a
+more complex event framework 
+can be implemented. In the advanced session we will see how
+<a href="asio.html" target="_top">Boost.Asio</a> can be used as a scheduler and how coroutines can be
+adapted as callbacks to asynchronous functions.</p>
+</div>
+<table width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright © 2006 Giovanni P. Deretta</small></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="multitasking.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="tutorial.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="advanced.html"><img src="files/next.png" alt="Next"></a>
+</div>
+</body></html>

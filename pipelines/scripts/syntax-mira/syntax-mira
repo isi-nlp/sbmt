@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+
+
+optparser = optparse.OptionParser()
+
+optparser.add_option( "-n", '--insertion-top-n'
+                    , default=30
+                    , type='int'
+                    , dest='topn'
+                    )
+                    
+
+opts, args = optparser.parse_args(sys.argv[1:])
+
+topn = opts.topn
+rules = args[0]
+dest = args[1]
+
+dirname = os.path.abspath(os.path.dirname(sys.argv[0]))
+
+syscall("rm -f insertions")
+
+mapreduce( os.path.join(dirname, 'insertion', 'mapper')
+         , os.path.join(dirname, 'insertion', 'reducer') + " %s" % topn
+         , rules
+         , 'insertion_topn_tbl'
+         , '-jobconf mapred.output.compress=false')
+
+get('insertion_topn_tbl','insertions')
+remove('insertion_topn_tbl')
+put('insertions','insertions')
+
+mapreduce( os.path.join(dirname, 'mira-features', 'syntax-mira-features.pl')  + " -e insertions"
+         , 'NONE'
+         , rules
+         , dest
+         , "-cacheFile insertions#insertions"
+         )
+
+remove('insertions')

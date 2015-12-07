@@ -1,0 +1,515 @@
+#!/usr/bin/env perl 
+#
+# visualization based on Wei's script, using Python modules, and
+# employing new tricks from the new decoder. This script reads one
+# n-best decoder output, and the corresponding global gar file, and the
+# per-sentence far or brf files.
+#
+# For each sentence, it produces three output files. The basename
+# is the sentence's chunk position. The true position is part of 
+# the output.
+#
+# REALID: real sentence number [foreign-length]
+# 1BEST: [1]: original sentence (foreign)
+#        [2]: 1-best translation (English)
+#        [3]: derivation tree
+#        [4]: rule tree
+# FSDAG: decoder's input lattice
+# RULES: xrs rules for the 1best hypothesis
+# NBEST  decoder unique n-best hypotheses
+#
+use 5.006;
+use strict;
+use warnings;
+use Getopt::Long qw(:config bundling no_ignore_case);
+use File::Basename;
+use File::Temp qw(tempfile tempdir);
+
+my %corpusmap = ();
+
+sub cmap {
+    shift;
+    my $cmapname = shift;
+    open CMAP, "<$cmapname" or die "didnt open $cmapname\n";
+    while (my $line = <CMAP>) {
+        if (substr($line,0,1) ne "#") {
+            my @pieces = split(/\s+/,$line);
+	    $corpusmap{$pieces[0]} = $pieces[2];
+	}
+    }
+}
+
+my $verbose = 1;
+$main::start = time();
+%main::unlink = ();
+END { unlink keys %main::unlink if ( %main::unlink ) }
+
+my $clean = 1;			# keep files: set to 0
+my $tmpdir = $ENV{'MY_TMP'} || 
+    $ENV{TMP} || 
+    $ENV{TEMP} || 
+    $ENV{TMPDIR} ||
+    File::Spec->tmpdir() || 
+    '/tmp';
+$tmpdir = '/scratch' if -d '/scratch';
+
+my ($grammar_view); 
+
+#
+# --- functions -------------------------------------------------
+#
+
+sub usage {
+    print << "EOF";
+Usage: @{[basename($0)]} [options] --map corpus.map n-best-file
+
+Optional arguments:
+ --verbose             more messages
+ --global unpack.xrs   unpacked both-side non-lex (global.gar) rules. 
+                       do not specify, if you don\'t use global grammars.
+
+Mandatory arguments:
+ --chunk i             number of this chunk (for parallel processing)
+                       you should use as many chunks as decoding or tuning did.
+ --grammar-view exe    location of the grammar_view application.
+ --output fn           where to put the combined output files.
+ --index fn            where to put the index for the output file.
+ --per-sentence dir    base directory where to start searching for rules.
+
+EOF
+
+    exit(1);
+}
+
+sub iso8601(;$) {
+    # purpose: poor man's strftime (avoid loading POSIX)
+    # returns: ISO 8601 like (not quite) formatted date stamp space time stamp
+    # warning: somewhat fudges the standard concerning zone and separator
+    #
+    my @x = localtime( defined $_[0] ? shift() : time() );
+    sprintf( "%04u-%02u-%02u %02u:%02u:%02u",
+	     $x[5]+1900, $x[4]+1, @x[3,2,1,0] );
+}
+
+sub format_e($) {
+    my $x = shift;
+    my $f = $x < 1 ? '=%0.4g' : '=%0.4f';
+    sprintf $f, exp(1) ** $x;
+}
+
+sub format_10($) {
+    my $x = shift;
+    my $f = $x < 1 ? '=%0.4g' : '=%0.4f';
+    # sprintf $f, 10.0 ** $x;
+    $x < 0 ? ( '=' . substr($x,1) ) : sprintf( $f, -$x );
+    ## sprintf $f, -$x;
+}
+
+sub read_all_rules($) {
+    # purpose: read the both-side non-lex rules into a rule-id indexed hash
+    # paramtr: $fn (IN): where to find these rules
+    # globals: $grammar_view (IN): where grammar_view resides
+    # returns: hash indexed by rule-IDs. 
+    #
+    my $fn = shift; 
+    my %result = (); 
+    if ( $fn =~ /\.xrs(\.(gz|bz2))?$/ ) {
+	# already unpacked XRS rules, just read it
+	local(*XRS); 
+	warn "# @{[iso8601]}: Reading all rules as XRS from $fn\n"; 
+	if ( substr( $fn, -3 ) eq '.gz' ) {
+	    die "ERROR: Unable to read-access $fn\n" unless -r $fn;
+	    open( XRS, "gzip -cd $fn|" ) ||
+		die "ERROR: Unable to find gzip\n";
+	} elsif ( substr( $fn, -4 ) eq '.bz2' ) {
+	    die "ERROR: Unable to read-access $fn\n" unless -r $fn;
+	    open( XRS, "bzip2 -cd $fn|" ) ||
+		die "ERROR: Unable to find bzip2\n";
+	} else {
+	    open( XRS, "<$fn" ) ||
+		die "ERROR: Unable to open $fn: $!\n";
+	}
+	while ( <XRS> ) {
+	    chomp ; 
+	    if ( / id=(-?\d+)/ ) {
+		my $ruleid = $1; 
+		die "ERROR: Rule with id=$ruleid already exists!\n"
+		    if exists $result{$ruleid}; 
+		# convert-e^.py
+		s/=e\^(\S+)/format_e($1)/eg;
+		s/=10\^(\S+)/format_10($1)/eg;
+		$result{$ruleid} = $_; 
+	    }
+	}
+	close XRS || die "ERROR: close $fn: $!\n"; 
+
+    } else {
+
+	# needs to be treated with grammar_view
+	local(*GVIEW);
+	warn "# @{[iso8601]}: Extracting XRS rules with grammar_view from $fn\n"; 
+	my @arg = ( $grammar_view, '-g', $fn );
+	push( @arg, '--quiet', 1 ) unless $verbose > 1;
+	if ( $fn =~ /\.gar(\.(gz|bz2))?$/ ) {
+	    # noop (default)
+	} elsif (  $fn =~ /\.brf(\.(gz|bz2))?$/ ) {
+	    push( @arg, '--grammar-format', 'brf' );
+	} elsif (  $fn =~ /\.far(\.(gz|bz2))?$/ ) {
+	    push( @arg, '--grammar-format', 'fat-archive' );
+	} else {
+	    die "Unknown grammar archive format";
+	}
+	push( @arg, '-a', '-' ); 
+	my $arg = join(' ',@arg);
+	$arg .= ' 2>> /dev/null'; 
+
+	warn "# $arg\n" if $verbose; 
+	if ( open( GVIEW, "$arg|" ) ) {
+	    while ( <GVIEW> ) {
+		chomp; 
+		if ( / id=(-?\d+)/ ) {
+		    my $ruleid = $1; 
+		    die "ERROR: Rule with id=$ruleid already exists!\n"
+			if exists $result{$ruleid}; 
+		    # convert-e^.py
+		    s/=e\^(\S+)/format_e($1)/eg;
+		    s/=10\^(\S+)/format_10($1)/eg;
+		    $result{$ruleid} = $_; 
+		}
+	    }
+	    close GVIEW || die "ERROR: close $arg[0]: $!\n"; 
+	} else {
+	    die "ERROR: popen $arg[0]: $!\n"; 
+	}
+    }
+
+    $result{count} = scalar keys %result; 
+    %result; 
+}
+
+sub unpacked_rules(*$$$@) {
+    # purpose: extract rules-ids for a sentence. uniq applied internally.
+    # paramtr: *HYP (IO): file handle open for writing
+    #          $sentence (IN): sentence number
+    #          $sdir (IN): per sentence grammar directory 
+    #          $gref (IN): global grammar rules (may be empty)
+    #          @ruleids (IN): array of rule ids
+    #
+    local(*NEW) = shift;
+    my $sentence = shift;
+    my $sdir = shift; 
+    my $gref = shift;
+    my %ruleids = map { $_ => 1 } @_; 
+
+    # extract global rules 
+    my %result = (); 
+    my $m = 0;			# global rule count
+    my $mm = ( defined $gref && exists $gref->{count} ) ? $gref->{count} : 0;
+    foreach my $id ( @_ ) { 
+	if ( exists $gref->{$id} ) {
+	    $result{$id} = $gref->{$id};
+	    ++$m; 
+	    delete $ruleids{$id}; 
+	}
+    }
+
+    my @x = sort { $a <=> $b } keys %result; 
+    warn( "# Found $m/$mm global rules: @x\n" ); 
+
+    #
+    # call grammar view with remainig rule ids
+    #
+    warn "# @{[iso8601]}: Extracting rules for sentence $sentence\n";
+    # MUST use -a mode to obtain ALL attributes on rule
+    my @arg = ( $grammar_view, '-a', '-' ); 
+    push( @arg, '--quiet', 1 ) unless $verbose; 
+    if ( -r "$sdir/rules.far.gz" ) {
+	push( @arg, '-g', "$sdir/rules.far.gz" );
+	push( @arg, '--grammar-format', 'fat-archive' ); 
+    } elsif ( -r "$sdir/rules.brf.gz" ) {
+	push( @arg, '-g', "$sdir/rules.brf.gz" );
+	push( @arg, '--grammar-format', 'brf' ); 
+    } else {
+	die "FATAL: Unknown grammar format, or unable to find grammar for sentence $sentence"; 
+    }
+    my $arg = join(' ',@arg);
+    $arg .= ' 2>>/dev/null' unless $verbose > 1;
+
+    warn "# $arg\n" if $verbose;
+    my $n = 0;			# local rule count
+    my $nn = 0;			# total local rule
+    if ( open( GVIEW, "$arg|" ) ) {
+	while ( <GVIEW> ) {
+	    chomp; 
+	    if ( / id=(-?\d+)/ ) {
+		my $ruleid = $1; 
+		++$nn; 
+		next unless exists $ruleids{$ruleid}; 
+		warn "# Found local rule $ruleid\n" if $verbose > 1; 
+
+		# convert-e^.py
+		s/=e\^(\S+)/format_e($1)/eg;
+		s/=10\^(\S+)/format_10($1)/eg;
+		$result{$ruleid} = $_; 
+		++$n; 
+	    }
+	}
+	close GVIEW || die "ERROR: close $arg[0]: $!\n"; 
+    } else {
+	die "ERROR: popen $arg[0]: $!\n"; 
+    }
+    warn "# Found $n/$nn local rules\n"; 
+
+    # print all found ruleids
+    foreach my $id ( keys %result ) {
+	delete $ruleids{$id}; 
+	print NEW "RULES: $result{$id}\n";
+    }
+    warn( "# @{[iso8601]}: found $m+$n=", $m+$n, 
+	  " matches in $mm+$nn=", $mm+$nn, " rules\n" );
+
+    if ( %ruleids ) {
+	warn( "Warning: Failed to find the following rules: ",
+	      join(' ',keys %ruleids), "\n" );
+    }
+}
+
+sub generate_1best(*$$$) {
+    # purpose: Emulate generate-1best.py 
+    # paramtr: HYP (IO): filehandle opened for writing
+    #          $real_sentence (IN): number of real sentence
+    #          $sdir (IN): where to find sentence stuff. 
+    #          $line (IN): 1-best hypothesis line from n-best file
+    #
+    local (*BEST) = shift;
+    my $sentence = shift;
+    my $sdir = shift; 
+    local $_ = shift;
+    local(*S,*DAG); 
+
+    my $ffn = File::Spec->catfile( $sdir, 'sentence' ); 
+    if ( open( S, "<$ffn" ) ) {
+	my $x = <S>; 
+	close S; 
+	$x =~ s{^<foreign-sentence> }{};
+	$x =~ s{[\r\n]+$}{}; 	# chomp
+	my @x = split ' ', $x;
+
+	# generator NEEDS the foreign length!
+	print BEST "REALID: $sentence ", @x+0, "\n";
+	print BEST "1BEST: $x\n";
+    } else {
+	die "FATAL: Unable to determine foreign plain sentence"; 
+    }
+
+    if ( m/\shyp=\{\{\{(.*?)\}\}\}/ ) {
+	print BEST "1BEST: $1\n";
+    } else {
+	die "FATAL: Unable to determine attr.hyp";
+    }
+
+    if ( m/\stree=\{\{\{(.*?)\}\}\}/ ) {
+	print BEST "1BEST: $1\n";
+    } else {
+	die "FATAL: Unable to determine attr.tree";
+    }
+
+    if ( m/\sderivation=\{\{\{(.*?)\}\}\}/ ) {
+	my $x = $1;
+	$x =~ s/\(\s*\)//g;	# only literal open-close
+	$x =~ s/^\s*//;		# trim front
+	$x =~ s/\s*$//;		# trim rear
+	$x =~ s/\s+/ /g;	# squeeze multiple whitespaces
+	print BEST "1BEST: $x\n";
+    } else {
+	die "FATAL: Unable to determine attr.derivation";
+    }
+
+    # store decoder's input lattice
+    my $latfn = File::Spec->catfile( $sdir, 'decode.ins' );
+    if ( open( DAG, "<$latfn" ) ) {
+	local $/;		# scoped slurp mode
+	my $x = <DAG>;
+	chomp($x); 
+	close DAG; 
+        $x =~ /(lattice.*};)/;
+        $x = $1;
+	$x =~ s{\s+}{ }g;	# make it a single line
+	print HYP "FSDAG: $x\n"; 
+    } else {
+	warn "# Unable to find lattice for sentence $sentence in $latfn\n";
+    }
+}
+
+sub prepare_viz_dat($$\%$$$) {
+    # purpose: extract n-best lists from n-best file
+    # paramtr: $fn (IN): new decoder's n-best separate output
+    #          $chunk (IN): which chunk number
+    #          %global (IN): unpacked both-side non-lex global.gar file (or undef)
+    #          $basedir (IN): where to start looking for grammars
+    #          $indexfn (IN): file name for sentence indices for this chunk
+    #          $outfn (IN): file name for cooked output for this chunk
+    # returns: -
+    #
+    my ($fn,$chunk,$gref,$basedir,$indexfn,$outfn) = @_; 
+    local (*NBEST,*HYP,*IDX,*DAG);
+
+    #
+    # open packed or unpacked n-best decoder output file
+    #
+    if ( substr( $fn, -3 ) eq '.gz' ) {
+	die "ERROR: Unable to read-access $fn\n" unless -r $fn;
+	open( NBEST, "gzip -cd $fn|" ) ||
+	    die "ERROR: Unable to find gzip\n";
+    } elsif ( substr( $fn, -4 ) eq '.bz2' ) {
+	die "ERROR: Unable to read-access $fn\n" unless -r $fn;
+	open( NBEST, "bzip2 -cd $fn|" ) ||
+	    die "ERROR: Unable to find bzip2\n";
+    } else {
+	open( NBEST, "<$fn" ) ||
+	    die "ERROR: Unable to open $fn: $!\n";
+    }
+    #binmode( NBEST, ':utf8' ) || die "ERROR: binmode utf8: $!\n";
+    warn "# @{[iso8601]}: reading from $fn\n" if $verbose;
+
+    #
+    # open output files
+    #
+    open( IDX, ">$indexfn" ) || die "ERROR: open $indexfn: $!\n";
+    open( HYP, ">$outfn" ) || die "ERROR: open $outfn: $!\n";
+    #binmode( HYP, ':utf8' ) || die "ERROR: binmode utf8: $!\n";
+
+    my ($sentence,$nbest,$hypothesis,%hypothesis,$rulefn,$hypfn,$bestfn);
+    my $prev_sent_no = 0;	# sentences start at 1
+    my $sent_count = 0; 	# sentence count
+    while ( <NBEST> ) {
+	# new decoder does not have recovered hypotheses any more
+	my $fix = substr( $_, 0, 32 );
+	if ( $fix =~ /^NBEST sent=(\d+) nbest=(\d+)/ ) {
+	    ($sentence,$nbest) = ($1,$2);
+	    my $save = $_;
+	    my $aa = sprintf "%02d", int($sentence / 100);
+	    my $bb = sprintf "%02d", int($sentence % 100);
+            my $sdir = File::Spec->catfile( $basedir, $corpusmap{$sentence} ); 
+	    #my $sdir = File::Spec->catfile( $basedir, 'tmp', $aa, $bb ); 
+
+	    if ( $prev_sent_no != $sentence ) {
+		# new sentence
+		if ( $prev_sent_no != 0 ) {
+		    print IDX "\t", tell(HYP), "\n";
+		    print HYP "\n";
+		}
+		
+		# output current sentence
+		print IDX $sentence, "\t", tell(HYP);
+		## deferred to generate_1best for now!!!
+		## print HYP "REALID: $sentence\n";
+
+		%hypothesis = ();
+		$prev_sent_no = $sentence;
+		++$sent_count; 
+		warn "\n# @{[iso8601]}: [$sent_count] Processing sentence $sentence\n";
+
+		# produce intermediary file for later consumption
+		generate_1best( HYP, $sentence, $sdir, $save );
+
+		# save 1-best derivation's rules
+		$_ = $save;
+		if ( /\sderivation=\{\{\{(.*?)\}\}\}/ ) {
+		    my $x = $1;
+		    next unless length $x;
+		    $x =~ s/[\(\)]//g;
+		    $x =~ s/^\s*//; # trim front
+		    $x =~ s/\s*$//; # trim rear
+		    # FIXME: Can we just drop UNK rules? 
+		    $x =~ s/UNK/-88888888/g; 
+		    my @x = sort { $a <=> $b } 
+		            keys %{{ map { $_ => 1 } split /\s/, $x }}; 
+
+		    warn( "# Seeking ", @x+0, " 1-best rules: @x\n" ) if $verbose; 
+		    $rulefn = unpacked_rules( HYP, $sentence, $sdir, $gref, @x ); 
+		} else {
+		    warn "Warning: No rules found for sentence $sentence\n";
+		}
+	    }
+
+	    # collect unique hypothesis n-best, while we are at it
+	    $_ = $save;
+	    if ( m<\shyp=\{\{\{(.*?)\}\}\}> ) {
+		$hypothesis = $1;
+		print HYP $save unless exists $hypothesis{$hypothesis};
+		$hypothesis{$hypothesis} = 1;
+	    } else {
+		# no hypothesis, what is going on?
+		warn "Warning: No hypothesis for $sentence:$nbest\n";
+	    }
+	} else {
+	    # unrecognized input
+	    print STDERR $_ if $verbose > 1;
+	}
+    }
+    close NBEST || die "ERROR: close $fn: $!\n";
+
+    if ( $prev_sent_no != 0 ) {
+	print IDX "\t", tell(HYP), "\n";
+	print HYP "\n";
+    }
+
+    close IDX;
+    close HYP;
+}
+
+#
+# --- main ------------------------------------------------------
+#
+usage unless @ARGV;
+warn "# @{[iso8601]}: $0 @ARGV\n";
+
+$SIG{INT} = sub { exit 1; };
+
+my ($per_sentence);
+my %global = (); 		# no global rules
+my $chunk = 0;
+my $outfn = '-';
+my $indexfn = File::Spec->devnull();
+GetOptions( 'help|h' => \&usage
+	  , 'verbose|v!' => \$verbose
+
+	  , 'map=s' => \&cmap
+	  , 'chunk=i' => \$chunk
+	  , 'global=s' => sub { %global = read_all_rules( $_[1] ) },
+
+	  , 'per-sentence=s' => \$per_sentence
+	  , 'grammar-view=s' => \$grammar_view
+	  , 'output=s' => \$outfn
+	  , 'index=s' => \$indexfn
+	  ) || 
+    die "ERROR: Problem processing options\n";
+
+my $decoder_nbest = shift || usage();
+if ( defined $per_sentence && length($per_sentence) ) {
+    die "ERROR: Unable to read --per-sentence location\n"
+	unless ( -d $per_sentence || -f _ );
+
+    die "ERROR: grammar_view does not exist\n" 
+	unless ( defined $grammar_view && -r $grammar_view );
+    die "ERROR: grammar_view is not executable\n" 
+	unless ( -x _ );
+} else {
+    die "ERROR: Must specify a --per-sentence directory\n"; 
+}
+
+if ( $chunk == 0 ) {
+    warn "# attempting to guess chunk number from $decoder_nbest\n";
+    $chunk = $1 if ( $decoder_nbest =~ /([1-9][0-9]*)/ );
+}
+die "ERROR: Missing --chunk argument\n" unless $chunk > 0;
+
+
+
+warn "# @{[iso8601]}: starting\n\n" if $verbose;
+prepare_viz_dat($decoder_nbest,$chunk,%global,$per_sentence,$indexfn,$outfn);
+my $diff = time() - $main::start;
+warn "\n# @{[iso8601]}: finished, $diff s\n" if $verbose;
+
+exit 0;

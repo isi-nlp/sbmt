@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+
+from hadoop import Hadoop
+from argparse import ArgumentParser
+import cfg
+
+parser = ArgumentParser()
+args = cfg.parse_args(parser)
+hp = args.hadoop
+
+bindir = args.config['variables']['rhbin']
+
+hp.mapreduce( mapper='%s/rule_training_length_mapper' % bindir
+            , reducer='%s/rule_training_length_reducer' % bindir
+            , input='rules'
+            , output='part.sentids'
+            , sortkeys=3
+            , partitionkeys=1 )

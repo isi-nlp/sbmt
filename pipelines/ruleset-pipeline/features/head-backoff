@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+
+from hadoop import Hadoop
+from argparse import ArgumentParser
+import cfg
+import os
+
+parser = ArgumentParser()
+args = cfg.parse_args(parser)
+hp = args.hadoop
+
+bindir = args.config['variables']['rhbin']
+
+# extract symbol, word, count
+hp.mapreduce( mapper='%s/child_head_mapper' % bindir
+            , reducer='%s/child_head_reducer' % bindir
+            , input='rules'
+            , output='sym_hw_counts'
+            , options='-jobconf stream.num.map.output.key.fields=2 '+\
+                      '-jobconf num.key.fields.for.partition=2'
+            , compress = False
+             )
+
+# extract symbol, tag, count
+hp.mapreduce( mapper='%s/child_head_mapper -p' % bindir
+            , reducer='%s/child_head_reducer' % bindir
+            , input='rules'
+            , output='sym_ht_counts'
+            , options='-jobconf stream.num.map.output.key.fields=2 '+\
+                  '-jobconf num.key.fields.for.partition=2'
+            , compress = False )
+
+# turn symbol, tag, count into symbol, count
+hp.mapreduce( mapper='%s/child_head_symbol_mapred' % bindir
+            , reducer='%s/child_head_symbol_mapred -r' % bindir
+            , input='sym_ht_counts'
+            , output='sym_counts'
+            , compress = False )
+
+hp.getmerge('sym_counts', os.path.join(args.tmpdir, 'sym_counts'))
+
+# turn sym_counts and sym_hw_counts into sym hw prob
+hp.mapreduce( mapper='%s/child_head_symbol_prob_mapper -s %s' % (bindir, os.path.join(args.tmpdir, 'sym_counts'))
+            , input='sym_hw_counts'
+            , output='probs.symbol.headword'
+            , compress = False )
+
+hp.getmerge('probs.symbol.headword', os.path.join(args.outdir, 'probs.symbol.headword'))
+
+
+# turn sym_counts and sym_ht_counts into sym ht prob
+hp.mapreduce( mapper='%s/child_head_symbol_prob_mapper -s %s' % (bindir, os.path.join(args.tmpdir, 'sym_counts'))
+            , input='sym_ht_counts'
+            , output='probs.symbol.headtag'
+            , compress = False )
+
+hp.getmerge('probs.symbol.headtag', os.path.join(args.outdir, 'probs.symbol.headtag'))
+hp.getmerge('sym_ht_counts', os.path.join(args.outdir,'counts.symbol.headtag'))
+hp.getmerge('sym_hw_counts', os.path.join(args.outdir,'counts.symbol.headword'))
+cfg.execute('cat $outdir/top.headword >> $outdir/counts.symbol.headword',outdir=args.outdir)
+cfg.execute('cat $outdir/top.headtag >> $outdir/counts.symbol.headtag',outdir=args.outdir)
+

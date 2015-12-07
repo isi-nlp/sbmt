@@ -1,0 +1,155 @@
+How to run:
+qsub -lnodes=20,walltime=48:00:00
+. start-hadoop-server.sh # important to run this way; variables are exported
+./runextract ...
+./runfeatures ...
+./runfilter ...
+./runxrsdb ...
+
+the tasks are run serially, either as one qsub or several.  start-hadoop-server.sh should be the 
+first step of each job if breaking the tasks into several qsubs:
+
+qsub -lnodes=20,walltime=14:00:00
+. start-hadoop-server.sh 
+./runextract ...
+
+qsub -lnodes=20,walltime=14:00:00
+. start-hadoop-server.sh
+./runextract ...
+
+qsub -lnodes=20,walltime=6:00:00
+. start-hadoop-server.sh
+./runfilter ...
+
+qsub -lnodes=20,walltime=14:00:00
+. start-hadoop-server.sh
+./runxrsdb ...
+
+-----------------------------------------------------------------------------
+
+usage: runextract [-h] [-s SUBCORPORA [SUBCORPORA ...]]
+                  [-m MODELDIR [MODELDIR ...]] [-c CONFIG [CONFIG ...]]
+                  [-o OUTDIR] [-t TMPDIR]
+                  target source align
+
+positional arguments:
+  target                training target-side trees
+  source                training source-side sentences
+  align                 alignments between target and source words
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s SUBCORPORA [SUBCORPORA ...], --subcorpora SUBCORPORA [SUBCORPORA ...]
+                        YAML description of subcorpora lines (colon or space
+                        separated file list)
+  -m MODELDIR [MODELDIR ...], --modeldir MODELDIR [MODELDIR ...]
+                        directory containing tables to construct features such
+                        as m1nrm, m1inv, lef, lfe, etc (that last one isnt a
+                        feature)
+  -c CONFIG [CONFIG ...], --config CONFIG [CONFIG ...]
+                        colon or space separated list of config-files. later
+                        files are merged into earlier ones, overriding
+                        conflicts. config-files are in YAML format.
+                        /auto/nlg-02/pust/sbmt-trunk/ruleset-
+                        pipeline/cfg.py/ruleset.cfg is loaded first.
+  -o OUTDIR, --output OUTDIR
+                        output directory. should be the same for run* jobs.
+                        defaults to "."
+  -t TMPDIR, --tmpdir TMPDIR
+                        temporary files stored here. should be the same for
+                        all run* jobs. defaults to $outdir/tmp
+
+-----------------------------------------------------------------------------
+
+usage: runfeatures [-h] [-m MODELDIR [MODELDIR ...]] [-c CONFIG [CONFIG ...]]
+                   [-o OUTDIR] [-t TMPDIR]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -m MODELDIR [MODELDIR ...], --modeldir MODELDIR [MODELDIR ...]
+                        directory containing tables to construct features such
+                        as m1nrm, m1inv, lef, lfe, etc (that last one isnt a
+                        feature)
+  -c CONFIG [CONFIG ...], --config CONFIG [CONFIG ...]
+                        colon or space separated list of config-files. later
+                        files are merged into earlier ones, overriding
+                        conflicts. config-files are in YAML format.
+                        /auto/nlg-02/pust/sbmt-trunk/ruleset-
+                        pipeline/cfg.pyc/ruleset.cfg is loaded first.
+  -o OUTDIR, --output OUTDIR
+                        output directory. should be the same for run* jobs.
+                        defaults to "."
+  -t TMPDIR, --tmpdir TMPDIR
+                        temporary files stored here. should be the same for
+                        all run* jobs. defaults to $outdir/tmp
+                        
+-----------------------------------------------------------------------------
+
+usage: runfilter [-h] [-c CONFIG [CONFIG ...]] [-o OUTDIR] [-t TMPDIR]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CONFIG [CONFIG ...], --config CONFIG [CONFIG ...]
+                        colon or space separated list of config-files. later
+                        files are merged into earlier ones, overriding
+                        conflicts. config-files are in YAML format.
+                        /auto/nlg-02/pust/sbmt-trunk/ruleset-
+                        pipeline/cfg.pyc/ruleset.cfg is loaded first.
+  -o OUTDIR, --output OUTDIR
+                        output directory. should be the same for run* jobs.
+                        defaults to "."
+  -t TMPDIR, --tmpdir TMPDIR
+                        temporary files stored here. should be the same for
+                        all run* jobs. defaults to $outdir/tmp
+
+-----------------------------------------------------------------------------
+
+usage: runxrsdb [-h] [-k] [-n] [-c CONFIG [CONFIG ...]] [-o OUTDIR]
+                [-t TMPDIR]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -k, --keeprules       keep pre-filtered rules in hdfs format
+  -n, --nocleanup       do not toss the temporary $tmpdir
+  -c CONFIG [CONFIG ...], --config CONFIG [CONFIG ...]
+                        colon or space separated list of config-files. later
+                        files are merged into earlier ones, overriding
+                        conflicts. config-files are in YAML format.
+                        /auto/nlg-02/pust/sbmt-trunk/ruleset-
+                        pipeline/cfg.pyc/ruleset.cfg is loaded first.
+  -o OUTDIR, --output OUTDIR
+                        output directory. should be the same for run* jobs.
+                        defaults to "."
+  -t TMPDIR, --tmpdir TMPDIR
+                        temporary files stored here. should be the same for
+                        all run* jobs. defaults to $outdir/tmp
+
+
+-----------------------------------------------------------------------------
+
+below is an actual invocation.  note the config file "nohadoop.cfg"  this 
+causes the tasks to bypass hadoop and process the rules serially.  useful 
+for debugging with small datasets, since hadoop has high overhead.  not 
+recommended in real life.
+
+. /home/nlg-03/mt-apps/ruleset-pipeline/0.1/start-hadoop-server.sh
+cd /home/nlg-02/pust
+/home/nlg-03/mt-apps/ruleset-pipeline/0.1/runextract \
+  de-en-small/training.E.berkeley-vf.lc \
+  de-en-small/training.F.tok.lc \
+  de-en-small/training.a.e-f.GIZA-linkdel \
+  -s subcorpora \
+  -m de-en-small/modeldir/GIZA de-en-small/modeldir/LEX \
+  -o de-en-rules2
+
+/home/nlg-03/mt-apps/ruleset-pipeline/0.1/runfeatures \
+  -m de-en-small/modeldir/GIZA de-en-small/modeldir/LEX \
+  -o de-en-rules2
+
+/home/nlg-03/mt-apps/ruleset-pipeline/0.1/runfilter \
+  -o de-en-rules2
+
+/home/nlg-03/mt-apps/ruleset-pipeline/0.1/runxrsdb \
+  --nocleanup --keeprules \
+  -o de-en-rules2
+

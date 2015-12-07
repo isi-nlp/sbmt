@@ -1,0 +1,17 @@
+$$$ filetype=rule version=1.0
+%%% data=dup
+C1(x0:E1) -> x0 "un" ### size=1
+C1(x0:E1) -> x0 ### size=1
+C1(x0:E1) -> x0 ### size=1
+C2(x0:E2) -> x0 ### size=1
+C2(x0:E2b) -> "un" x0 ### size=1
+C2(x0:E2b) -> x0 ### size=1
+E1("w1") -> "f0" ### size=0
+E1("w3") -> "f2" ### size=0
+E2("w2") -> "f1" ### size=0
+E2b("w4") -> "f3" ### size=0
+S(x0:SA x1:SB) -> x0 x1 ### size=1
+SA(x0:C1 x1:C2) -> x0 x1 ### size=1
+SB(x0:C1 x1:C2) -> x0 "un" x1 ### size=1
+SB(x0:C1 x1:C2) -> x0 x1 ### size=1
+SB(x0:C1 x1:C2) -> x0 x1 ### size=1

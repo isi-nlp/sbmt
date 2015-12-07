@@ -1,0 +1,17 @@
+load-grammar brf "brf" weights "src:1.0,tgt:1.0,d-exp:1.0,d-norm:1.0,p1:1.0,p2:1.0,pt-lm-unk:1.0,pt-lm:1.0,text-length:1.0,derivation-size:1.0";
+
+lattice {
+    [0,1] "A" src="10^-1";
+    [0,1] "A" target="X(\"special\")" text-length="10^-1" derivation-size="10^-1" tgt="10^-1";
+    block {
+        [1,2] "B" src="10^-1";
+        [2,3] "C" src="10^-1";
+    };
+    block {
+        [3,4] "D" src="10^-1";
+    };
+    [4,5] "A" src="10^-2";
+};
+
+decode A B C D A
+

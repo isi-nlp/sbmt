@@ -1,0 +1,12 @@
+NNP("UNKINDONESIA") -> "c1" ### id=128 gt_prob=e^-0.7 count=1
+NNP("INDONESIA") -> "c1" ### id=128 gt_prob=e^-0.7 count=1
+VBD("UNKREITERATED") -> "c2" ### id=132 gt_prob=e^-0.8 count=1
+NNP("OPPOSITION") -> "c3" ### id=130 gt_prob=e^-0.7 count=1
+NPB(JJ("FOREIGN") JJ("MILITARY") NNS("FORCES")) -> "c4" "c5" ### id=122 gt_prob=e^-0.8 count=1
+NN("UNKPRESENCE") -> "c6" ### id=124 gt_prob=e^-.012 count=1
+NP-C(NPB(PRP$("ITS") X0:NNP) PP(TO("TO") x1:NP-C)) -> x0 x1 ### id=131 gt_prob=e^-0.01 count=1
+S(S(x0:NP-C VP(x1:VBD x2:NP-C)) .(".")) -> x0 x1 x2 ### id=173 gt_prob=e^-0.1 count=1
+NP-C(x0:NPB PP(IN("OF") x1:NP-C)) -> x0 x1 ### id=127 gt_prob=e^-0.7 count=1
+NP-C(x0:NPB) -> x0 ### id=123 gt_prob=e^-.01 count=1
+NP-C(NPB(x0:NNP)) -> x0 ### id=137 gt_prob=e^-5 count=1
+NPB(DT("THE") x0:NN) -> x0 ### start=5 end=6 id=126 gt_prob=e^-0.8 count=1

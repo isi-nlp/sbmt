@@ -1,0 +1,2 @@
+ADJP(JJ("active") CC("and") x3:JJ) -> "积极" x3 ### attr1=val prob=1.0 % this is my comment
+ADJP(JJ("administrative") CC("and") x3:JJ) -> "各级" x3 ### attr2=test

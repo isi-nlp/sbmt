@@ -1,0 +1,10 @@
+project decoder_filters ;
+
+
+lib decoder_filters
+  : decoder_filters.cpp
+    /sbmt_decoder//sbmt
+  : <include>. <include>..
+  :
+  : <include>.
+  ;

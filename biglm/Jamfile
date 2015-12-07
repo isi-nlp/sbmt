@@ -1,0 +1,4 @@
+project biglm ;
+
+use-project /cmph : cmph-0.8 ;
+use-project /pagh : pagh ;

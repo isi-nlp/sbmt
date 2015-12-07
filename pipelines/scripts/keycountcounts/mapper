@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+SBMTHADOOP=$(dirname $(dirname $0))
+cut -f1,3 | $SBMTHADOOP/precombine -k2 | $SBMTHADOOP/count -k2 -u

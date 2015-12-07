@@ -1,0 +1,7 @@
+X3(X("www") x0:X x1:X x2:X x3:X) -> x1 x3 x2 x0 ### derivation-size=10^-1 text-length=10^-1 p=10^-3 id=3
+X7(X("www") x0:X x1:X x2:X x3:X) -> x1 x3 x2 x0 "W" ### derivation-size=10^-1 foreign-length=10^-1 text-length=10^-1 p=10^-7 id=7
+X6(x0:X x1:X x2:X x3:X) -> "WWW2" x1 x3 x2 x0 "W2" ### derivation-size=10^-1 foreign-length=10^-2 p=10^-11 id=11
+X5(x0:X x1:X X(x2:X x3:X)) -> x1 x3 x2 x0 "W" ### derivation-size=10^-1 foreign-length=10^-1 p=10^-15 id=15
+X(X("www") x0:X x1:X X(x2:X x3:X)) -> x1 x3 x2 x0 ### derivation-size=10^-1 text-length=10^-1 p=10^-19 id=19
+X(X("www") x0:X x1:X) -> x1 x0 ### derivation-size=10^-1 text-length=10^-1 p=10^-23 id=23
+X3(X("www") x0:X) -> x0 ### derivation-size=10^-1 text-length=10^-1 p=10^-27 id=27

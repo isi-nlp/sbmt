@@ -1,0 +1,64 @@
+Probably too many geographically distant function objects and callbacks are used, but here's what happens with feature vectors:
+
+grammar/grammar_in_memory.hpp:
+
+scored_syntax: syntax_rule, combined score_t, and feature_vector_byid - sparse (id,score_t) vector (grammar/features_byid.hpp)
+
+vector is initialized from map of name->score_t, using an in_memory_token_storage (sbmt/token/in_memory_token_storage.hpp) to get int. ids from name
+
+feature_accum_byid - complete vector with max index = max id.  uses accumulate_at_pairs (graehl/shared/assoc_container.hpp) to multiply (add logs) the sparse vectors onto the full vector.  default value (mult. identity) is given by the accumlate_multiply functor which sets = 1 (good).
+
+grammar_in_memory.cpp: syntax_rule_action (constructs scored_syntax), binary_rule_action (computes and sets heuristic and inside scores)
+
+
+reading a grammar:
+
+#include <sbmt/grammar/grammar_in_memory.hpp>
+brf_stream_reader (parses rules from brf text)
+
+#include <sbmt/grammar/brf_archive_io.hpp>
+brf_archive_writer (saves archive)
+brf_archive_reader (loads archive)
+
+brf_reader.hpp:
+
+typedef std::map<std::string,score_t> score_map_type;
+
+typedef std::map<std::string,std::string> text_feature_map_type;
+
+actual parsing done in brf_file_reader.cpp and archive io in brf_archive_io.cpp
+
+
+brf rule heuristic/inside scores: on loading rules, use score combiner on feature vectors ... starts as name/score, turned into byid score combiner
+
+brf_reader.hpp set_handlers (boost fn obj for sr, brf rule)
+
+./sbmt_decoder/src/grammar_in_memory.cpp:    reader.set_handlers( detail::syntax_rule_action(this,combine)
+
+
+./sbmt_decoder/src/grammar_in_memory.cpp:    syntax_rule_action(grammar_in_mem* gram, score_combiner const& combine)
+
+ - builds combiner byid
+
+./sbmt_decoder/src/grammar_in_memory.cpp:    binary_rule_action(grammar_in_mem* gram)
+
+void brf_stream_reader::read()
+{
+    while (input) {
+        string line;
+        getline(input,line);
+        if (boost::regex_match(line,blank)) continue;
+        Rule r(line);
+        if (!r.is_virtual_label()) {
+            indexed_syntax_rule syn = detail::create_syntax_rule(r,tf);
+            score_map_type score_map;
+            detail::extract_scores(r,score_map,verbose);
+            syntax_rule_cb(syn,score_map);
+        }
+        indexed_binary_rule binrule(r,tf);
+        vector<syntax_id_type> rule_list;
+        detail::extract_syntax_ids(r,std::inserter(rule_list,rule_list.end()));
+        binary_rule_cb(binrule,rule_list);
+    }
+}
+

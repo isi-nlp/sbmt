@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+
+import cfg
+import hadoop
+import argparse
+import string
+import os
+import subprocess
+import sys
+
+parser = argparse.ArgumentParser()
+parser.add_argument( '-M'
+                   , dest='map'
+                   , action='store_true'
+                   , help='internal option.  do not use')
+parser.add_argument( '-n'
+                   , '--no-local-rulefile'
+                   , action='store_false'
+                   , dest='local_rulefile' )
+d = cfg.parse_args(parser,config='$outdir/corpus-prep.config')
+hp = d.hadoop
+rules = d.config['rules']
+
+mapper = os.path.abspath(__file__) + ' -M -o ' + d.outdir
+
+if d.map:
+    retriever = os.path.join(d.config['rule-extraction']['xrsdb'], 'xrsdb_batch_retrieval')
+    cmd = string.Template('$retriever -i - -d $rules/xrsdb -p hadoop')
+    cmd = cmd.substitute(rules=rules,retriever=retriever)
+    print >> sys.stderr, 'MAPPER COMMAND:', cmd
+    extractor = subprocess.Popen( cmd
+                                , stdin=subprocess.PIPE
+                                , stdout=sys.stdout
+                                , stderr=sys.stderr
+                                , shell=True )
+    for line in sys.stdin:
+        print >> sys.stderr, line.split('\t')[0]
+        extractor.stdin.write(line.split('\t')[2])
+    extractor.stdin.close()
+    extractor.wait()
+    sys.exit(extractor.returncode)
+else:
+    input = os.path.join(d.tmpdir,'input')
+    output = os.path.join(d.tmpdir,'rules.retrieved')
+    lines = 0
+    for line in open(input):
+        lines += 1
+    if not os.path.exists(output):
+        if not hp.file_exists('input'):
+            hp.put(input,'input')
+        hp.mapreduce( mapper=mapper
+                    , input='input'
+                    , output='rules.retrieved'
+                    , options = '-jobconf mapred.map.tasks='+str(int(lines/10))
+                    )
+        if d.local_rulefile:
+            hp.get('rules.retrieved',output)
+    

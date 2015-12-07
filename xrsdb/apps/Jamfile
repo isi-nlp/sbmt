@@ -1,0 +1,165 @@
+# import testing ;
+import sbmt-util ;
+
+local allocator = [ option.get allocator : off ] ;
+
+require = <library>../lib//xrsdb ;
+
+project apps ;
+
+lib xrsdb_search_util
+  : [ glob search/*.cpp ]
+    ../../source_syntax//source_syntax
+    ../../cluster_model//cluster_model
+    ../../nntm
+    ../../neural_collins
+    ../../rule_head//collins
+    ../../srl
+  : $(require) <include>.
+  : 
+  : $(require) <include>.
+  ;
+
+exe readforest
+  : readforest.cpp
+  : $(require)
+  ;
+  
+exe xrsdb_dump_index
+  : dump_index.cpp
+  : $(require)
+  ;
+
+exe xrsdb_dump
+  : dump.cpp
+  : $(require)
+  ;
+  
+exe xrsdb_batch_retrieval
+  : batch_retrieval.cpp
+  : $(require)
+  ;
+
+exe xrsdb_filter
+  : filter.cpp
+  : $(require)
+  ;
+  
+exe xrsdb_create
+  : create.cpp
+  : $(require)
+  ;
+  
+exe xrsdb_unknown_filter
+  : unknown_filter.cpp
+  : $(require)
+  ;
+  
+exe nth
+  : nth.cpp
+  : $(require)
+  ;
+  
+exe xrsdb_genfreq
+  : genfreq.cpp
+  : $(require)
+  ;
+
+exe xrsdb_makefreq
+  : makefreq.cpp
+  : $(require)
+  ;
+  
+exe xrsdb_index
+  : index.cpp
+  : $(require)
+  ;
+
+exe xrsdb_populate
+  : populate.cpp
+  : $(require)
+  ;
+  
+exe xrsdb_populate2
+  : populate2.cpp xrsdb_search_util
+  : $(require) <include>.
+  ;
+
+  
+exe xrsdb_mergetables
+  : mergetables.cpp
+  : $(require)
+  ;
+  
+exe xrsdb_assignkeys
+  : assignkeys.cpp
+  : $(require)
+  ;
+  
+exe xrsdb_retrieval
+  : retrieval.cpp
+  : $(require)
+  ;
+
+exe xrsdb_binarize
+  : binarize.cpp
+  : $(require)
+  ;
+
+exe xrsdb_search
+  : search.cpp
+    xrsdb_search_util
+    ../../utilities//decode_sequence_reader
+    ../../utilities//numproc
+    /site-config//tbb
+  : $(require) 
+    <include>.
+    <allocator>$(allocator)
+  : <allocator>$(allocator)
+  ;
+
+# exe xrsdb_split
+#  : split.cpp
+#    
+#    /boost/regex
+#    /boost/filesystem
+#    /boost/program_options
+#  ;
+
+# unit-test check
+#   : [ glob test/*.cpp ]
+#     /boost/test//boost_unit_test_framework/<link>static
+#     
+#   ;
+  
+sbmt-util.install install
+  :
+  : xrsdb_search
+    xrsdb_batch_retrieval
+    xrsdb_retrieval
+    xrsdb_assignkeys
+    xrsdb_mergetables
+    xrsdb_populate
+    xrsdb_populate2
+    xrsdb_genfreq
+    xrsdb_makefreq
+    xrsdb_create
+    xrsdb_index
+    xrsdb_filter
+    xrsdb_unknown_filter
+    xrsdb_dump
+    xrsdb_dump_index
+    xrsdb_binarize
+    nth
+    readforest
+  : # no libs
+  : # no headers
+  : sent_to_lattice.pl
+    stree2lat
+    stree2sig
+    xrsdb_write_config
+    rawsigfreq
+    freqmerge
+  ;
+
+explicit install ;

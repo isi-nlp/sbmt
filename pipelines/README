@@ -1,0 +1,315 @@
+the pipeline consists of four primary routines:
+1 - ruleset-pipeline
+    given a set of target trees, source sentences, and alignments, construct ghkm
+    rules with attached features, and store them in a database for the decoder to
+    use
+
+2 - corpus-pipeline
+    given a set of sentences to be translated, and a ruleset, creates 
+    named entity rules, identity,rules, unknown rules, translation lattices. 
+    essentially prepares the sentences to be translated 
+
+3 - tune-pipeline
+    given a prepared corpus, tune a weight file
+
+4 - decode-pipeline
+    given a prepared corpus, and a tuned system, decode the corpus and return 
+    nbests and bleu score
+
+throughout this tutorial, we will submit jobs to PBS using a helper script called "qsubrun",
+located in $PIPELINE/tools, where $PIPELINE refers to the directory containing this README
+
+--------- ruleset pipeline ----------------------------------------------------------------------
+
+minimally, requires a file describing the training data, and a config file 
+describing the language pair. example:
+
+   # training.pipeline.resource
+   target: /home/nlg-02/data07/chi-eng/bolt-y2r1/v1/Training-Full/training.radu.e-parse.hbin
+   source: /home/nlg-02/data07/chi-eng/bolt-y2r1/v1/Training-Full/training.f
+   align:  /home/nlg-02/data07/chi-eng/bolt-y2r1/v1/Training-Full/training.nile.v1.e-f
+   subcorpora:
+    - name: core
+      lines: 1-73694
+
+   # lang.pipeline.config
+   source-language: Chinese
+   target-language: English
+
+then the ruleset pipeline can be invoked on hpc as follows:
+  echo "cd $PBS_O_WORKDIR; "\
+       "$PIPELINE/ruleset-pipeline/run.sh -s training.pipeline.resource"\
+       "                                  -c lang.pipeline.config"\
+       "                                  -o ruleset -nk"\
+  | qsub -lwalltime=96:00:00,nodes=40 -qisi -Tallcores  -Nrunrules
+
+or, if you wish to pattern your experiments appropriately, 
+you can use the convenience wrapper:
+
+  qsubrun $PIPELINE/runrules.sh
+
+for more details about what "pattern your experiments appropriately" means, read the section
+'- experimental setup -'
+
+about training.pipeline.resource:
+the subcorpora field allows you to extract rules from different lines of your training with different
+options. in the above example, we are telling the extractor to apply options that we typically apply
+to "core" training data (big4 rules, wsd rules). we are telling the extractor to ignore the rest
+of training.
+another example might be:
+ subcorpora:
+   - name: core
+     lines: 1-73694
+   - name: full
+     lines: 73695-12753050
+"full" corresponds to the extraction of minimal and wsd rules. you can also create your own set
+of extraction options. see section '- configuration files -'
+
+--------- corpus pipeline -----------------------------------------------------------------------
+
+minimally, requires a file describing the corpus to be prepared. an example file 
+can be found here:
+/home/nlg-02/eval10/astral2012p1.v3/chinese/Tune/Tune.p1.chi.text.forum.v3.pipeline.resource
+
+to invoke:
+    ln -s /home/nlg-02/eval10/astral2012p1.v3/chinese/Tune/Tune.p1.chi.text.forum.v3.pipeline.resource \
+    tune.pipeline.resource
+  
+    echo "cd $PBS_O_WORKDIR; mkdir -p corpus-tune ; " \
+         "$PIPELINE/corpus-pipeline/run.sh ruleset" \
+         "                                 -s tune.pipeline.resource" \
+         "                                 -c lang.pipeline.config" \
+         "                                 -o corpus-tune 2> corpus-tune/pipeline.log" \
+    | qsub -lwalltime=2:00:00,nodes=20 -qisi -Tallcores -Nruncorpus
+
+or via the convenience wrapper:
+
+  qsubrun $PIPELINE/runcorpus.sh tune 
+
+--------- tune pipeline --------------------------------------------------------------------------
+
+minimally, requires a prepped corpus to tune. decode and tune jobs require large memory machines
+
+to invoke:
+    echo "cd $PBS_O_WORKDIR; mkdir -p tune-tune;" \
+         "$PIPELINE/tune-pipeline/run.sh corpus-tune" \
+         "                            -c lang.pipeline.config" \
+         "                            -o tune-tune 2> tune-tune/pipeline.log" \
+    | qsub -lwalltime=300:00:00,nodes=20,pmem=23g -qisi -Tallcores -Nruntune
+
+or, via the convenience wrapper
+
+   qsubrun $PIPELINE/runtune.sh tune
+
+you can also combine the corpus-prep and tune step into one command:
+
+   qsubrun $PIPELINE/runcorpustune.sh tune
+   
+the tune pipeline runs forever. periodically, you should check its progress with the command:
+
+   $PIPELINE/tune-pipeline/run.sh -po tune-tune
+
+you will get output that looks like
+    #iter   heldout[lr]     full[lr]
+    1       23.96[1.06]     18.2[1.085]
+    2       30.72[0.9971]   22.71[1.008]
+    3       32.14[0.9994]   24.21[1.005]
+    4       32.96[0.9941]   25.23[1]
+    5       33.02[1.001]    25.23[1.003]
+    6       34.43[0.9974]   25.92[0.9998]
+    7       35.11[1.015]    26.79[1.003]
+    8       34.53[1.012]    26.52[1.006]
+    9       35.61[0.9972]   27.39[0.9947]
+    10      35.58[0.9935]   27.54[1.005]
+    11      35.67[0.9977]   27.32[1.004]
+    12      35.41[1.001]    27.2[1.006]
+    13      35.91[0.998]    27.75[1.002]
+    14      36.48[0.9912]   27.55[0.9965]
+    15      35.74[1.004]    27.45[1.006]
+    16      36.67[1.001]    28.04[0.9985]
+    17      35.96[0.9971]   27.92[0.9977]
+    18      35.07[1.001]    27.55[1.002]
+
+run somewhere between 10 and 20 iterations. decode using the best heldout score
+
+--------- decode pipeline -----------------------------------------------------------------------
+
+minimally, requires a prepped corpus to test. 
+
+to invoke:
+   ln -s /home/nlg-02/eval10/astral2012p1.v3/chinese/Test/Test.p1.chi.text.forum.v3.pipeline.resource \
+   test.pipeline.resource
+   
+then run corpus-prep on test:   
+   qsubrun $PIPELINE/runcorpusdecode.sh test tune 16
+
+once it is finished, there should be a 1best.hyp file containing output sentences, and an 
+ibmbleu.out file containing the bleu score
+
+------- configuration files ---------------------------------------------------------------------
+
+in order to add additional features to rules, you have to understand the pipeline configuration 
+file. the default configuration file is located at $PIPELINE/lib/default.sbmt.cfg
+it is written in YAML, and is written for the most part as a nested hierarchy of maps. additional
+configuration files can be passed to the pipeline scripts using the -c option, as in:
+
+  ruleset-pipeline/run.sh -c config1 config2 ... configN
+  
+they are merged with the default configuration, with entries on the right considered "newer" than
+entries on the left, and if there are conflicts, newer entries overwrite older entries.
+
+-- first example:
+pretend for some reason we want to disable the rule-prob feature. we dont want rules to have the
+feature. in default.sbmt.cfg, the feature is controlled by this entry:
+
+  rule-extraction:
+    features:
+      rprob: # unsmoothed rule prob
+        active: true
+        stage: feature
+        exec: "$curr/ruleset-pipeline/features/rprob -c $config -t $tmpdir"
+
+to disable it, we create a new config  norprob.pipeline.config file in our experiment directory, 
+with the contents:
+  rule-extraction:
+    features:
+      rprob:
+        active: false
+
+and pass it to the rulest pipeline:
+   ruleset-pipeline/run.sh -c norprob.pipeline.config
+
+in the convenience wrapper, $PIPELINE/runrules.sh, as well as other wrappers, every file ending in 
+*.pipeline.config is automatically processed, including every file in your ancestor directories, with 
+files appearing in parent directories appearing before children directories.
+
+-- second example:
+changing the rule extractor settings. suppose you want to only extract minimal rules on some of your 
+training. we want to be able to write a training.pipeline.resource file like this:
+
+   target: /home/nlg-02/data07/chi-eng/bolt-y2r1/v1/Training-Full/training.radu.e-parse.hbin
+   source: /home/nlg-02/data07/chi-eng/bolt-y2r1/v1/Training-Full/training.f
+   align:  /home/nlg-02/data07/chi-eng/bolt-y2r1/v1/Training-Full/training.nile.v1.e-f
+   subcorpora:
+    - name: core
+      lines: 1-73694
+    - name: minimal
+      lines: 73695-12753050
+
+in default.sbmt.cfg, "core", and "full" are specified this way:
+    extraction-options:
+      option-string: "-h -U 7 -E -O -T -i -H -m 5000"
+      node-limit: 1000
+      compose-limit: 4
+      wsd-size: 5
+      subcorpora:
+        core: # inherit
+        full:
+          compose-limit: 0 # no non-wsd composition
+
+in our own config file, we add the following to define the "minimal" suite
+    extraction-options:
+      subcorpora:
+        minimal:
+          wsd-size: 0 # no wsd composition
+          compose-limit: 0 # no bigX composition
+
+
+-- third example:
+adding the rprob feature. rule prob is just the probability that a given rule R should appear under 
+the non-terminal symbol root(R). it is determined by taking the ratio of the count of R over the count
+of rules with root root(R).
+
+at one stage of the ruleset pipeline (called the features stage), rules have been extracted and counts 
+have been assigned. the step that computes rprob will have access to these rules in a hadoop file named
+"rules". its job will be to process that file, and create a new hadoop file called "part.rprob", 
+containing tab separated fields, with the rule id in the first field, and the features calculated in 
+the second field. so something like:
+
+    392     rprob=10^-2.08636
+    462     rprob=10^-5.32403
+    933     rprob=10^-5.32403
+    1545    rprob=10^-4.06876
+    2284    rprob=10^-5.32403
+    105     rprob=10^-4.84691
+
+it will likely do this in two passes, first creating a table of counts of rule roots, and then using the table
+to calculate the feature. the file $PIPELINE/ruleset-pipeline/features/rprob is a python script that does just
+that.
+
+after writing the rprob script, it plugs into the pipeline with a config file like:
+   rule-extraction:
+     features:
+       rprob: # unsmoothed rule prob
+         stage: feature
+         exec: "/path/to/rprob -c $config -t $tmpdir"
+
+but, since rprob is integrated into the pipelines default configuration, and its script lives in the pipeline,
+the exec field is replaced with "$curr/ruleset-pipeline/features/rprob -c $config -t $tmpdir"
+
+--
+
+there are other types of features that can be added to the pipeline besides just count based ones.
+you can attach additional features as ghkm is extracting the rules (stage: ghkm). you can add features 
+that are based on distributions of each rule in the training data (stage: extract). for instance, 
+you can create a distribution of the span lengths of trees attached to each variable in a rule, as 
+in the feature rule-length in default.sbmt.cfg. the extract stage is also where the count feature is 
+calculated.
+
+i will add further documentation as we need it. the point is the ruleset pipeline is pretty 
+configurable. dont assume you have to edit the pipeline scripts directly to modify it.
+
+
+--------- model files ---------------------------------------------------------------------------
+
+to build rules, you need target trees, source sentences, and alignments. some features, however, 
+require auxiliary files. for instance, to create the source root-variable agreement feature, you 
+need source trees for each training line. to use weighted counts instead of raw counts, 
+you need a weight file that associates a weight for each training line. to decode with ngrams, you
+need ngram files.
+
+some features only fire if there is an auxiliary file that has the right extension. these files -- or 
+the directories containing these files -- are specified with the '-m' option. so if i have files
+ - tune.ngram
+ - training.tags
+ - training.f-parse
+ - training.weights
+in a directory called aux, then invoking:
+ ruleset-pipeline/run.sh -m aux
+will tell the ruleset-pipeline (and subsequent steps) that there are additional files that features
+can use.
+
+you can tell which features require an auxiliary file, because their config description will have a
+field called "extension". so, the ngram feature has "extension: ngram"
+
+by default, the run{rules,corpus,tune,decode}.sh wrapper scripts all look for a model directory 
+called aux.
+
+--------- experimental setup --------------------------------------------------------------------
+
+what follows is completely optional. it relates to how i personally organize my experimental pipeline
+and why i made certain decisions in writing the pipeline.
+
+i like to put experiments in nested directories. my baseline run is the parent directory of my contrastive 
+run. i also like to minimize the amount of configuration i have to specify to run a contrastive run. by
+default, i want my contrastive run to inherit everything from the baseline run exactly, and just overwrite
+whatever i want changed.
+
+this is why the '-c' option works the way it does, and why in my wrapper scripts, you will always see 
+something like
+  "-c $($PIPELINE/bin/gatherconfig)"
+gatherconfig just grabs every *.pipeline.config file in the current directories ancestor directories, with
+higher config files appearing to the left of lower config files.
+
+i also run experiments where i do not need to redo every step in the pipeline. for instance, i may be testing
+new ngrams, in which case i do not need to rebuild rules or corpus files. or i may be testing new named entity
+rules, in which case i do need new corpus files, but not new rule files. 
+so in the run{rules,decode,tune,corpus}.sh, you will see lines like:
+  ruleset-pipeline/run.sh $($PIPELINE/bin/findlocalpath training.pipeline.resource)
+or
+  corpus-pipeline/run.sh $($PIPELINE/bin/findlocalpath ruleset)
+
+$(findlocalpath ruleset) just looks for ruleset in "./", then "../", then "../../", etc
+
+you dont need to organize your experimental setup this way. but then you might want to write your own wrapper 
+scripts. fortunately, that is very easy.

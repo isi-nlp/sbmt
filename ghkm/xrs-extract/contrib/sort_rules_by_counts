@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+
+# Read rules from stdin (version 1.0, see Bryant's handout), 
+# sort them with 'sort' (on disk, if necessary), and print them sorted 
+# by count.
+
+use strict;
+
+# Globals:
+my $TMPFILE = `mktemp /tmp/countXXXXXX`;
+my $TMPDIR = '/tmp';
+
+# Create file to sort (prefixed with counts):
+chop $TMPFILE;
+open(F,">$TMPFILE");
+my $HEADER = "";
+while(<STDIN>) {
+  if(/^\$\$\$/) {
+	 $HEADER = $_;
+	 next;
+  }
+  /count=(\S+)/;
+  my $countstr = sprintf("%12d",$1);
+  print F "$countstr\t$_\n";
+}
+close(F);
+
+# 'Sort' by count:
+open(O,"sort -T $TMPDIR -r $TMPFILE |");
+print $HEADER;
+while(<O>) {
+  my ($count,$rule) = split(/\t/);
+  print $rule;
+}

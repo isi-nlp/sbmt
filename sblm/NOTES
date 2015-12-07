@@ -1,0 +1,381 @@
+146: sblm (pust mira) - no terminals
+147: sblm_sb_spc (pust mira) - no terminals
+
+149: sblm (pust mira) -
+150: sblm_sb_spc (pust mira) -
+151: sblm (trunk mira)
+
+viz /home/nlg-03/mt-apps/force-decode-visualization/ len 40 or less (3k sents) 50best
+
+test noise inside mira - disk cache per deriv (not forest-scoreable noise)
+
+problems:
+
+1. pcfg (+ unk / size indicators) isn't helping. solutions: strengthen model (grandparent?) esp. the word part? more training data? treat GLUE and other unk better?
+
+2. indicators (sb and spc) aren't helping. SHOULD overfit on tune better (unless we have enough indicators already w/ ssyn, provenance, to do that effectively). solutions: different indicators, choicest indicators only, larger tune set
+
+GLUE parent of @S-0-BAR - violates assumption that eventual parent will be S
+
+http://www.isi.edu/~graehl/sblm/bl3.heldout.png
+
+135 - baseline (not hexcore req)
+10	31.59[1.014]	30.73[0.9968] - 1 decode chunk not finished - chi-decode-10-p5-nw-sct0017
+13	31.85[1.013]	30.9[0.9968] - 29.5[1.01]
+
+137 - spc
+32	31.83[1.013]	31.08[0.996] - 29.5[1.01]
+
+138 - spc+sb
+36	32.11[1.017]	31.46[0.9989] - 29.4[1.02]
+
+--
+139 - just sblm. openclass unk (pay bos)
+140 - nongreedy  spc+sb open
+141 - just sblm. close. old mira. greedy
+142 - just sb. new mira. greedy
+
+chi-decode-10-p5-nw-sct0016  - baseline w/ spc+sb for checking nbest scores
+
+134 - spc+sb - dead after 1 epoch - 1	30.19[1.027]	28.67[1.011] - ~9hrs
+136 - spc - connectivity failed - restarting as 137
+
+129 spc+sb - bad
+
+130 spc - bad
+
+top symbol (FRAG-0 for mt, SG for mt)	512, 2755,1595	need to have MIRA-trained features for symbol under TOP, not rely on prob distribution learned from training data
+
+two NP subjects.  "S -> NP-C NP VP ." is a 3067-count rule. 	1673, 2373, 2792, 217
+
+
+todo: noise feature -> mira
+
+todo: make trunk mira work. only pust mira works reliably.
+
+todo: sblm-nts
+
+sblm unk terms may be distinct from lm-unk (superset, likely - less training data). need unk penalty feature or prob.
+
+sblm unk NTs - handled by existing count features? or are those just e.g. GLUE-rooted? what about internal?
+
+lwlm correctness?
+
+more sblm training data?
+
+
+123: dead. noexit ind
+
+124: pust mira, noexit ind nongreedy!
+1	30.37[1.023]	29.19[1.003]
+2	30.84[1.015]	29.62[0.9948]
+3	31.06[1.019]	30.03[1.001]
+75.1466666666667 hours for 12 epochs, or 6.26222222222223 hours per (approx) time span: tmp 0:00:00
+4	30.61[1.019]	30.13[1]
+5	30.97[1.017]	29.88[0.998]
+6	30.61[1.024]	30.07[1.004]
+7	30.95[1.017]	30.47[0.995]
+8	30.98[1.015]	30.45[1]
+9	30.88[1.015]	30.37[1.001]
+10	30.89[1.01]	30.44[0.9936]
+11	30.89[1.016]	30.5[0.9993]
+12	30.61[1.022]	30.51[1.003]
+13	31.04[1.024]	30.42[1.007]
+14	31.3[1.022]	30.49[1.007]
+15	31.54[1.012]	30.9[0.9979]
+16	30.9[1.023]	30.57[1.009]
+17	31.37[1.013]	30.74[0.9943]
+
+125: pust2 greedy ind.
+chi-decode-10-p5-nw-sct0014 - 29.1/1.02 bleu (horrible - no ind was 29.6, baseline 29.7)
+
+#iter	heldout[lr]	full[lr]
+1	30.52[1.027]	29.25[1.001]
+2	29.71[1.033]	29.1[1.013]
+3	30.33[1.032]	29.23[1.01]
+4	30.62[1.015]	29.81[1.001]
+5	31.1[1.018]	30.27[1.002]
+6	31.38[1.017]	30.48[0.9993]
+7	31.07[1.028]	30.22[1.01]
+8	31.16[1.015]	30.39[1.001]
+9	31.25[1.012]	30.43[0.9943]
+10	31.64[1.008]	30.55[0.9891]
+
+66.7 hours for 10 epochs, or 6.67 hours per (approx) time span: tmp 0:00:00
+dead
+
+
+lrwxrwxrwx 1 graehl isd-all   73 Jul 10 23:00 chi-mira-p5-nw-tune0123.contrast-noexit-greedy-sblm-sblmind-greedy -> /lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0123
+lrwxrwxrwx 1 graehl isd-all   73 Jul 11 10:18 chi-mira-p5-nw-tune0124.contrast-noexit-pust-sblm-sblmind -> /lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0124
+
+120 121 122
+
+lrwxrwxrwx 1 graehl isd-all   73 Jul 10 08:38 chi-mira-p5-nw-tune0120.contrast-noexit-sblm -> /lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0120
+lrwxrwxrwx 1 graehl isd-all   73 Jul 10 08:39 chi-mira-p5-nw-tune0121.contrast-sblm -> /lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0121
+lrwxrwxrwx 1 graehl isd-all   73 Jul 10 08:41 chi-mira-p5-nw-tune0122.contrast-noexit-sblm-sblmind -> /lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0122
+
+(all nongreedy)
+
+120: sblm nongreedy
+300s/sent
+#iter	heldout[lr]	full[lr]
+25.5855555555556 hours for 1 epochs, or 25.5855555555556 hours per (approx)
+1	21.06[1.067]	21.34[1.046]
+died (down node)
+
+121: exit-retry nongreedy sblm+term
+300s/sent
+5k sent, 0 epoch done
+
+122: IO error connectivity broken 0 epoch, 300 s/sent 2700 sents
+
+123: 3600 sent, 340s/sent
+
+
+124: 7600 sent, 0 epoch, 300s/se
+
+
+
+
+todo: non-greedy|sblmind tune+sct (recall search error impact from non-greedy state)
+
+
+todo: simple baseline (xrs feats only vs +sblm)? few xrs feats (exclude ssyn and other 'mira' types - or just lex_* gt_prob) + ngram +sblm?
+
+100: sblm greedy
+300s/sent
+
+#iter   heldout[lr]     full[lr]        time
+1       30.42[1.012]    29.03[0.9969]
+2       31.11[1.02]     29.82[0.9984]
+3       31.63[1.005]    30.02[0.991]
+4       31.32[1.019]    30.01[1.001]
+5       31.02[1.014]    30.22[0.9967]
+6       31.08[1.024]    30.17[1.003]
+7       31.61[1.012]    30.45[0.995]
+8       30.87[1.014]    30.29[0.9951]
+9       31.34[1.019]    30.68[1.001]
+10      31.32[1.013]    30.28[0.9928]
+11      31.58[1.02]     30.26[1.003]
+12      30.97[1.021]    30.41[1.005]
+13      31.48[1.014]    30.37[0.9985]
+14      31.03[1.017]    30.55[0.996]
+15      31.37[1.018]    30.55[0.9947]
+16      31.59[1.018]    30.68[0.9925]
+17      31.58[1.015]    30.71[0.9938]
+18      31.14[1.017]    30.82[0.9942]
+
+109: new baseline (pust/mira2)
+#iter	heldout[lr]	full[lr]	time
+1	30.66[1.015]	28.9[0.9991]
+2	31.06[1.016]	29.89[0.9988]
+3	30.85[1.023]	30.14[1]
+4	31[1.02]	30.15[1.005]
+
+
+2: baseline?
+
+#iter   heldout[lr]     full[lr]        time
+1       30.57[1.018]    29.33[1.001]
+2       31.23[1.012]    30.28[0.9936]
+3       30.83[1.02]     30.24[1.001]
+4       31.88[1.009]    30.46[0.9929]
+5       31.57[1.008]    30.58[0.9924]
+6       31.79[1.009]    30.65[0.9937]
+7       31.54[1.012]    30.74[0.9972]
+8       31.51[1.014]    30.75[0.9991]
+9       31.18[1.017]    30.96[0.9965]
+10      31.96[1.016]    30.89[1.003]
+
+
+
+75: 4085
+	--use-info distortion,rva0,ngram,sblm,dlm \
+(deplm? avg(N=921): [sbmt.forest][warning]: NBEST sent=[18/2130/4086] nbest=[1/5.648/9] total mismatch: possibly-greedy-inside=10^[-735.5/-221.5/15.6] (rules*infos)^weights=10^[-741.2/-223.4/16.01] log_possibly-greedy-inside((rules*infos)^weights)=[0.9728/1.009/1.079] possibly-greedy-inside/(rules*infos)^weights=10^[-3.373/1.883/10.67])
+
+76: 6.6k
+	--use-info distortion,rva0,ngram,dlm \
+(deplm? avg(N=1487): [sbmt.forest][warning]: NBEST sent=[5/2145/4061] nbest=[1/5.531/9] total mismatch: possibly-greedy-inside=10^[-587.3/-206/23.33] (rules*infos)^weights=10^[-592/-207.8/23.78] log_possibly-greedy-inside((rules*infos)^weights)=[0.8012/1.01/1.859] possibly-greedy-inside/(rules*infos)^weights=10^[-5.65/1.882/12.58])
+
+77: 6.4k
+	--use-info distortion,rva0,ngram \
+no inside mismatch
+
+59,61-64
+59 = 63 = greedy deleted (should = baseline)
+64 = deleted (nongreedy, search error)
+
+64
+#iter	heldout[lr]	full[lr]
+1	29.92[1.015]	28.85[0.9942]
+2	30.25[1.02]	29.66[0.9997]
+3	31.22[1.011]	29.66[0.9943]
+4	30.45[1.008]	29.91[0.995]
+5	31.05[1.017]	30.09[0.9985]
+6	30.8[1.018]	30.03[0.9984]
+7	30.98[1.006]	30.2[0.9917]
+8	31.24[1.007]	30.19[0.9989]
+9	30.93[1.005]	30.13[0.9966]
+10	30.8[1.006]	29.94[0.9923]
+
+59
+
+
+
+
+#iter	heldout[lr]	full[lr]
+1	30.18[1.02]	29.05[0.9971]
+2	30.62[1.023]	29.86[1.002]
+3	30.88[1.005]	29.69[0.9924]
+
+tune: sent=130 has infinite component scores
+sent=246 has nan component scores
+(probably sblm)
+
+greedy deplm explains mismatch warn?
+but what explains nan?
+
+61 - sblm-noterm
+avg(N=33): [sbmt.app.xrs_info_decoder][info]: command-line: /home/nlg-02/graehl/isd/hpc-opteron/bin/x86_64/tbb/bin/xrs_info_decoder --use-info dlm,distortion,rva0,ngram,sblm --limit-syntax-length 40 --sbmt.search.level=terse --span-max-edges 1500 --unary-span-max-edges 0 --ngram-cache-size 100000 --keep-align false --merge-heap-decode true --merge-heap-lookahead 10 --sbmt.app.grammar-args.level verbose --dependency-lm big=/tmp/11646941.hpc-pbs.usc.edu/dlm.trigram.L.big.1,big=/tmp/11646941.hpc-pbs.usc.edu/dlm.trigram.R.big.1 --dlm-order 3 --greedy-dlm 1 --binarized-distortion-feature 1 --distortion-prob-file /home/nlg-03/graehl/workflow/gale-baseline/taglex/rules/probs.label --rva0-prefix ssyn --rva0-root froot --rva0-vars fvars --exit-on-retry --sblm-ngram lw[@][/home/nlg-02/pust/v8.1zh/pysblm-noterm.sblm/sblm.pcfg.5gram.lwlm] --sblm-skip-bar 1 --sblm-unsplit 1 --sblm-terminals 0 --sblm-bigram-indicators 0 --sblm-greedy 1 --nbests 10 --per-estring-nbests 1 --grammar-archive /home/nlg-03/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0061/tmp/global.gar.gz --prior-file /home/nlg-03/graehl/workflow/gale-baseline/taglex/rules/grammar.nts --prior-bonus-count 100 --use-cube-heap true --quote-never true -o /dev/null --print-forest-em-file - --print-forest-em-and-node-type target_string --ngram-order 5 --dynamic-lm-ngram multi[@][lm2=big[c][/tmp/11646941.hpc-pbs.usc.edu/lm.3.bitext.5gram.prune5.p4.b4.k16.nz],lm1=big[c][/tmp/11646941.hpc-pbs.usc.edu/lm.B.col07.4bw.5gram.p5.legal.eng.nz]] --multi-thread --instruction-file -
+avg(N=38): [sbmt.forest][warning]: NBEST sent=[115/2284/3985] nbest=[0/4.237/9] sbtm feature mismatch: product over combined rules=10^[-20.81/0.692/43.01] combined total (over rules) feature vector=10^[-20.7/0.7732/43.24] log_product over combined rules(combined total (over rules) feature vector)=[-2.082/0.9268/1.197] product over combined rules/combined total (over rules) feature vector=10^[-0.4175/-0.08118/0.5667]
+avg(N=145): [sbmt.forest][warning]: NBEST sent=[28/1915/4049] nbest=[1/5.29/9] total feature mismatch: component scores=10^[-587.7/-221.8/6.213] component scores mixed=10^[-591/-223.3/7.372] log_component scores(component scores mixed)=[0.5292/1.023/3.369] component scores/component scores mixed=10^[-4.575/1.512/6.536]
+avg(N=70): [sbmt.forest][warning]: NBEST sent=[130/2178/3778] nbest=[0/2.043/9] total feature mismatch: component scores=10^inf component scores mixed=10^inf log_component scores(component scores mixed)=nan component scores/component scores mixed=10^nan
+avg(N=106): [sbmt.forest][warning]: NBEST sent=[246/2600/3778] nbest=[2/5.443/9] total feature mismatch: component scores=10^nan component scores mixed=10^inf log_component scores(component scores mixed)=nan component scores/component scores mixed=10^nan
+
+
+
+chi-mira-p5-nw-tune0062 greedy-sblm-nterm+ind
+#iter	heldout[lr]	full[lr]
+1	29.4[1.004]	27.69[0.9892]
+avg(N=50): ERROR: caught exception: exit-on-retry. exiting.
+avg(N=37): ERROR: caught exception: std::bad_alloc. exiting.
+avg(N=6655): [sbmt.app.output-args][info]: parse forest has (loops excluded) [0/1.14e+22/4.722e+25] trees in [0/4236/1.137e+04] items connected by [0/1.001e+04/2.275e+04] edges.
+avg(N=113): [sbmt.app.xrs_info_decoder][info]: command-line: /home/nlg-02/graehl/isd/hpc-opteron/bin/x86_64/tbb/bin/xrs_info_decoder --use-info dlm,distortion,rva0,ngram,sblm --limit-syntax-length 40 --sbmt.search.level=terse --span-max-edges 1500 --unary-span-max-edges 0 --ngram-cache-size 100000 --keep-align false --merge-heap-decode true --merge-heap-lookahead 10 --sbmt.app.grammar-args.level verbose --dependency-lm big=/tmp/11646943.hpc-pbs.usc.edu/dlm.trigram.L.big.1,big=/tmp/11646943.hpc-pbs.usc.edu/dlm.trigram.R.big.1 --dlm-order 3 --greedy-dlm 1 --binarized-distortion-feature 1 --distortion-prob-file /home/nlg-03/graehl/workflow/gale-baseline/taglex/rules/probs.label --rva0-prefix ssyn --rva0-root froot --rva0-vars fvars --exit-on-retry --sblm-ngram lw[@][/home/nlg-02/pust/v8.1zh/pysblm-noterm.sblm/sblm.pcfg.5gram.lwlm] --sblm-skip-bar 1 --sblm-unsplit 1 --sblm-terminals 0 --sblm-bigram-indicators 1 --sblm-greedy 1 --nbests 10 --per-estring-nbests 1 --grammar-archive /home/nlg-03/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0062/tmp/global.gar.gz --prior-file /home/nlg-03/graehl/workflow/gale-baseline/taglex/rules/grammar.nts --prior-bonus-count 100 --use-cube-heap true --quote-never true -o /dev/null --print-forest-em-file - --print-forest-em-and-node-type target_string --ngram-order 5 --dynamic-lm-ngram multi[@][lm2=big[c][/tmp/11646943.hpc-pbs.usc.edu/lm.3.bitext.5gram.prune5.p4.b4.k16.nz],lm1=big[c][/tmp/11646943.hpc-pbs.usc.edu/lm.B.col07.4bw.5gram.p5.legal.eng.nz]] --multi-thread --instruction-file -
+avg(N=1209): [sbmt.forest][warning]: NBEST sent=[36/2098/4088] nbest=[0/4.021/9] sbtm feature mismatch: product over combined rules=10^[-140.8/2.835/178.5] combined total (over rules) feature vector=10^[-144.8/2.832/176.4] log_product over combined rules(combined total (over rules) feature vector)=[-20.35/1.023/24.57] product over combined rules/combined total (over rules) feature vector=10^[-5.968/0.003016/4.077]
+avg(N=15566): [sbmt.forest][warning]: NBEST sent=[3/2117/4081] nbest=[0/4.182/9] total feature mismatch: component scores=10^[-1002/-251.6/41.53] component scores mixed=10^[-996.2/-250.5/41.76] log_component scores(component scores mixed)=[0.633/0.9968/1.136] component scores/component scores mixed=10^[-21.52/-1.169/13.2]
+avg(N=48): [sbmt.forest][warning]: NBEST sent=[1017/2823/4053] nbest=[0/2.562/9] total feature mismatch: component scores=10^inf component scores mixed=10^inf log_component scores(component scores mixed)=nan component scores/component scores mixed=10^nan
+avg(N=62): [sbmt.forest][warning]: NBEST sent=[1017/2463/4053] nbest=[2/5.274/9] total feature mismatch: component scores=10^nan component scores mixed=10^inf log_component scores(component scores mixed)=nan component scores/component scores mixed=10^nan
+
+
+
+48: nongreedy
+49: greedy
+53: nongreedy
+
+48 == 53
+
+54: baseline
+
+56: hexcore nongreedy
+
+
+
+/lfs/bauhaus/graehl/workflow/gale-baseline/taglex$ mycond | grep tune
+1:/lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0048 267567
+2:/lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0049 267568
+3:/lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0048 267587 267570
+4:/lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0048 267570
+5:/lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0049 267593 267572
+6:/lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0049 267572
+70:/lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0053 268098 268032
+71:/lfs/bauhaus/graehl/workflow/gale-baseline/taglex/chi-mira-p5-nw-tune0053 268032
+
+drwxr-sr-x 2 graehl isd-all  4096 Jun 10 19:26 chi-mira-p5-nw-tune0047
+lrwxrwxrwx 1 graehl isd-all    23 Jun 10 19:27 chi-mira-p5-nw-tune0048.sblm -> chi-mira-p5-nw-tune0048
+lrwxrwxrwx 1 graehl isd-all    23 Jun 10 19:27 chi-mira-p5-nw-tune0049.greedy-sblm -> chi-mira-p5-nw-tune0049
+drwxr-sr-x 2 graehl isd-all  4096 Jun 10 19:28 chi-mira-p5-nw-tune0050
+lrwxrwxrwx 1 graehl isd-all    23 Jun 10 19:28 chi-mira-p5-nw-tune0048.greedy-nosblm -> chi-mira-p5-nw-tune0048
+drwxr-sr-x 2 graehl isd-all  4096 Jun 10 19:28 chi-mira-p5-nw-tune0051
+lrwxrwxrwx 1 graehl isd-all    23 Jun 10 19:28 chi-mira-p5-nw-tune0049.baseline-nosblm -> chi-mira-p5-nw-tune0049
+lrwxrwxrwx 1 graehl isd-all    28 Jun 10 19:28 chi-decode-10-p5-nw-tune0003.greedy-sblm-10 -> chi-decode-10-p5-nw-tune0003
+lrwxrwxrwx 1 graehl isd-all    28 Jun 10 19:28 chi-decode-20-p5-nw-tune0002.greedy-sblm-20 -> chi-decode-20-p5-nw-tune0002
+drwxr-sr-x 2 graehl isd-all  4096 Jun 10 19:32 chi-mira-p5-nw-tune0048
+drwxr-sr-x 2 graehl isd-all  4096 Jun 10 19:34 chi-mira-p5-nw-tune0049
+drwxr-sr-x 2 graehl isd-all 12288 Jun 10 19:56 chi-decode-20-p5-nw-tune0002
+drwxr-sr-x 2 graehl isd-all 12288 Jun 10 19:56 chi-decode-10-p5-nw-tune0003
+lrwxrwxrwx 1 graehl isd-all    27 Jun 14 00:18 chi-decode-10-p5-nw-sct0009.greedy-sblm-10 -> chi-decode-10-p5-nw-sct0009
+lrwxrwxrwx 1 graehl isd-all    27 Jun 14 00:18 chi-decode-20-p5-nw-sct0004.greedy-sblm-20 -> chi-decode-20-p5-nw-sct0004
+drwxr-sr-x 2 graehl isd-all  4096 Jun 14 00:21 chi-mira-p5-nw-tune0052
+lrwxrwxrwx 1 graehl isd-all    27 Jun 14 00:21 chi-decode-20-p5-nw-sct0004.sblm-0sblm-deleted -> chi-decode-20-p5-nw-sct0004
+lrwxrwxrwx 1 graehl isd-all    23 Jun 14 00:22 chi-mira-p5-nw-tune0053.sblm-deleted -> chi-mira-p5-nw-tune0053
+drwxr-sr-x 2 graehl isd-all  4096 Jun 14 00:23 chi-decode-10-p5-nw-sct0009
+drwxr-sr-x 2 graehl isd-all  4096 Jun 14 00:25 chi-mira-p5-nw-tune0053
+drwxr-sr-x 2 graehl isd-all  4096 Jun 14 00:26 chi-decode-20-p5-nw-sct0004
+
+
+
+to read/verify: indicator namer set_weights
+
+TODO:
+
+<unk> -> <unk> .... pre-score? same as anything? but know you can use unigrams throughout.
+
+GLUE prob (this is just an ngram <unk>) - since there's a GLUE penalty indicator tuned already, 0 cost? or is 0 cost bad bcoz it means tuning glue penalty weight every time you change slbm weight? mira is gradient-like so should be no problem
+
+put known-inside (and h-) cost onto rules to affect their cube pruning order - should be done if rule_heuristic includes it
+
+generate bigram features ASAP (not just whole-sequence-at-once when non-BAR parent is reached)
+
+test
+
+external score verifier.
+
+debug print trace (score details)
+notes on syntax-rule-only features:
+
+(lazy?) list of child-equivs, as binarized and built, or else recombination based on actual identity?
+
+lazy subforest of child-equivs? (cube-like at each OR-node?)
+
+
+
+
+types of rules:
+
+@NPB-1-BAR(x0:PRN-0 x1:NNS-0)
+@(T T) or @T
+result: PRN NNS
+events:
+
+@NPB-1-BAR(x0:NNS-0 x1:,-0 x2:@NPB-0-BAR)
+
+result:  NNS , x2
+events:
+
+@(T @) or @T,@@
+i.e. no new PCFG events, just @->@
+
+S-1(ADVP-0(x0:NP-0 x1:RB-1 x2:PP-0) x3:,-0 NP-C-0(x4:@NP-C-0-BAR x5:PP-0) VP-2(x6:MD-0 x7:VP-C-1) x8:.-0)
+T(T(@ T) ...) or TT@,TTT
+result: []
+events: ADVP(NP RB PP) S(ADVP , NP-C VP .) NP-C(x4 PP) VP(MD VP-C)
+i.e. completely score all children, result = done
+
+is there a:
+
+@(T(@ ...) ...) or @T@
+
+?
+
+yes: composed rule:
+
+@VP-C-2-BAR(VP-0(ADVP-0(x0:RB-0) x1:@VP-1-BAR) x2:,-0 x3:VP-0 x4:,-0 x5:VP-0 x6:,-0)
+
+@(T(T(T @)) T ...)
+
+result: VP , VP , VP ,
+events: ADVP(RB) VP(ADVP x1) ...
+
+@(T(@...) @)
+
+i.e. result: T x1
+events: T(x0 ...)
+
+@NP-C-0-BAR(x0:@NP-C-1-BAR NP-0(x1:NPB-1) x2:,-0 x3:NP-0 x4:,-0 NP-0(x5:NPB-1) x6:,-0 x7:NP-0)
+result: x0 NP , NP , NP , NP
+events: NP(NPB)
+
+@NP-C-0-BAR(x0:@NP-C-1-BAR NP-0(x1:NPB-1) x2:,-0 NP-0(NPB-1(x3:JJ-2 x4:@NPB-1-BAR)))
+result: x0 NP , NP
+events: NP(NPB) NP(NPB) NPB(JJ x4)
+

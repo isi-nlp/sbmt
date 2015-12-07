@@ -1,0 +1,18 @@
+#!/usr/bin/env perl
+
+use FindBin qw($Bin);
+use lib "$Bin/..";
+use NLPRules qw(extract_rhs_safe signature extract_feat_safe feature_spec);
+
+# input: rule
+# output: sig \t count \t rule
+
+while (<>) {
+    chomp; 
+    $rule = $_;
+    $s = signature(split(" ",extract_rhs_safe($rule)));
+    %v = feature_spec(extract_feat_safe($rule));
+    unless ($v{filter} eq "true"){
+        print "$s\t$v{count}\t$rule\n";
+    }
+}

@@ -1,0 +1,28 @@
+
+\data\
+ngram 1=15
+ngram 2=2
+
+\1-grams:
+-5.021284       foreign -0.8
+-1.50000     military   -0.4
+-0.40000     forces   -0.1212361776
+-0.30000     freaky   -0.1212361776
+-0.20000     eucalyptus   -0.1212361776
+-0.10000     trees   -0.1212361776
+-0.05000     presence   -0.1212361776
+-0.50000     the   -0.1212361776
+-0.50000     of   -0.1212361776
+-0.50000     indonesia   -0.1212361776
+-0.50000     opposition   -0.6
+-0.50000     acceptance   -0.1212361776
+-0.50000     its   -0.5
+-0.50000     to   -0.1212361776
+-0.50000     reiterated   -0.1212361776
+
+\2-grams:
+
+0.01    of foreign
+0.02    foreign military
+
+\end\

@@ -1,0 +1,137 @@
+# include <sbmt/search/block_lattice_tree.hpp>
+# include <iterator>
+# include <iostream>
+# include <sbmt/grammar/lm_string.hpp>
+
+namespace std {
+    template <class C, class T, class F, class S>
+    basic_ostream<C,T>& operator<<(basic_ostream<C,T>& o, pair<F,S> const& p)
+    {
+        o << '(' << p.first << ',' << p.second << ')';
+        return o;
+    }
+}
+
+using namespace std;
+
+namespace sbmt {
+
+//static fat_token_factory fat_tf;
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_tree::lattice_tree( size_t id
+                          , set<span_t> const& r
+                          , map<string,string> const& lf )
+: id(id)
+, sr(r)
+, features(lf) {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_tree::lattice_tree( node const& n
+                          , size_t id
+                          , set<span_t> const& r
+                          , map<string,string> const& lf )
+: id(id)
+, rt(n)
+, sr(r)
+, features(lf) {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_tree::node::node() : impl(new lattice_tree::internal_node()) {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_tree::node::node(lattice_edge const& e)
+: impl(new lattice_tree::leaf_node(e)) {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_tree::internal_node::~internal_node() {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_tree::children_iterator
+lattice_tree::internal_node::children_begin() const
+{
+    return children.begin();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_tree::children_iterator
+lattice_tree::internal_node::children_end() const
+{
+    return children.end();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_tree::node_impl*
+lattice_tree::internal_node::clone() const
+{
+    std::list<node>::const_iterator itr = children.begin(),
+                                    end = children.end();
+    return new internal_node(itr,end);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+struct offset {
+    unsigned int n;
+    offset(unsigned int n):n(n){}
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
+span_t lattice_tree::internal_node::span() const
+{ return spn; }
+
+////////////////////////////////////////////////////////////////////////////////
+
+bool lattice_tree::internal_node::is_internal() const
+{ return true; }
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_tree::internal_node::internal_node() {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_tree::leaf_node::leaf_node(lattice_edge const& e)
+: e(e) {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_tree::node_impl* lattice_tree::leaf_node::clone() const
+{ return new leaf_node(e); }
+
+////////////////////////////////////////////////////////////////////////////////
+
+bool lattice_tree::leaf_node::is_internal() const
+{ return false; }
+
+////////////////////////////////////////////////////////////////////////////////
+
+span_t lattice_tree::leaf_node::span() const
+{ return e.span; }
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_edge const& lattice_tree::leaf_node::lat_edge() const
+{ return e; }
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_tree::leaf_node::~leaf_node() {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+lattice_edge::lattice_edge()
+: rule_id(NULL_GRAMMAR_RULE_ID)
+, syntax_rule_id(NULL_GRAMMAR_RULE_ID) {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+} // namespace sbmt

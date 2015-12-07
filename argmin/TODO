@@ -1,0 +1,134 @@
+* EDA on rpds0655 corpus 1:
+	* Why didn't we get hypotheses quickly for sentence 9 + 12
+	* Why do we have so many periods in early 1-best output?
+
+* Agenda n-best (hard upper limit), with agenda pruning
+
+* Separate GLUE cell
+
+* params.txt
+
+* Memory usage
+
+* Controlled experiments, regressions, &tc.
+
+***
+
+BUGS?
+
+* score (cf. inside_score) might already be part of the final score,
+i.e. final scoring might be messed up.
+
+* Why is mini_decoder lmcost messed up?
+
+***
+
+HIGH-LEVEL TODO
+
+* Fix buggy pruning (not allowing more than one edge_equiv per
+chart). This messes up the overall k-best output. PACK the items into an
+edge_equiv. (However, there's this question of how to propagate better
+scores up to parents of the edge_equiv. So maybe keep items unpacked,
+and redo work. This at least is simpler to do correctly.)
+
+* Statistics about # edge creations, # edges pushes, # edge pops, &tc.
+	* Finer-grained statistics about the types of edges, e.g. by length,
+	by span, virtual / non-virtual, label, &tc.
+
+* Program options
+	* See parameters.txt
+	* Check out utilities/archive_grammar.cpp and
+	itg_binarizer/binal.cpp for example usage of Graehl's
+	boost::program_options wrapper.
+
+* Diagnostic output
+
+* k-best output
+	* Uniq'ing
+
+* Integrate LM and test it
+
+* Test suite for regressions and profiling
+
+* BLEU evaluation of output
+
+* Experiments
+
+* Constrained decoding
+
+* Check monotonicity of Chart::consider, if SANITY_CHECKS are enabled
+
+* Profiling
+	* Make Grammar::derive faster by short-circuiting creation of
+	any Derivation if we know that it will be pruned.
+	* Before trying to find binary_rules (or unary_rules) for
+	some RHS, short-circuit if the span is full (both virtual and
+	non-virtual).
+
+***
+
+LOW-LEVEL TODO
+
+* Grep for Pust, as Michael Pust some questions
+	* Does grammar_in_mem::binary_rules / unary_rules automatically return top-level rules or not?
+
+	* Ask Pust to remove dependence on grammar parameter in so many
+	functions. We don't always need to hold on to the grammar.
+
+* Documentation including terminology and definitions.
+	* ``Inference''
+	* Fill in all WRITEMEs
+	* Fix Doxygen to include class information in .hpp header into namespace argmin
+	* Add documentation about edge and edge_equivalence to sbmt
+	* Design document
+		* Include into doxygen documentation
+	* Command-line (user's) document
+		* Include description of parameters
+	* Include this TODO list and parameters.txt into Doxygen docs
+	* Make all terminology consistent.
+	* Describe how we interface with the sbmt_decoder types
+
+* Better build procedure.
+	* Go over automake, autoconf, and friends
+	* Best way to use flag '-lsbmt' ?
+	* Add bootstrap.sh
+	* Use configure.ac or configure.in?
+	* Check for all needed headers and libraries
+
+* Code cleanup:
+	* Remove all REMOVEMEs
+	* Remove 'assert()', use throws
+	* Go over \todo items and \bug items
+	* Better #include locations of sbmt_decoder headers (use -I)
+	* Instead of using cout for debug logging, use current library debug facilities
+	* Use BOOST_CHECKPOINT, BOOST_CHECK more (What does this do? Pust)
+	* Add more debug output
+	* Use boost::smart_pointer in Grammar
+	* Move much of 'main()' functionality to SBMT library, ../utilities/grammar_args.hpp e.g.
+
+* Common code:
+	* Include program options, i.e. parameters
+	* Namespace gpl::common for GPL code and common stuff
+	* Ask Kevin + Daniel about licensing issues and GPL code
+
+* Optimizations:
+	* There are a lot of optimizations we can do using the notion
+	of Chart::consider, but using partial information. e.g.
+		* If no Derivation of a particular span would go into
+		the Chart, then don't even create RHSes for that span
+		in Grammar::get_rhs().
+		* If no Derivation of a particular span with a particular
+		label would go into the Chart, then don't even fire that
+		grammar rule.
+		* If the score of a Derivation after applying the grammar
+		rule but before computing the LM cost is too low to go
+		into the Chart, then don't compute the LM cost.
+	* Agenda pruning
+
+* Consistent random seeding for deterministic replay
+
+* Use DerivationP throughout (to reduce memory usage)
+
+**
+
+$Id: TODO 1308 2006-10-06 04:37:37Z jturian $

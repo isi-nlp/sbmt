@@ -1,0 +1,51 @@
+#!/usr/bin/env perl 
+
+# Filter derivations in Bryant's format into one Jonathan can read, i.e. from
+# @@@ forest={{{(1880867 (4427012 1154735 1325490) (10353774 (11089119 (5819807 1167123) 10767614)) 20657)}}}
+# to
+# (1880867 (4427012 1154735 1325490) (10353774 (11089119 (5819807 1167123) 10767614)) 20657)
+
+use strict;
+use warnings;
+use Getopt::Long;
+use File::Basename;
+
+sub usage {
+	print << "EOF";
+Usage:  @{[basename($0)]} [options] file
+ --lines-file  file  holding the line numbers in the original training file for 
+                     lines in extract.deriv.
+
+EOF
+	exit(1);
+}
+
+my $lines_file;
+
+Getopt::Long::Configure('no_ignore_case');
+GetOptions(
+	'lines-file=s' => \$lines_file,
+	'help|h' => \&usage,
+);
+
+
+if( defined $lines_file ){
+	open (LINE_FILE, ">$lines_file") 
+	                   || die "FATAL: write-access $lines_file:$!\n";
+}
+
+while( <> ){
+	next if /^\s*(\$\$\$|%)/;
+	if( /.*forest={{{(.*?)}}}\s+line=(\d+)/ ){
+		print $1 . "\n";
+		if( defined $lines_file ){
+			print LINE_FILE $2 . "\n";
+		}
+	}
+
+}
+
+if (defined $lines_file) {
+	close LINE_FILE;
+}
+

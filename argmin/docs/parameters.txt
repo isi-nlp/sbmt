@@ -1,0 +1,42 @@
+default values?
+
+[other program options from mini decoder?]
+
+Uncategorized:
+	[choice of FOM]
+	need optimal solution or not (sanity checks)
+	admissable (monotonic) heuristic (sanity checks)
+
+Grammar:
+	use inside_score instead of score
+	ensure_implicit_weights
+
+Chart:
+	allow chart overwrite
+	[pruning criteria]
+
+argmin:
+	input file
+	*grammar file
+	*weight file
+	program options file
+
+Minimizer:
+	k-best derivations needed
+	[stopping condition / overparsing control]
+		parse exhaustively
+		parse until first solution
+	Use Chart::consider to save work? (may not get correct n-best output
+	though)
+
+LM parameters:
+	LM file
+	[other LM shit]
+
+Debug: [must init]
+	*debuglevel
+	*logfile
+	*dump volatile statistics
+
+***
+$Id: parameters.txt 1308 2006-10-06 04:37:37Z jturian $

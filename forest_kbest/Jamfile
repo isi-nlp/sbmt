@@ -1,0 +1,17 @@
+import sbmt-util ;
+
+project forest_kbest ;
+
+exe forest_kbest
+  : forestReader.cpp
+    forestMethods.cpp
+    forest_connection.cpp
+    /sbmt_decoder//sbmt
+    /xrsparse
+    
+  ;
+
+sbmt-util.install install
+  : <install-source-root>.
+  : forest_kbest
+  ; 

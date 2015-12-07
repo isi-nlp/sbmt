@@ -1,0 +1,27 @@
+NNP("INDONESIA") -> "c1" ### start=0 end=1 id=128 gt_prob=e^-0.7 count=1 align={{{[#s=1 #t=1 0,0]}}} textf=ab textf2={{{cd ef}}}
+VBD("REITERATED") -> "c2" ### start=1 end=2 id=132 gt_prob=e^-0.8 count=1 align={{{[#s=1 #t=1 0,0]}}}
+NN("OPPOSITION") -> "c3" ### start=2 end=3 id=130 gt_prob=e^-0.7 count=1 align={{{[#s=1 #t=1 0,0]}}}
+NN("ACCEPTANCE") -> "c3" ### start=2 end=3 id=2 gt_prob=e^-0.31 count=1 align={{{[#s=1 #t=1 0,0]}}}
+NPB(JJ("FOREIGN") JJ("MILITARY") NNS("FORCES")) -> "c4" "c5" ### start=3 end=5 id=122 gt_prob=e^-0.8 count=1 align={{{[#s=2 #t=3 0,0 1,1 1,2]}}}
+NPB(JJ("FREAKY") JJ("EUCALYPTUS") NNS("TREES")) -> "c4" "c5" ### start=3 end=5 id=1 gt_prob=e^-.019 count=1 align={{{[#s=2 #t=3 0,0 1,1 1,2]}}}
+NN("PRESENCE") -> "c6" ### start=5 end=6 id=124 gt_prob=e^-.012 count=1 align={{{[#s=1 #t=1 0,0]}}}
+NPB(DT("THE") x0:NN) -> x0 ### start=5 end=6 id=126 gt_prob=e^-0.8 count=1 align={{{[#s=1 #t=2 0,1]}}}
+NP-C(x0:NPB PP(IN("OF") x1:NP-C)) -> x1 x0 ### start=3 end=6 id=127 gt_prob=e^-0.7 count=1 align={{{[#s=2 #t=3 0,2 1,0]}}}
+NNP(x0:NP-C) -> x0 ### start=0 end=1 id=129 gt_prob=e^-0.87 count=1 align={{{[#s=1 #t=1 0,0]}}}
+NNP(x0:NPB) -> x0 ### start=0 end=1 id=166 gt_prob=e^-.019 count=1 align={{{[#s=1 #t=1 0,0]}}}
+NP-C(NPB(x0:NNP)) -> x0 ### start=0 end=1 id=137 gt_prob=e^-5 count=1 align={{{[#s=1 #t=1 0,0]}}}
+NP-C(NPB(PRP$("ITS") X0:NN) PP(TO("TO") x1:NP-C)) -> x0 x1 ### start=2 end=6 id=131 gt_prob=e^-0.01 count=1 align={{{[#s=2 #t=4 0,1 1,3]}}}
+S(x0:NP-C VP(x1:VBD x2:NP-C)) -> x0 x1 x2 ### start=0 end=6 id=133 gt_prob=e^-0.18 count=1 align={{{[#s=3 #t=3 0,0 1,1 2,2]}}}
+S(S(x0:NP-C VP(x1:VBD x2:NP-C))) -> x0 x1 x2 ### start=0 end=6 id=173 gt_prob=e^-0.1 count=1 align={{{[#s=3 #t=3 0,0 1,1 2,2]}}}
+S(x0:NP-C ADVP("CONVERSELY") VP(x1:VBD x2:NP-C)) -> x2 x1 x0 ### start=0 end=6 id=153 gt_prob=e^-0.2 count=1 align={{{[#s=3 #t=4 0,3 1,2 2,0]}}}
+S(x0:NP-C ADVP("REALLY") VP(x1:VBD x2:NP-C)) -> x0 x1 x2 ### start=0 end=6 id=163 gt_prob=e^-0.1 count=1 align={{{[#s=3 #t=4 0,0 1,2 2,3]}}}
+VP(x0:VBD x1:NP-C) -> x0 x1 ### start=0 end=6 id=134 gt_prob=e^-0.37 count=1 align={{{[#s=2 #t=2 0,0 1,1]}}}
+S(x0:NP-C x1:VP) -> x0 x1 ### start=0 end=6 id=135 gt_prob=e^-.118 count=1 align={{{[#s=2 #t=2 0,0 1,1]}}}
+NNP(x0:VP) -> x0 ### id=189 gt_prob=e^-.0199 align={{{[#s=1 #t=1 0,0]}}}
+NNP(x0:S) -> x0 ### id=136 gt_prob=e^-.01 align={{{[#s=1 #t=1 0,0]}}}
+S(x0:NP-C) -> x0 ### start=0 end=6 id=199 gt_prob=e^-0.5 count=1 align={{{[#s=1 #t=1 0,0]}}}
+NP-C(x0:NPB) -> x0 ### start=3 end=5 id=123 gt_prob=e^-.01 count=1 align={{{[#s=1 #t=1 0,0]}}}
+CD("99") -> "c5" ### start=3 end=4 id=299 gt_prob=e^0 count=1 align={{{[#s=1 #t=1 0,0]}}}
+NPB(x0:VBD x1:CD x2:NNP x3:NN) -> x2 x0 x3 "c4" x1 ### start=0 end=4 id=94 gt_prob=e^-.11 count=1 align={{{[#s=5 #t=4 0,2 1,0 2,3 4,1]}}}
+NPB(x0:VBD x1:CD x2:NNP x3:NN) -> x2 x0 x3  x1 ### start=0 end=4 id=99 gt_prob=e^-.11 count=1 align={{{[#s=4 #t=4 0,2 1,0 2,3 3,1]}}}
+NP-C(JJ("FAKE") x0:NPB) -> "c1" "c2" x0 "c4" ### start=3 end=5 id=323 gt_prob=e^-.01 count=1 align={{{[#s=4 #t=2 0,0 3,0 2,1]}}}

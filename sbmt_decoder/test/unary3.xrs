@@ -1,0 +1,9 @@
+A("foo") -> "FOO" ### id=1 scr=10^-2
+B("foo") -> "FOO" ### id=2 scr=10^-1
+C("foo") -> "FOO" ### id=3 scr=10^-3
+D(x0:A)  -> x0    ### id=4 scr=10^-4
+C(x0:B)  -> x0    ### id=5 scr=10^-0.5
+A(x0:C)  -> x0    ### id=6 scr=10^-0.2
+D(x0:C)  -> x0    ### id=7 scr=10^-4.5
+A(x0:A)  -> x0    ### id=8 scr=10^5
+TOP(x0:D) -> x0   ### id=9 scr=10^0

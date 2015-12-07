@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+from hadoop import Hadoop
+from argparse import ArgumentParser
+import cfg, os
+
+parser = ArgumentParser()
+args = cfg.parse_args(parser)
+hp = args.hadoop
+
+bindir = args.config['variables']['rhbin']
+outdir = args.outdir
+tmpdir = args.tmpdir
+
+cfg.execute( args
+           , '$bindir/headtables2dict $outdir/counts.symbol.headword $outdir/counts.symbol.headtag > $tmpdir/dict.rule-head'
+           , bindir=bindir, outdir=outdir, tmpdir=tmpdir
+           )
+
+hp.put(os.path.join(tmpdir,'dict.rule-head'),'dict.rule-head')
+

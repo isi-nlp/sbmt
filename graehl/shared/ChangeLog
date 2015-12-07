@@ -1,0 +1,186 @@
+2007-07-24  Jonathan Graehl  <graehl@isi.edu>
+
+	* mean_field_scale.hpp (struct mean_field_scale): linear interpolation for digamma(x<.0002)
+
+	* weight.h: Weight::pow,root was identity.  oops.
+
+2006-06-05  Jonathan Graehl  <graehl@isi.edu>
+
+	* 2heap.h (template): changed heapAdd to work just like
+	std::push_heap (i.e. preincrement end, not post)
+
+2006-06-02  Jonathan Graehl  <graehl@isi.edu>
+
+	* memory_stats.hpp (operator -): include memory mapped in memory_report
+
+2006-03-31  Jonathan Graehl  <graehl@isi.edu>
+
+	* lazy_forest_kbest.hpp: changed from LazyKBestTrees to value-type
+	derivation
+
+2006-02-24  Jonathan Graehl  <graehl@isi.edu>
+
+	* shell_escape.hpp: split from io.hpp
+
+2006-02-22  Jonathan Graehl  <graehl@isi.edu>
+
+	* os.hpp (split_dir_file): FIXME: test
+
+2006-02-14  Jonathan Graehl  <graehl@isi.edu>
+
+	* stopwatch.hpp (class stopwatch): adapted from Timer
+	(start/stop/totals seems useful - TODO: include memory stats?)
+
+2006-02-13  Jonathan Graehl  <graehl@isi.edu>
+
+	* size_mega.hpp: from funcs.hpp, STL.h
+
+	* memory_stats.hpp: from syntax-decoder STL.h
+
+2006-02-09  Jonathan Graehl  <graehl@isi.edu>
+
+	* LazyKBestTrees.h (jonmay_cycle): verified that missing jonmay
+	deriv wasn't a bug but a RTG transcription error
+
+	* test/LazyKbestTrees_test.cpp: run jonmay test case
+
+	* LazyKBestTrees.h: separate add, add_sorted, sort routines.  need
+	to find bug in jonmay missing #17,18,19 (symmetrical q0->A(qo qo)
+	deriv
+
+2006-02-07  Jonathan Graehl  <graehl@isi.edu>
+
+	* graehl.mk (LARGEFILEFLAGS): added default support for >4g files (linux)
+
+2005-11-16  Jonathan Graehl  <graehl@isi.edu>
+
+	* info_debug.hpp: renamed from Debug.h (conflict with srilm's Debug.h)
+
+	* safe_db.hpp (class safe_db): renamed from SafeDb.h, and use
+	BOOST_STATIC_CONSTANT
+
+2005-10-05  Jonathan Graehl  <graehl@isi.edu>
+
+	* os.hpp (safe_tmpnam): is_tmpnam_template, throw_last_error
+
+	* Debug.h: default is debug object, not dbg pointer
+
+2005-09-12  Jonathan Graehl  <graehl@isi.edu>
+
+	* align.hpp: renamed ::align to ::align_up (some conflict with a
+	gcc preprocessor macro?)
+
+	* stackalloc.hpp: use align.hpp
+
+	* swapbatch.hpp: use align.hpp
+
+2005-08-19  Jonathan Graehl  <graehl@TRUE>
+
+	* align.hpp: split from funcs.hpp
+
+2005-08-18  Jonathan Graehl  <graehl@TRUE>
+
+	* io.hpp (stringbuf): argc_argv (tested)
+
+2005-06-23  Jonathan Graehl  <graehl@isi.edu>
+
+	* tails_up_hypergraph.hpp: added comments (TailsUpHypergraph used
+	to be RevHyperGraph in hypergraph.hpp)
+
+2005-05-03  Jonathan Graehl  <graehl@isi.edu>
+
+	* gzstream.C: throw exceptions when things fail (e.g. bad checksum
+	on input, input file not found)
+
+2005-04-28  Jonathan Graehl  <graehl@isi.edu>
+
+	* main.hpp (MAIN_BEGIN): by default (unless SYNC_STDIO) unsync
+	stdio and cerr for better performance.
+
+2005-04-27  Jonathan Graehl  <graehl@isi.edu>
+
+	* charbuf.hpp (getline_chomped): getline_chomped
+
+	* graehl.mk (ALL_OBJS): $LIB e.g. -lz put in proper place in g++
+	commandline (after objects)
+
+	* fileargs.hpp (validate): open Infile as gzstream if ends in ".gz"
+
+2005-04-13  Jonathan Graehl  <graehl@isi.edu>
+
+	* fileargs.hpp (validate): added "-0" to stand for NULL
+	input/output files (as distinct from /dev/null, you'll need to
+	test them for NULL and not dereference)
+	 (i.e. default_in_none and default_out_none)
+
+2005-04-12  Jonathan Graehl  <graehl@isi.edu>
+
+	* 2hash.h: visit_key_val
+
+2005-04-07  Jonathan Graehl  <graehl@isi.edu>
+
+	* genio.h (CREATE_INSERTER_T1): for classes with 1 template arg.
+
+2005-03-30  Jonathan Graehl  <graehl@isi.edu>
+
+	* io.hpp: unget in show_error_context to show the last (failed) char
+	report file position before rading extra chars
+
+	* dynarray.h: for reading arrays terminated by EOF, forgot to
+	change undo_push_back_raw to pop_back (pop_back not being done
+	meant an extra 0 in sortpercent)
+
+	* weight.h: set 15 digits if double, 7 digits if float
+
+2005-03-29  Jonathan Graehl  <graehl@isi.edu>
+
+	* arc.h: had to change name of Arc to FSTArc for some insane
+	reason (i.e. I haven't a clue)
+
+	* normalize.hpp: typedefs WD (for inside/outside) count_t (counts)
+	prob_t (probs) ... intention to make prob_t float-based, count_t
+	double-based logweights - but will need a change to
+	normalize-in-place ... also changed to integer indices instead of
+	ill-conceived pointeroffset optimization
+
+	* weight.h: Weight = logweight<FLOAT_TYPE> - not tested with
+	carmel or tt
+
+	* funcs.hpp: lowercase k m g = base10. upper=base2
+
+2005-03-26  Jonathan Graehl  <graehl@isi.edu>
+
+	* io.hpp: moved everything from genio.h except what's used for
+	get_from print macros
+
+2005-03-21  Jonathan Graehl  <graehl@isi.edu>
+
+	* genio.h (FRIEND_INSERTER): const C arg -> const C &arg
+
+2005-03-17  Jonathan Graehl  <graehl@isi.edu>
+
+	* funcs.hpp: added maybe_{decrease,increase}_{min,max} and
+	accumulate for assoc containers, and ONE_PLUS_EPSILON,
+	slightly_{smaller,larger} (also used in SyntaxDecoder)
+
+2005-02-28  Jonathan Graehl  <graehl@isi.edu>
+
+	* memmap.hpp: added filename to exceptions
+
+2005-01-27  Jonathan Graehl  <graehl@isi.edu>
+
+	* normalize.hpp: add-k-smoothing (denominator) (set directly or in
+	constructor)
+
+2004-09-23  Jonathan Graehl  <graehl@isi.edu>
+
+	* weight.h: e^-2.68116e+11 -2.68116e+11ln 
+
+	UPDATE: so that nobody has to be confused about what the "ln"
+	suffix means, the new default output shall be "e^n" (except in
+	case of zero, which is just "0" and not "e^-INF", since "-INF"
+	doesn't read/write properly using the standard I/O libraries). I
+	suggest everyone only produce such outputs, but be prepared to
+	read arbitrary real numbers, as well as those starting with "e^".
+
+

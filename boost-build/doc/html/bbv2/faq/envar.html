@@ -1,0 +1,61 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>
+      Accessing environment variables
+      </title>
+<link rel="stylesheet" href="../../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.69.1">
+<link rel="start" href="../../index.html" title="Part I. Boost.Build v2 User Manual">
+<link rel="up" href="../faq.html" title="Chapter 7. Frequently Asked Questions">
+<link rel="prev" href="s02.html" title="
+        I'm getting &quot;Duplicate name of actual target&quot; error. What
+        does it mean?
+      ">
+<link rel="next" href="s04.html" title="
+        How to control properties order?
+      ">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../boost.png"></td></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="s02.html"><img src="../../images/prev.png" alt="Prev"></a><a accesskey="u" href="../faq.html"><img src="../../images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../images/home.png" alt="Home"></a><a accesskey="n" href="s04.html"><img src="../../images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="bbv2.faq.envar"></a>
+      Accessing environment variables
+      </h2></div></div></div>
+<p>    
+      Many users would like to use environment variables in Jamfiles, for
+      example, to control location of external libraries. In many cases you
+      better declare those external libraries in the site-config.jam file, as
+      documented in the <a href="../recipies/site-config.html" title="Targets in site-config.jam">recipes
+      section</a>. However, if the users already have the environment variables set
+      up, it's not convenient to ask them to set up site-config.jam files as
+      well, and using environment variables might be reasonable.
+    </p>
+<p>In Boost.Build V2, each Jamfile is a separate namespace, and the
+    variables defined in environment is imported into the global
+    namespace. Therefore, to access environment variable from Jamfile, you'd
+    need the following code:
+</p>
+<pre class="programlisting">
+import os ;
+local SOME_LIBRARY_PATH = [ os.environ SOME_LIBRARY_PATH ] ;
+exe a : a.cpp : &lt;include&gt;$(SOME_LIBRARY_PATH) ;
+</pre>
+<p>
+    </p>
+</div>
+<table width="100%"><tr>
+<td align="left"></td>
+<td align="right"><small></small></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="s02.html"><img src="../../images/prev.png" alt="Prev"></a><a accesskey="u" href="../faq.html"><img src="../../images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../images/home.png" alt="Home"></a><a accesskey="n" href="s04.html"><img src="../../images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

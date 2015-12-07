@@ -1,0 +1,16 @@
+AC_INIT(marker.c)
+AM_INIT_AUTOMAKE(treep, 1.0)
+
+AM_CONFIG_HEADER(config.h)
+
+AC_PROG_CC
+AC_PROG_INSTALL
+
+AC_PROG_YACC
+AM_PROG_LEX
+
+AC_CHECK_HEADERS(getopt.h)
+AC_CHECK_HEADERS(string.h)
+AC_CHECK_FUNCS(strchr strdup)
+
+AC_OUTPUT(Makefile)

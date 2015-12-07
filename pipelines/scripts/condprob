@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import hadoop
+import os
+import sys
+
+parser = argparse.ArgumentParser()
+parser.add_argument('input')
+parser.add_argument('output')
+parser.add_argument('keygen')
+parser.add_argument('-c','--config',default='')
+
+args = parser.parse_args()
+config = cfg.load_config(args.config)
+hp = cfg.make_hadoop(config)
+
+euid = str(os.geteuid())
+
+scriptdir = os.path.dirname(os.path.abspath(__file__))
+
+counter = os.path.join(scriptdir,'count')
+joiner = os.path.join(scriptdir,'join')
+divide = os.path.join(scriptdir,'divide')
+
+hp.mkdir('/tmp')
+
+hp.mapreduce( input=args.input 
+            , output='/tmp/idcount.%s' % euid
+            , mapper=args.keygen
+            , reducer='NONE' )
+
+hp.mapreduce( input='/tmp/idcount.%s' % euid
+            , output='/tmp/countxy.%s' % euid 
+            , mapper='/bin/cat'
+            , reducer=counter + ' -k2'
+            , options='-jobconf stream.num.map.output.key.fields=2' )
+
+hp.mapreduce( input='/tmp/countxy.%s' % euid
+            , output='/tmp/countx.%s' % euid
+            , mapper='/bin/cat'
+            , reducer=counter + ' -k1' )
+cargs = ''
+if args.config:
+    cargs = ' -c ' + args.config
+mp = { 'join':joiner, 'div':divide, 'e':euid, 'out':args.output, 'config':cargs }
+cmd = "%(join)s /tmp/countxy.%(e)s /tmp/countx.%(e)s -r '%(div)s -k0' -o /tmp/pyx.%(e)s %(config)s" % mp
+hp.syscall(cmd)
+
+#hp.remove('/tmp/countxy.%s' % euid)
+#hp.remove('/tmp/countx.%s' % euid)
+
+cmd = "%(join)s /tmp/idcount.%(e)s /tmp/pyx.%(e)s -k2 -r 'cut -f3,5' -o %(out)s %(config)s" % mp
+hp.syscall(cmd)
+
+#hp.remove('/tmp/idcount.%s' % euid)
+#hp.remove('/tmp/pyx.%s' % euid)
+
+
+

@@ -1,0 +1,15 @@
+import sbmt-util ;
+
+project unaligned-feature ;
+
+exe unaligned_mapper 
+  : unaligned_mapper.cpp 
+    /sbmt_decoder//sbmt 
+    /xrsparse 
+    /boost/program_options
+  ;
+
+sbmt-util.install install
+  :
+  : unaligned_mapper
+  ;

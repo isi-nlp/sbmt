@@ -1,0 +1,16 @@
+NNP("France") -> "FRANCE" ###  scr=0.8 id=1
+CC("and") -> "AND" ### scr=0.2 id=2
+NNP("Russia") -> "RUSSIA" ### scr=0.3 id=3
+.(".") -> "." ### scr=0.9 id=4
+NP(x0:NNP) -> x0 ### scr=0.2 id=5
+NP(x0:NNS) -> x0 ### scr=0.1 id=6
+NP(x0:NP x1:CC x2:NP) -> x0 x1 x2 ### scr=0.3 id=7
+NNS("astronauts") -> "ASTRO-" "-NAUTS"  ### scr=0.2 id=8
+VBP("include") -> "INCLUDE" ### scr=0.3 id=9
+VP(VBG("coming") PP(IN("from") x0:NP)) -> "COMINGFROM" x0 ### scr=0.2 id=10
+DT("These") -> "THESE" ### scr=0.2 id=11
+NP(x0:DT CD("7") NN("people")) -> x0 "7PEOPLE" ### scr=0.4 id=12
+NP(x0:NP x1:VP) -> x1 "p-DE" x0 ### scr=0.1 id=13
+VP(x0:VBP x1:NP) -> x0 x1 ### scr=0.3 id=14
+S(x0:NP x1:VP x2:.) -> x0 x1 x2 ### scr=0.2 id=15
+VP(VBG("returning") PP(IN("from") x0:NP)) -> "COMINGFROM" x0 ### scr=0.1 id=16

@@ -1,0 +1,21 @@
+import sbmt-util ;
+
+project itg_binarizer ;
+
+exe itg_binarizer 
+  : binal.cc 
+    /boost/program_options//boost_program_options
+    /boost/filesystem//boost_filesystem
+    /boost/regex//boost_regex
+    /graehl//graehl
+    /RuleReader//RuleReader
+    /world//z
+    /sbmt_decoder//sbmt
+  ;
+
+sbmt-util.install install
+  : 
+  : itg_binarizer
+  ;
+
+

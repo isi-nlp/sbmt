@@ -1,0 +1,5 @@
+exe lattice_words
+  : lattice_words.cpp
+    /gusc//gusc
+    /boost/thread//boost_thread
+  ;

@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+# Copies a file from /tmp to the destination and checks for integrity. For failsafe.
+# Adapted from code by Dragos.
+
+my $source = $ARGV[0];
+my $dest = $ARGV[1];
+my $mdSource=""; my $mdDest=""; my @tmp = ();
+my $nTriesCopy = 0;
+my $maxNTries = 10;
+while ($nTriesCopy < $maxNTries) {
+  $nTriesCopy++;
+  if ($nTriesCopy > 1) { warn "safe_copy: Copy of $source into $dest failed, doing the $nTriesCopy try\n"; }
+  system ("cp $source $dest") == 0 or die "safe_copy: Failed copying from $source to $dest\n";
+  $mdSource = `md5sum $source`; @tmp = split " ",$mdSource; $mdSource = $tmp[0];
+  $mdDest = `md5sum $dest`; @tmp=split " ",$mdDest; $mdDest = $tmp[0];
+  if ($mdSource eq $mdDest) { last; }
+  else { warn "safe_copy: Source=$source, Dest=$dest\nmdSource=$mdSource, mdDest=$mdDest\n"; }
+}
+if ($nTriesCopy == $maxNTries and $mdSource ne $mdDest) { die "safe_copy: ERROR! I tried to copy $source into $dest for $maxNTries times, and still failed!\n"; }

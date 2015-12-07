@@ -1,0 +1,13 @@
+#!/usr/bin/env perl
+#
+# filter a given NT prior file, and generates a list of non-terminals
+# appropriate for glue_rules.
+#
+use 5.006;
+use strict;
+
+my @x;
+while ( <> ) {
+    @x = split ;
+    print "$x[0]\n" unless /^TOP/;
+}

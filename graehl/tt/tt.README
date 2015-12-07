@@ -1,0 +1,10 @@
+Welcome!
+
+You'll need Boost, a recent C++ compiler, and GNU Make 3.80 or later.
+
+You'll need to understand some of the libraries in ../shared to make sense of
+the code.  See ../shared/README
+
+tt.cpp is a simple xRs/xR rule validator (build it using "make")
+
+

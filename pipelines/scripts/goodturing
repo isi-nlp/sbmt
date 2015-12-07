@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import os.path
+
+parser = argparse.ArgumentParser()
+parser.add_argument('input')
+parser.add_argument('output')
+parser.add_argument('keygen')
+args = cfg.parse_args(parser)
+
+dir = os.path.dirname(os.path.dirname(__file__))
+scriptdir = os.path.abspath(os.path.join(dir,'scripts'))
+tmpdir = os.path.abspath(args.tmpdir)
+
+euid = str(os.geteuid())
+hp = args.hadoop
+
+hp.mapreduce( input=args.input 
+            , output='/tmp/keys.%s' % euid
+            , mapper=args.keygen
+            , reducer='NONE' )
+
+hp.mapreduce( input='/tmp/keys.%s' % euid
+            , output='/tmp/keycounts.%s' % euid
+            , mapper=os.path.join(scriptdir,'keycounts','mapper') 
+            , reducer=os.path.join(scriptdir,'keycounts','reducer')
+            , compress=False )
+
+hp.mapreduce( input='/tmp/keys.%s' % euid
+            , output='/tmp/keycountcounts.%s' % euid
+            , mapper=os.path.join(scriptdir,'keycountcounts','mapper')
+            , reducer=os.path.join(scriptdir,'keycountcounts','reducer')
+            , compress=False
+            , options='-jobconf stream.num.map.output.key.fields=2' )
+
+keycounts = os.path.join(tmpdir,'keycounts.%s' % euid)
+keycountcounts = os.path.join(tmpdir,'keycountcounts.%s' % euid)
+
+hp.getmerge('/tmp/keycounts.%s' % euid, keycounts)
+hp.getmerge('/tmp/keycountcounts.%s' % euid, keycountcounts)
+
+hp.mapreduce( input='/tmp/keys.%s' % euid 
+            , output=args.output
+            , mapper=os.path.join(scriptdir,'gdivide') + ' -f ' + keycounts + ' -g ' + keycountcounts 
+            , reducer='NONE' )
+            
+hp.syscall('rm -rf ' + keycounts)
+hp.syscall('rm -rf ' + keycountcounts)
+
+hp.remove('/tmp/keys.%s' % euid)
+hp.remove('/tmp/keycounts.%s' % euid)
+hp.remove('/tmp/keycountcounts.%s' % euid)
+
+
+

@@ -1,0 +1,10 @@
+import sbmt-util ;
+
+project source_syntax ;
+
+lib source_syntax
+  : info.cpp
+    /sbmt_decoder//sbmt
+  ;
+
+sbmt-util.install install : : source_syntax ;

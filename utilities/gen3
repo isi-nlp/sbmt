@@ -1,0 +1,1914 @@
+#!/usr/bin/env perl
+# 
+# prototype to generate CtoE translation pipelines
+#
+use 5.006;
+use strict;
+my @save = ( @ARGV );		# deep copy
+
+## make sure your PERL5LIB contains the directory that has the relative
+## sub-path NLP/Properties.pm. For now that is in ~voeckler/lib/perl...
+#use NLP::Properties;		# Will remove initial -D args from @ARGV
+
+use Getopt::Long qw(:config no_ignore_case);
+use File::Spec;
+use File::Basename qw(basename dirname);
+use Digest::MD5;
+use Data::Dumper;
+use Sys::Hostname;
+use Carp;
+use POSIX qw();
+use constant DEFAULT_MINI_DECODER => 'latest';
+use constant DEFAULT_QUEUE => 'isi';
+
+my $hpc_workflow='/home/nlg-03/'.$ENV{USER}.'/workflow';
+$hpc_workflow=$ENV{HPC_WORFKLOW} if exists $ENV{HPC_WORFKLOW};
+
+# global variables
+$main::debug = ~3;		# full debug except LFN | subfn
+$main::count = 0;		# don't touch
+$main::daglog = 'rpds.log';	# dont' touch for now
+my $user = $ENV{USER} || $ENV{LOGNAME} || scalar getpwuid($<);
+
+# version information from VCS -- don't edit
+$main::version = '1.0';
+$main::version = $1 if ( '$Revision: 1.10 $' =~ /Revision:\s+([0-9.]+)/o );
+
+# NEW: Updated to reflect Agile 2.2 data
+my %mode = 
+    ( ara => {
+	'2.2' => {
+	    ulf => 1,		# Ulf 1.3 considered helpful
+	    green => 0,		# no old green rule processing
+	    nonlex => 0,	# no non-lexicalized rule filtering
+	    lm => '/auto/rcf-11/voeckler/config/lm.ara.lw',
+	    nts => '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/decoder/v7/grammar.nts',
+	    param => '/home/rcf-11/voeckler/config/param.trigram.AtoE',
+	    rules => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.2/ara-eng/A-full/rules/GHKM_WSD.fix_pfe.gz', 
+	    model1inv => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.2/ara-eng/A-full/GIZA.invers.t1.5.bz2',
+	    model1nrm => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.2/ara-eng/A-full/GIZA.normal.t1.5.bz2',
+	    pipeline => { line1 => 'serial=corpus-filter,malformed-rules,beam-pruning' },
+	}, '2.4' => {
+	    ulf => 1,		# Ulf 1.3 considered helpful
+	    green => 0,		# no old green rule processing
+	    nonlex => 0,	# no non-lexicalized rule filtering
+	    lm => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.4/ara-eng/LMs/lm.bi-ara-mono-giga.nodigits.genbiglm.prune9.lw-format',
+	    nts => '/home/rcf-12/graehl/blobs/tag.prior/v2.4/ae.tag.prior',
+	    param => '/home/rcf-11/voeckler/config/param.trigram.AtoE.2.4',
+	    rules => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.4/ara-eng/A-full/rules/GHKM_WSD.gz.w-rf.gz',
+	    notes => [ 'DO NOT USE gt-prob WITH rf RULES' ],
+	    model1inv => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.4/ara-eng/A-full/GIZA.invers.t1.5.bz2',
+	    model1nrm => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.4/ara-eng/A-full/GIZA.normal.t1.5.bz2',
+	    pipeline => { line1 => 'serial=corpus-filter,malformed-rules,beam-pruning' },
+	} 
+    }, chi => {
+	'2.2' => {
+	    ulf => 1,
+	    green => 1,		# use old green rule processing
+	    nonlex => 0,	# NEW: No non-lexicalized rule filtering
+	    lm => '/home/rcf-11/voeckler/config/lm.chi.lw',
+	    nts => '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/decoder/v7/grammar.nts',
+	    param => '/home/rcf-11/voeckler/config/param.trigram.CtoE.2.2',
+	    rules => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.2/chi-eng/B-news/rules/emd2/big4.w-all-feats.emd2.gz',
+	    model1inv => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.2/chi-eng/B-full/GIZA.invers.t1.5.bz2',
+	    model1nrm => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.2/chi-eng/B-full/GIZA.normal.t1.5.bz2',
+	    pipeline => { line1 => 'serial=corpus-filter,malformed-rules,beam-pruning' },
+	}, '2.4' => {
+	    ulf => 1,
+	    green => 1,		# use old green rule processing
+	    nonlex => 0,	# NEW: No non-lexicalized rule filtering
+	    lm => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.4/chi-eng/LMs/lm.bi-chi-mono-giga.nodigits.genbiglm.prune9.lw-format',
+	    nts => '/home/rcf-12/graehl/blobs/tag.prior/v2.4/ce.tag.prior',
+	    param => '/home/rcf-11/voeckler/config/param.trigram.CtoE.2.4',
+	    rules => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.4/chi-eng/B-news-GALE/rules/GHKM.big4.wei-rule-extr.serial-fcomp.gz.add_id.gz',
+	    model1inv => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.4/chi-eng/B-news-GALE/GIZA.invers.t1.5.bz2',
+	    model1nrm => '/home/hpc-22/dmarcu/nlg/eval06/data/v2.4/chi-eng/B-news-GALE/GIZA.normal.t1.5.bz2',
+	    pipeline => { line1 => 'serial=corpus-filter,malformed-rules,beam-pruning' },
+	} } );
+
+# translate $mode into CLI argument for Ulf rules
+my %ulfmode = ( ara => '-arabic', chi => '-chinese' );
+
+my $exitpost = File::Spec->catfile( $ENV{'VDS_HOME'}, 'bin', 'exitpost' );
+die "FATAL: Unable to access $exitpost\n" unless -x $exitpost;
+
+my $site = 'HPC';		# hard-coded for now
+my ($ldir,$rdir);		# local and remote working directories
+
+#
+# The site catalog describes the remote site(s) from the user's perspective
+#
+
+my %sc = 
+    ( HPC => {
+              blobs => '/home/hpc-22/dmarcu/nlg/blobs',
+	# adjust to your data directory section
+	workdir => $hpc_workflow,
+	# do not touch
+	lrc => 'rls://lennon.isi.edu',
+	gridshell => '/home/rcf-11/voeckler/bin/kickstart',
+	seqexec   => '/home/rcf-11/voeckler/bin/seqexec',
+	ncpus => 112,
+	'wn_tmp' => '/tmp',
+	#'wn_tmp' => '/scratch',
+	tmp => "/home/nlg-tmp/$user",
+	gridftp => [ [ 'hpc-opteron.usc.edu', $hpc_workflow, 2, 4, undef ] ],
+	contact => {
+	    vanilla =>  [ 'hpc-master.usc.edu/jobmanager-pbs', 'batch', 2, 4, undef ],
+	    transfer => [ 'hpc-opteron.usc.edu/jobmanager-fork', 'fork', 2, 4, undef ] },
+	profile => {
+	    globus => { queue => DEFAULT_QUEUE }
+	}
+    } );
+
+#
+# The transformation catalog maps logical transformations to applications 
+#
+my %tc =
+    ( HPC => {
+	'*' => { 
+	    profile => { 
+		env => { 
+		    'LANG' => '', 
+		    'LC_ALL' => 'C', 
+		    'PATH' => '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/bin:/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/misc:/bin:/usr/bin',
+		    'SBMT_BIN' => '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0',
+		    'LD_LIBRARY_PATH' => '/home/wwang/sbmt-dev/lib/pcre/lib:/usr/usc/globus/default/lib:' . 
+			'/home/rcf-12/graehl/isd/linux/lib:/home/rcf-11/voeckler/lib' } } },
+	# special
+	kickstart => { 
+	    app => '/home/rcf-11/voeckler/bin/kickstart' },
+	seqexec => { 
+	    app => '/home/rcf-11/voeckler/bin/seqexec',
+	    profile => { env => { 
+		'SEQEXEC_PROGRESS_REPORT' => # default, to be overwritten by WF
+		    File::Spec->catfile( $sc{HPC}{workdir}, 'seqexec.log' ) } } },
+
+	# general
+	echo => {
+	    app => '/bin/echo',
+	    profile => { globus => { maxTime => 2 } } },
+	mail => { 
+	    app => '/bin/mail',
+	    profile => { globus => { maxTime => 2 } } },
+	link => { 
+	    app => '/bin/ln',
+	    profile => { globus => { maxTime => 2 } } },
+	mkdir => {
+	    app => '/bin/mkdir',
+	    profile => { globus => { maxTime => 2 } } }, 
+	cat => {
+	    app => '/bin/cat',
+	    profile => { globus => { maxTime => 2 } } },
+	cut => {
+	    app => '/bin/cut',
+	    profile => { globus => { maxTime => 2 } } },
+	rm => { 
+	    app => '/bin/rm',
+	    profile => { globus => { maxTime => 1 } } },
+	mv => { 
+	    app => '/bin/mv',
+	    profile => { globus => { maxTime => 1 } } },
+	'disk-free' => {
+	    app => '/bin/df',
+	    profile => { globus => { maxTime => 1 } } },
+	gunzip => { 
+	    app => [ '/bin/gzip', '-cd' ],
+	    profile => { globus => { maxTime => 5 } } },
+	'sort' => {
+	    app => '/bin/sort',
+	    profile => { globus => { maxTime => 2 } } },
+	'egrep' => {
+	    app => '/bin/egrep',
+	    profile => { globus => { maxTime => 2 } } },
+
+	# my user apps
+	'combine' => { 
+	    app => '/home/rcf-11/voeckler/bin/combine',
+	    profile => { globus => { maxTime => 2 } } },
+	'zmove' => { 
+	    app => '/home/rcf-11/voeckler/bin/zmove',
+	    profile => { globus => { maxTime => 5 } } },
+	'split-corpus' => { 
+	    app => '/home/rcf-11/voeckler/bin/split-seq-new.pl',
+	    profile => { globus => { maxTime => 5 } } },
+	'sorted-split' => { 
+	    app => '/home/rcf-11/voeckler/bin/split-corpus.pl',
+	    profile => { globus => { maxTime => 5 } } },
+	'sorted-merge' => { 
+	    app => '/home/rcf-11/voeckler/bin/merge-corpus.pl',
+	    profile => { globus => { maxTime => 5 } } },
+	'cut-reorder' => {
+	    app => '/home/rcf-11/voeckler/bin/cut-and-reorder.pl',
+	    profile => { globus => { maxTime => 5 } } },
+
+	'fix-dian' => {
+	    app => '/home/rcf-11/voeckler/bin/fix-dian',
+	    profile => { globus => { maxTime => 1 } } },
+	'drop-dian' => {
+	    app => '/home/rcf-11/voeckler/bin/drop-dian',
+	    profile => { globus => { maxTime => 1 } } },
+	'id-rule-grep' => {
+	    app => '/home/rcf-11/voeckler/bin/id-rule-grep.pl',
+	    profile => { globus => { maxTime => 1 } } },	
+	'count-empty' => {
+	    app => '/home/rcf-11/voeckler/bin/count-empty-lines.pl',
+	    profile => { globus => { maxTime => 1 } } },
+	'old-chinese-nematch' => {
+	    app => [ '/usr/usc/bin/perl', 
+		     '/home/rcf-11/voeckler/bin/old-chinese-nematch.pl' ],
+	    profile => { globus => { maxTime => 5 },
+			 env => { PERL5LIB => '/home/rcf-11/voeckler/lib/perl',
+				  'JAVA_HOME' => '/usr/java/j2sdk1.4.2_11' } } },
+	'run-one-nbest' => {
+	    app => [ '/usr/usc/bin/perl',
+		     '/home/rcf-11/voeckler/bin/run-one-nbest.pl' ],
+	    profile => { globus => { maxTime => 5 },
+			 env => { PERL5LIB => '/home/rcf-11/voeckler/lib/perl' } } },
+	
+	# general user apps
+	'green-rules' => { 
+	    app => [ '/usr/usc/bin/perl', 
+		     '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/rule-prep/v2.3/GreenRules/generate_entity_rules.pl' ],
+	    profile => { globus => { maxTime => 10 } } },
+	'green-cat' => { 
+	    app => '/bin/sh',
+	    profile => { globus => { maxTime => 10 } } },
+	'green-rules-ulf' => {
+	    app => [ '/usr/usc/bin/perl', 
+		     '/home/hpc-22/dmarcu/nlg/blobs/ulf-rules/bin/v1.3/green-rules.pl' ],
+	    profile => { globus => { maxTime => 10 } } },
+	'remove-occ-ulf' => {
+	    app => [ '/usr/usc/bin/perl', 
+		     '/home/hpc-22/dmarcu/nlg/blobs/ulf-rules/bin/v1.3/remove-snt-id-occ-from-gr.pl' ],
+	    profile => { globus => { maxTime => 10 } } },
+	'old-green-rule-filter' => {
+	    app => [ '/usr/usc/bin/perl', 
+		     '/home/hpc-22/dmarcu/nlg/blobs/ulf-rules/bin/v1.3/old-green-rule-filter.pl' ],
+	    profile => { globus => { maxTime => 3 } } },
+
+	'identity' => { 
+	    app => [ '/usr/usc/bin/perl', 
+		     '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/rule-prep/identity-ascii-xrs/v1/identity-ascii-xrs.pl' ],
+	    profile => { globus => { maxTime => 2 } } },
+
+	'corpus-filter' => { 
+	    app => [ '/usr/usc/bin/perl', 
+		     '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/rule-prep/v2.3/test-corpus-prune.pl' ],
+	    profile => { globus => { maxTime => 200 } } },
+	'malformed-rules' => { 
+	    app => '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/rule-prep/v2.3/filter_malformed_rule',
+	    profile => { globus => { maxTime => 70 } } },
+	'beam-pruning' => { 
+	    app => [ '/usr/usc/bin/perl', 
+		     '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/rule-prep/v2.3/rule-beam-pruning-extended-rhs-phrase-context.pl' ],
+	    profile => { globus => { maxTime => 55 } } },
+	'non-lexical' => { 
+	    app => [ '/usr/usc/bin/perl', 
+		     '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/bin/select_lexicalized_rules.pl' ],
+	    profile => { globus => { maxTime => 20 } } },
+
+	'bin-filter' => { 
+#	    '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/binarizer/ITG/binal',
+#	    '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/decoder/new_decoder/bin/itg_binarizer', 
+                         app => [$sc{HPC}{blobs} . '/mini_decoder' . DEFAULT_MINI_DECODER . '/mini_decoder' ],
+
+	    profile => { globus => { maxTime => 8, arch => 'x86_64' } } },
+	'weight-format' => {
+	    app => [$sc{HPC}{blobs}.'/mini_decoder' . 
+		DEFAULT_MINI_DECODER . '/new_decoder_weight_format'],
+	    profile => { globus => { maxTime => 20, arch => 'x86_64' } } },
+	'binarization' => { 
+	    app => [$sc{HPC}{blobs}.'/mini_decoder' . 
+		DEFAULT_MINI_DECODER . '/itg_binarizer'],
+	    profile => { globus => { maxTime => 9, arch => 'x86_64' } } },
+	'model1-invers' => { 
+	    app => [ '/usr/usc/bin/perl', 
+		     '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/rule-prep/model1-adder/v1.2/add-model1-to-xrs-rules.pl' ],
+	    profile => { globus => { maxTime => 20 } } }, 
+	'model1-normal' => { 
+	    app => [ '/usr/usc/bin/perl', 
+		     '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/rule-prep/model1-adder/v1.2/add-model1-normal-to-xrs-rules.pl' ],
+	    profile => { globus => { maxTime => 20 } } }, 
+	'unknown-adder' => {
+	    app => [$sc{HPC}{blobs}.'/mini_decoder' . 
+		DEFAULT_MINI_DECODER . '/unknown_word_rules'],
+	    profile => { globus => { maxTime => 5, arch => 'x86_64' } } },
+	'archive-grammar' => {
+	    app => [$sc{HPC}{blobs}.'/mini_decoder' . 
+		DEFAULT_MINI_DECODER . '/archive_grammar'],
+	    profile => { globus => { maxTime => 5, arch => 'x86_64' } } },
+	'sentence-processing' => {
+	    app => [ '/usr/usc/bin/perl',
+		     '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/decoder/new_decoder/mini_smartercube/append_fs.pl' ],
+	    profile => { globus => { maxTime => 5 } } },
+	'split-byline' => {
+	    app => [ '/usr/usc/bin/perl',
+                     $sc{HPC}{blobs}.'/mini_decoder' . DEFAULT_MINI_DECODER .
+		     'split-byline.pl' ],
+	    profile => { globus => { maxTime => 2 } } },
+	'paste-byline' => {
+	    app => [ '/usr/usc/bin/perl',
+		     $sc{HPC}{blobs}.'/mini_decoder' . DEFAULT_MINI_DECODER .
+                     'paste-byline.pl' ],
+	    profile => { globus => { maxTime => 2 } } },
+
+	'decoder' => { 
+	    app => [ '/home/rcf-11/voeckler/bin/start-with-limit', # set vmemlim to 4.5 GB
+		     $sc{HPC}{blobs}.'/mini_decoder' . 
+		     DEFAULT_MINI_DECODER . '/mini_decoder' ],
+	    profile => { globus => { maxTime => 1390, arch => 'x86_64', maxMemory => 4800 } } },
+
+	'extract-hypothesis' => { 
+	    # app => '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/bin/extract-hypothesis.pl',
+	    app => '/home/hpc-22/dmarcu/nlg/blobs/decoder/v11/extract-hypothesis.pl',
+	    profile => { globus => { maxTime => 30 } } },
+	'bleu-score' => { 
+	    app => '/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/misc/syn-ats-compare/PickTheBest/scoreTranslation.out',
+	    profile => { globus => { maxTime => 2 } } },
+	'sgmlize' => {
+	    app => [ '/usr/usc/bin/perl', 
+		     '/home/rcf-11/voeckler/bin/wei-sgmlize.pl' ],
+	    profile => { globus => { maxTime => 30 },
+			 env => { PERL5LIB => '/home/rcf-11/voeckler/lib/perl:/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/libgraehl/inuse:/home/hpc-22/dmarcu/nlg/wwang/sbmt-bin/v3.0/perllib' } } }
+    } );
+
+#
+# The replica catalog maps logical files to physical files
+#
+my %rc = ( HPC => { } );
+
+my %decoder = ( 'lm-cost' => 'weight-lm-ngram',
+#		'text-length' => 'weight-text-length',
+		'derivation-size' => 'weight-derivation-size' );
+
+my %mike = ( 'v1059' => 1, 'smartercube' => 1, 'fastercube' => 1, 'v3' => 1 );
+
+#
+# --- functions -------------------------------------------------
+#
+
+sub usage {
+    # purpose: print usage information and exit with code 1
+    #
+    my $base = basename($0);
+    print << "EOF";
+Usage: $base [-Dk=v [..]] [options]
+
+Optional arguments:
+ -Dprop=val         explicit settings of a property (multi-option). 
+ -h|--help          print this help message and exit.
+ -d|--debug lvl     sets the debug level (verbosity), default is $main::debug. 
+                    bit\#0: protocol LFN resolutions
+                    bit\#1: protocol submit file writing
+ --mode ara|chi     Defines the workflow baseline mode, default is 'chi'.
+ --release 2.2|2.4  Defines the data release for the mode, default '2.4'.
+
+ --prob-type type   Uses 'type' as PROB_TYPE beam pruning arg, default 'count'.
+ --corpus-ne fn     The location of the foreign named entity corpus (Chinese only).
+ --create-nematch   Alternative to create a named entity corpus from plain.
+
+ --nts-file fn      The location of the grammar.nts fileset to overwrite mode default.
+ --lm fn            The location of the language module to overwrite mode. 
+ --model1-nrm fn    The location of the model1 normal file to overwrite mode.
+ --model1-inv fn    The location of the model1 inverse file to overwrite mode.
+ --input-rules fn   The location of the rule file to overwrite mode defaults.
+ --non-lexical      If set, filter out all non-lexical rules.
+ --green            If set (or negated), overide mode defaults for green rules.
+ --halfway [s:]rdir Skip pre-processing steps, and use filtered rules from rdir, 
+                    s=1: skip corpus filtering, recycle rules.cf.*.gz, default no-s,
+                    s=2: skip up to combine step, recycle rules.cmb.*.gz. 
+		    s=3: skip any pre-processing, recycle grammar archive.
+ --nbest n          Extract n k-bests, default is 300.
+ --tstmaster fn     Location of the tstmaster, if nbest > 1.
+
+Expert flags:
+ --ulf [0|1]        If 1, use Ulf\'s green rule processing; default ara:$mode{ara}{ulf}, chi:$mode{chi}{ulf}
+ --mike mode        mode is @{[join(', ',sort keys %mike)]}; default @{[DEFAULT_MINI_DECODER]}
+ --sorted           Use sort-scrambled chunks and unscrambling at x-best gen.
+ --queue id         Use a different queue on HPC, default is "isi" (not implemented)
+ --decoder-option --opt=value   Pass through additional arguments to decoder (multiple allowed)
+Mandatory arguments:
+  [general]
+ -f|--corpus fn     The location 'fn' of the foreign plain corpus.
+ -e|--english fn    Location of the gold standard translation (multi option).
+                    BLEU scoring will only happen, if English is specified.
+ --chunk-size M     selects that number of sentences per chunks. The number of
+                    chunks depend on the size of the input corpus.
+ --lines T          number of sentences (lines, T) in plain corpus. 
+
+  [beam pruning]
+ --top-k nr         Uses 'nr' as the TOP_K beam pruning parameter, default 30.
+ --keep-min nr      Uses 'nr' as the KEEP_MIN beam pruning parameter.
+ --non-lex-min nr   Uses 'nr' as the NON_LEX_MIN beam pruning parameter.
+
+  [decoding]
+ --param fn             The location 'fn' of the decoder parameter file.
+ -f|--feature 'qs'      A quoted string with all decoder feature weights.
+ -p|--pass opt=arg      Pass decoder option along (not yet implemented).
+
+EOF
+exit(1);
+}
+
+#
+# --- main ------------------------------------------------------
+#
+
+my @pass = ();
+my $feature = '';
+my @feature = ();
+my %feature = ();
+my $lines = 0;
+my @english = ();
+
+my $mode = 'chi';
+my $release = '2.4';
+my %config = %{$mode{$mode}{$release}};
+my $dirno = 1;			# start run-directory number
+
+my $nbest = 1;
+my %xlate = 
+    ( topk => 0,
+      'keep_min' => 30,
+      'non_lex_min' => 0,
+      'prob_type' => 'count',
+      chunks => 0,
+      tstmaster => '',
+      'chunk_size' => 0 );
+
+my ($rule_file,$corpus,$corpus_ne,$halfway);
+my $tag_hist=100;
+my $virt_hist=600;
+my $cube_fuzz=.2;
+my @decoder_options=();
+my $sorted = 0;
+my $mike = DEFAULT_MINI_DECODER;
+my $remove_qq = 0;
+my $create_ne = 0;
+my $dagman_retries = 1;
+GetOptions( 'help|h' => \&usage,
+	    'debug|d=o' => \$main::debug,
+	    'dirno=i' => \$dirno,
+	    'mode|m=s' => sub {
+		my $thismode = lc $_[1];
+		die "ERROR: Unknown mode $mode\n" unless exists $mode{$thismode};
+		die "ERROR: Mode $mode has no release $release\n"
+		    unless exists $mode{$mode}{$release};
+		%config = %{$mode{$mode=$thismode}{$release}};
+	    },
+	    'release=s' => sub {
+		my $thisrel = $_[1];
+		die "ERROR: Unknown release $release for mode $mode\n"
+		    unless exists $mode{$mode}{$thisrel};
+		%config = %{$mode{$mode}{$release=$thisrel}};
+	    },
+
+	    'prob-type=s' => sub { $xlate{'prob_type'} = $_[1] },
+	    'corpus-ne=s' => \$corpus_ne,
+	    'create-nematch' => \$create_ne,
+	    'nts-file|nts=s' => sub { $config{nts} = $_[1] },
+	    'language-module|lm=s' => sub { $config{lm} = $_[1] },
+	    'model1-inv=s' => sub { $config{model1inv} = $_[1] },
+	    'model1-nrm=s' => sub { $config{model1nrm} = $_[1] },
+	    'input-rules=s' => sub { $config{rules} = $_[1] },
+	    'non-lexical!' => sub { $config{nonlex} = $_[1] },
+	    'green!' => sub { $config{green} = $_[1] },
+	    'halfway=s' => \$halfway, 
+	    'sorted!' => \$sorted,
+	    'ulf=i' => sub { $config{ulf} = $_[1] },
+	    'mike=s' => \$mike,
+	    'queue=s' => sub { $sc{$site}{profile}{globus}{queue} = $_[1] },
+	    'n-best|nbest=i' => \$nbest,
+	    'tstmaster=s' => sub { $xlate{tstmaster} = $_[1] },
+
+            ,'--tag-span-max-edges=i' => \$tag_hist
+            ,'--virt-span-max-edges=i' => \$virt_hist
+            ,'--cube-heap-fuzz-exp=f' => \$cube_fuzz
+            ,'--decoder-option=s' => sub { push @decoder_options,$_[1] }
+            ,
+	    'corpus|corpus-file=s' => \$corpus,
+	    'english|e=s' => \@english,	# gold standard
+	    'chunk-size=i' => sub { $xlate{'chunk_size'} = $_[1] },
+	    'lines=i' => \$lines, 
+	    
+	    'top-k|topk=i' => sub { $xlate{topk} = $_[1] },
+	    'keep-min=i' => sub { $xlate{'keep_min'} = $_[1] },
+	    'non-lex|non-lex-min|non-lex-min-count=i' => sub { 
+		$xlate{'non_lex_min'} = $_[1] },
+
+	    'param-file|params=s' => sub { $config{param} = $_[1] },
+	    'feature|f=s' => \$feature,
+	    'pass|p=s' => \@pass,
+
+	    'dagman-retries=i' => \$dagman_retries
+	    );
+
+# sanity checks
+die "ERROR: You cannot have a non-positive chunk size\n" unless $xlate{'chunk_size'} > 0;
+die "ERROR: You must (for now) gimme the number of corpus lines\n" unless $lines > 0;
+$xlate{chunks} = int(POSIX::ceil($lines / $xlate{'chunk_size'}));
+$xlate{chunks}++ while ( $xlate{chunks}*$xlate{'chunk_size'} < $lines );
+die "ERROR: You must specify a tstmaster for nbest>1\n"
+    if ( $nbest > 1 && length($xlate{tstmaster}) < 5 );
+
+die( "ERROR: Unrecognized --mike $mike, permitted modes are ", 
+     join(', ',keys %mike), "\n" ) unless exists $mike{$mike};
+
+die "ERROR: You must specify some sane features\n" unless length($feature)>10;
+die "ERROR: You must specify an input foreign corpus\n" unless length($corpus);
+$rc{$site}{corpus} = $corpus;
+die "ERROR: Chinese requires an entity-tagged corpus, too\n" 
+    unless ( $mode ne 'chi' || 
+	     ( defined $corpus_ne && length($corpus_ne) > 1 || $create_ne ) );
+$corpus_ne = 'f-tok.NE' if $create_ne;
+$rc{$site}{corpus_ne} = $corpus_ne if defined $corpus_ne;
+$xlate{lm} = $config{lm};
+$xlate{nts_file} = $config{nts};
+
+my $halfwaypath = '';
+if ( defined $halfway ) {
+    if ( index('=:',substr($halfway,1,1)) >= 0 ) {
+	($halfway,$halfwaypath) = split /[:=]/, $halfway, 2;
+    } else {
+	$halfwaypath = $halfway;
+	$halfway = 1;
+    }
+    warn "# halfway=$halfway, path=$halfwaypath\n";
+}
+
+# permit -e 1 -e 2,3 -e 4
+@english = grep { length($_) } split( /,/, join(',',@english) );	
+if ( @english == 0 ) {
+    warn( "Info: You did not specify any gold standards, skipping scoring\n" );
+}
+
+{
+    my %english = map { $_ => 1 } @english;
+    die "ERROR: Your gold standards use replicated files\n"
+	unless ( @english == (keys %english) );
+}
+
+#
+# extract decoder CLI options
+#
+foreach ( split /\s*,\s*/, $feature ) {
+    my ($k,$v) = split /:/, $_, 2;
+    push( @feature, $k );
+    $feature{$k} = $v;
+}
+
+#
+# --- submit functions require access to my variables -----------
+#
+sub log10($) {			
+    # purpose: Integer computation of log10 w/o NPU
+    # paramtr: $x (IN): non-negative integer
+    # returns: number of digits in integer
+    #
+    length(int($_[0]+0));
+}
+
+my $goodchr = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+sub randstr {
+    my $ctx = Digest::MD5->new;
+    $ctx->add( @_, $$, time(), rand() );
+    my $x = 0;
+    $x ^= $_ foreach ( unpack("LLLL",$ctx->digest) );
+
+    my $len = length($goodchr);
+    my $loglen = log($len) / log(2.0);
+    my $result = '';
+    for ( my $i=0; $i < 32.0; $i+=$loglen ) {
+	$result .= substr( $goodchr, ($x % $len), 1 );
+	$x /= $len;
+    }
+    $result;
+}
+
+sub resolve($$$) {
+    # purpose: resolves a parameter or logical filename, if found
+    # paramtr: $site (IN): destination site
+    #          $wdir (IN): working directory for PFN construction
+    #          $arg (IN): string that may contain PARAM or LFN 
+    # globals: %feature, %xlate, %rc, %tc
+    # returns: string with resolved entities
+    #
+    my $site = shift;
+    my $wdir = shift;		# may be undef
+    local $_ = shift;
+    my $p;
+
+    while ( /([\$\@]\{(\S+)\})/ ) {
+	my ($full,$lfn,$debug) = ($1,$2);
+	my $pfn = '';
+	if ( substr($full,0,1) eq '@' ) {
+	    # logical filename
+	    if ( exists $rc{$site}{$lfn} ) {
+		$pfn = $rc{$site}{$lfn};
+	    } else {
+		if ( defined $wdir && length($wdir) > 0 ) {
+		    $pfn = File::Spec->catfile( $wdir, $lfn );
+		} else {
+		    $pfn = $lfn;
+		}
+		warn "Warning: Mapping LFN $lfn to $pfn\n"
+		    if ( ($main::debug & 0x0001) == 1 );
+		$rc{$site}{$lfn} = $pfn;
+	    }
+	} else {
+	    # fill-in argument
+	    if ( index( $lfn, ':' ) > -1 ) {
+		# sub-feature
+		my ($ns,$k) = split /:/, $lfn;
+		if ( $ns eq 'feature' ) {
+		    if ( exists $feature{$k} ) {
+			$pfn = $feature{$k};
+		    } elsif ( $k eq '__all__' ) {
+			# really all
+			foreach my $k ( @feature ) {
+			    $pfn .= ',' if length($pfn) > 0;
+			    $pfn .= $k . ':' . $feature{$k};
+			}
+		    } elsif ( $k eq 'all' ) {
+			# almost all
+			foreach my $k ( @feature ) {
+			    next if exists $decoder{$k};
+			    $pfn .= ',' if length($pfn) > 0;
+			    $pfn .= $k . ':' . $feature{$k};
+			}
+		    } else {
+			warn "Warning: Unknown feature \$feature{$k}\n";
+			$debug=1;
+		    }
+		} else {
+		    warn "Warning: Unknown binding $ns with key $k\n";
+		    $debug=1;
+		}
+	    } else {
+		# full feature
+		if ( exists $xlate{$lfn} ) {
+		    $pfn = $xlate{$lfn};
+		} else {
+		    warn "Warning: unknown translation \${$lfn}\n";
+		    $debug=1;
+		}
+	    }
+	}
+	warn "Debug: << $_\n" if $debug; 
+	substr($_,$p,length($full),$pfn) while ( ($p=index($_,$full)) > -1 );
+	warn "Debug: >> $_\n" if $debug; 
+    }
+
+    $_;
+}	
+	
+sub escape($) {
+    # purpose: Condor-escapes an args argument
+    # paramtr: $arg (IN): raw argument
+    # returns: escaped argument, or original argument
+    #
+    local $_ = shift;
+
+    # if argument has quotes, duplicate them
+    s/\"/""/g;
+    s/\'/''/g;
+
+    # if argument contains spaces, protect them
+    $_ = '\'' . $_ . '\'' if ( /\s/ );
+
+    $_;
+}
+
+sub profile_copy(\%) {
+    # purpose: generates a deep copy of a profile structure
+    # paramtr: %profile (IN): profile source to copy from
+    # returns: hash with deep copy
+    #
+    my $src = shift;
+    my %result = ();
+    foreach my $ns ( keys %{$src} ) {
+	$result{$ns} = { %{$src->{$ns}} };
+    }
+    %result;
+}
+
+sub profile_merge(\%\%) {
+    # purpose: merges the second into the first profile
+    # paramtr: %src (IO): source and destination profile
+    #          %add (IN): profile to merge
+    #
+    my $src = shift;
+    my $add = shift;
+    
+    # print Data::Dumper->Dump( [$src,$add], [qw($src $add)] );
+    foreach my $ns ( keys %{$add} ) {
+	if ( exists $src->{$ns} ) {
+	    # treat globus universe specially 
+	    if ( $ns eq 'globus' ) {
+		foreach my $key ( keys %{$add->{$ns}} ) {
+		    my $dst = lc $key;
+		    if ( exists $src->{$ns}->{$dst} ) {
+			if ( $dst =~ /time$/ ) {			
+			    # accumulate
+			    $src->{$ns}->{$dst} += $add->{$ns}->{$key};
+			} else {
+			    # replace
+			    $src->{$ns}->{$dst} = $add->{$ns}->{$key};
+			}
+		    } else {
+			# insert
+			$src->{$ns}->{$dst} = $add->{$ns}->{$key};
+		    }
+		}
+	    } else {
+		$src->{$ns} = { %{$src->{$ns}}, %{$add->{$ns}} };
+	    }
+
+	} else {
+	    # namespace does not exist, insert the additives
+	    if ( $ns eq 'globus' ) {
+		my ($k,$v);
+		while ( ($k,$v) = each %{$add->{$ns}} ) {
+		    $src->{$ns}->{lc($k)} = $v;
+		}
+	    } else {
+		$src->{$ns} = { %{$add->{$ns}} };
+	    }
+	}
+    }
+}
+
+sub decoder_hack($) {
+    # purpose: Adjust decoder path according to $mike variable
+    # globals: $mike (IN): current choice of decoder
+    #          DEFAULT_MINI_DECODER: default setup of decoder
+    # paramtr: $app (IN): application path
+    # returns: possibly adjusted application path
+    #
+    my $app = shift;
+
+    # don't touch these, use the hard-wired version thereof
+    return $app if ( $app =~ /(split-byline|append_fs)/ );
+
+    if ( $mike ne DEFAULT_MINI_DECODER ) {
+	my $pos = index( $app, DEFAULT_MINI_DECODER );
+	substr( $app, $pos, length(DEFAULT_MINI_DECODER), $mike ) if $pos >= 0;
+    }
+    $app;
+}
+
+sub apply($\%) {
+    # purpose: takes a logical job description and turns it into physical
+    # paramtr: $site (IN): site handle
+    #          %task (IN): single task hash
+    # globals: %sc (IN): site catalog
+    #          %tc (IN): transformation catalog
+    #          %rc (IN): replica catalog
+    # returns: 
+    #
+    my $site = shift;
+    my $tref = shift;
+    carp "Requires a hash reference" unless ref $tref eq 'HASH';
+    my %task = %{$tref};
+    my %result = ();
+
+    my @argv = ( $tc{$site}->{kickstart}->{app}, '-R', $site, '-n', $task{tr} );
+    $result{kickstart} = 1;	# was kickstarted
+    my $wdir = $task{dir};	# may be undef
+
+    # stdio
+    push( @argv, '-i', resolve( $site, $wdir, $task{in} ) ) 
+	if exists $task{in};
+    push( @argv, '-e', resolve( $site, $wdir, $task{err} ) ) 
+	if exists $task{err};
+    push( @argv, '-o', '\'^' . resolve( $site, $wdir, $task{out} ) . '\'' ) 
+	if exists $task{out};
+
+    # extra file stats before job is started
+    if ( exists $task{istat} ) {
+	die "FATAL: task{istat} must be an array ref" 
+	    unless ref $task{istat} eq 'ARRAY';
+	foreach my $full ( @{$task{istat}} ) {
+	    if ( index( '$@', substr( $full, 0, 1 ) ) != -1 ) {
+		my $lfn = substr( $full, 2, -1 );
+		my $pfn = resolve( $site, $wdir, $full );
+		push( @argv, '-S', "$lfn=$pfn" );
+	    } else {
+		push( @argv, '-S', $full );
+	    }
+	}
+    }
+
+    # extra file stats after job has finished
+    if ( exists $task{ostat} ) {
+	die "FATAL: task{ostat} must be an array ref" 
+	    unless ref $task{ostat} eq 'ARRAY';
+	foreach my $full ( @{$task{ostat}} ) {
+	    if ( index( '$@', substr( $full, 0, 1 ) ) != -1 ) {
+		my $lfn = substr( $full, 2, -1 );
+		my $pfn = resolve( $site, $wdir, $full );
+		push( @argv, '-s', "$lfn=$pfn" );
+	    } else {
+		push( @argv, '-s', $full );
+	    }
+	}
+    }
+
+    # application
+    die "ERROR: task ", $task{tr}, " not found in TC\n"
+	unless exists $tc{$site}->{$task{tr}};
+    if ( ref $tc{$site}->{$task{tr}}->{app} eq 'ARRAY' ) {
+	foreach my $part ( @{$tc{$site}->{$task{tr}}->{app}} ) {
+	    push( @argv, decoder_hack($part) );
+	}
+    } else {
+	push( @argv, decoder_hack($tc{$site}->{$task{tr}}->{app}) );
+    }
+    
+    # arguments
+    push( @argv, map { resolve( $site, $wdir, $_ ) } @{$task{arg}} )
+	  if exists $task{arg};
+    $result{argv} = [ @argv ];
+
+    # profiles (environment, condor, globus (pbs walltime, queue) )
+    my %profile = ();
+    %profile = profile_copy( %{$task{profile}} ) if exists $task{profile};
+    if ( exists $tc{$site} && exists $tc{$site}{$task{tr}} && 
+	 exists $tc{$site}{$task{tr}}{profile} ) {
+	profile_merge( %profile, %{$tc{$site}{$task{tr}}{profile}} );
+    }
+    $result{profile} = \%profile if ( %profile > 0 );
+
+    %result;
+}
+
+sub mysort {
+    my $aa = join(' ',reverse split /_/,$a);
+    my $bb = join(' ',reverse split /_/,$b);
+    $aa cmp $bb;
+}
+
+sub profile_into_submit(\%\%) {
+    # purpose: adds profile settings into a submit file
+    # paramtr: %submit (IO): submit file representation
+    #          %profile (IN): profile representation
+    #
+    my $submit = shift;
+    my $profile = shift;
+    my ($k,$v);
+    
+    # print Data::Dumper->Dump( [$profile,$submit],[qw($profile $submit)] );
+    foreach my $ns ( keys %{$profile} ) {
+	if ( $ns eq 'globus' ) {
+	    while ( ($k,$v) = each %{$profile->{globus}} ) {
+		$submit->{globusrsl} .= "($k=$v)";
+	    }
+	} elsif ( $ns eq 'condor' ) {
+	    while ( ($k,$v) = each %{$profile->{condor}} ) {
+		if ( defined $v ) {
+		    $submit->{$k} = $v;
+		} else {
+		    delete $submit->{$k};
+		}
+	    }
+	} elsif ( $ns eq 'env' ) {
+	    # FIXME: quoting and escaping
+	    my $env = '';
+	    while ( ($k,$v) = each %{$profile->{env}} ) {
+		$env .= ' ' if length($env) > 0;
+		$env .= "$k=$v";
+	    }
+	    $submit->{environment} = '"' . $env . '"';
+	} else {
+	    warn "Warning: Ignoring unknown profile namespace $ns\n";
+	}
+    }
+}
+
+sub write_submitfile($\%) {
+    # purpose: dump contents of the hash ref into submit file
+    # paramtr: $subfn (IN): name of submit file
+    #          $sref (IN): data to write into submit file
+    # returns: true if OK, false in case of error, check $!
+    #
+    my $fn = shift;
+    my $sref = shift;
+    my ($k,$v);
+    local(*SUB);
+    open( SUB, ">$fn" ) || die "ERROR: open $fn: $!\n";
+
+    # preamble
+    print SUB "# version : $main::version\n";
+    print SUB "# created : ", POSIX::strftime( "%Y-%m-%dT%H:%M:%SZ", gmtime() ), "\n";
+    print SUB "# creator : $user\n";
+    print SUB "# basedir : ", dirname( File::Spec->rel2abs($fn) ), "\n";
+    print SUB "# filename: ", basename($fn), "\n";
+    print SUB "#\n";
+
+    # content
+    foreach my $cmd ( sort mysort keys %{$sref} ) {
+	print SUB $cmd;
+	print SUB "\t" if length($cmd) < 8;
+	print SUB "\t" if length($cmd) < 16;
+	print SUB ' ' if length($cmd) >= 16;
+	print SUB '= ', $sref->{$cmd}, "\n";
+    }
+
+    # submit
+    print SUB "queue\n";
+
+    # done
+    close SUB || die "ERROR: close $fn: $!\n";
+    1;
+}
+
+sub submit($$@) {
+    # purpose: Write a submit file for condor
+    # paramtr: $base (IN): base name including directory
+    #          $site (IN): site handle (currently fixed)
+    #          @task (IN): one or more tasks to plan
+    # returns: hash ( id => number, subfn, out, err [, in] )
+    #
+    my $base = shift;
+    my $site = shift;
+    warn "Debug: base=$base\n" if ( $main::debug & 2 );
+
+    my %result = 
+	( id => ++$main::count, 
+	  subfn => "$base.sub",
+	  out => basename("$base.out"),
+	  err => basename("$base.err") );
+
+    # generic Globus universe submit file template
+    my %submit = 
+	( universe => 'globus',
+	  globusscheduler => $sc{$site}->{contact}->{vanilla}->[0],
+	  globusrsl => '(jobType=single)',
+	  notification => 'NEVER',
+	  output => $result{out},
+	  'transfer_output' => 'True',
+	  'stream_output' => 'False',
+	  error => $result{err},
+	  'transfer_error' => 'True',
+	  'stream_error' => 'False',
+	  'periodic_release' => '(NumSystemHolds <= 3)',
+	  'periodic_remove' => '(NumSystemHolds > 3)',
+	  'submit_event_user_notes' => "pool:$site",
+	  'remote_initialdir' => File::Spec->catdir( $sc{$site}->{workdir}, 
+						     $rdir ),
+	  log => $main::daglog );
+
+    # init profile
+    my %profile = ();
+    if ( exists $sc{$site} && exists $sc{$site}{profile} ) {
+	# from site catalog -- general for site $site
+	profile_merge( %profile, %{$sc{$site}{profile}} );
+    }
+    if ( exists $tc{$site} && exists $tc{$site}{'*'} && 
+	 exists $tc{$site}{'*'}{profile} ) {
+	# from transformation catalog -- another way to say the same thing
+	profile_merge( %profile, %{$tc{$site}{'*'}{profile}} );
+    }
+
+    # work on task
+    my $jobs = 0;
+    if ( @_ == 1 ) {
+	# single application submit file
+	my %x = apply( $site, %{$_[0]} );
+	$submit{executable} = shift( @{$x{argv}} );
+	$submit{'transfer_executable'} = 'False';
+	$submit{args} = '"' . join(' ', map { escape($_) } @{$x{argv}} ) . '"';
+
+	# merge profiles into one
+	profile_merge( %profile, %{$x{profile}} ) if exists $x{profile};
+	$jobs++;
+    } else {
+	# seqexec multi-job submit file
+	local(*SEQ);
+	my $fn;
+	my %tr = ();
+
+	# seqexec may have a profile of its own... 
+	profile_merge( %profile, %{$tc{$site}{seqexec}{profile}} )
+	    if exists $tc{$site}{seqexec} && exists $tc{$site}{seqexec}{profile};
+
+	$result{in} = basename( ($fn = "$base.in") );
+	open( SEQ, ">$fn" ) || die "ERROR: open $fn: $!\n";
+
+	foreach my $task ( @_ ) {
+	    my %x = apply( $site, %{$task} );
+	    splice( @{$x{argv}}, 1, 0, '-H' ) # insert preamble supression
+		if ( $jobs > 0 && exists $x{kickstart} && $x{kickstart} );
+	    $jobs++;
+	    print SEQ "#\n# ", $task->{tr}, "\n";
+	    print SEQ join( ' ', @{$x{argv}} ), "\n";
+	    $tr{$task->{tr}}++;
+
+	    # merge profiles into one
+	    profile_merge( %profile, %{$x{profile}} ) if exists $x{profile};
+	}
+	close SEQ || die "ERROR: close $fn: $!\n";
+
+	# multi-job single submit file
+	$submit{executable} = $tc{$site}->{seqexec}->{app};
+	$submit{'transfer_executable'} = 'False';
+	$submit{input} = $result{in};
+	$submit{'transfer_input'} = 'True';
+
+	# NEW: hard failure mode for vertical clustering
+	$submit{args} = '-f' if ( scalar(keys %tr) > 1 ); 
+    }
+
+    # merge profile settings into submit settings
+    profile_into_submit( %submit, %profile ) if ( %profile > 0 );
+
+    # write submit file from submit settings
+    write_submitfile( $result{subfn}, %submit );
+
+    %result;
+}
+
+#
+# --- main ------------------------------------------------------
+#
+
+# record how were we called
+if ( $main::debug ) {
+    print STDERR "Debug: Invocation ";
+    foreach my $arg ( File::Spec->rel2abs($0), @save ) {
+	print STDERR " \\\n" if substr($arg,0,1) eq '-';
+	print STDERR " $arg";
+    }
+    print STDERR "\n";
+}
+
+# how shy is the last corpus of being full
+warn( 'Debug: ', $xlate{chunks}, ' chunks * ', $xlate{'chunk_size'}, ' = ',
+      $xlate{chunks} * $xlate{'chunk_size'}, ' -- ', $lines, " lines in corpus\n" );
+
+# 
+# determine local and remote run directories
+#
+do { 
+    $ldir = sprintf 'run%04u', $dirno } 
+while ( ( -e $ldir || -d _ ) && ++$dirno < 1000 );
+die "FATAL: Too many directories, use another (fresh) base directory\n"
+    if ( $dirno >= 1000 );
+mkdir $ldir || die "FATAL: mkdir $ldir: $!\n";
+$rdir = sprintf 'rpds%04u', $dirno;
+warn "Debug: Run directory $ldir -> $rdir\n";
+
+#
+# record settings
+#
+my $fn = File::Spec->catfile( $ldir, 'record.txt' );
+open( RECORD, ">$fn" ) || die "open $fn: $!\n";
+END { close RECORD }		# let functions above also write
+
+print RECORD "#!/bin/sh\n";
+print RECORD "#\n";
+print RECORD "# creation time: ", scalar localtime(), "\n";
+print RECORD "# creation user: $user\n";
+print RECORD "# creation host: ", Sys::Hostname::hostname, "\n";
+print RECORD "# creation path: ", File::Spec->rel2abs($ldir), "\n";
+print RECORD "#\n";
+print RECORD "# language mode  : $mode, $release\n";
+print RECORD "# grammar nts    : $config{nts}\n";
+print RECORD "# language module: $config{lm}\n";
+print RECORD "# basic rule file: $config{rules}\n";
+print RECORD "# model1 invers  : $config{model1inv}\n";
+print RECORD "# model1 normal  : $config{model1nrm}\n";
+print RECORD "# parameter file : $config{param}\n";
+print RECORD "# tstmaster file : $xlate{tstmaster}\n" if $nbest > 1;
+print RECORD "# corpus f.plain : $corpus\n";
+print RECORD "# create f.NE-tag: $create_ne\n";
+print RECORD "# corpus f.NE-tag: $corpus_ne\n" if defined $corpus_ne;
+if ( exists $config{notes} ) {
+    foreach ( @{$config{notes}} ) {
+	chomp;
+	print RECORD "# reminder notes : $_\n";
+    }
+}
+for ( my $i=0; $i < @english; ++$i ) {
+    print RECORD "# gold standard $i: $english[$i]\n";
+}
+foreach my $f ( qw(topk keep_min non_lex_min prob_type) ) {
+    print RECORD "# top-k filtering: $f=$xlate{$f}\n";
+}
+foreach my $f ( sort keys %feature ) {
+    # printf RECORD "# feature weights: %18s=% f\n", $f, $feature{$f};
+    print RECORD "# feature weights: $f=$feature{$f}";
+    print RECORD " (--$decoder{$f})" if exists $decoder{$f};
+    print RECORD "\n";
+}
+
+print RECORD "#\n";
+print RECORD "# chunking method: ", 
+    ( $sorted ? "$xlate{chunks} sorted bins" : 
+      "$xlate{chunks} natural order bins" ), "\n";
+print RECORD "# use green rules: $config{green}\n";
+print RECORD "# ulf green rules: $config{ulf}\n";
+print RECORD "# lex-only rules : $config{nonlex}\n";
+print RECORD "# decoder version: $mike\n";
+print RECORD "# qqot,wei-rb fix: 1\n"; # FIXME!!!!
+
+print RECORD "#\n";
+print RECORD File::Spec->rel2abs($0);
+foreach my $arg ( @save ) {
+    print RECORD " \\\n" if substr($arg,0,1) eq '-';
+    print RECORD " $arg";
+}
+print RECORD "\n\n";
+
+# capture jobs and deps
+my %task = ();
+my %parent = ();
+my @last_task = ();
+
+# 
+# TASK: create remote wdir
+#
+my @task =
+    ( { tr => 'mkdir',
+	arg => [ qw(-m 2755 -p), File::Spec->catdir( $sc{$site}->{workdir}, 
+						     $rdir ) ],
+	profile => { 
+	    condor => { 
+		'remote_initialdir' => undef,
+		'globusscheduler' => $sc{$site}{contact}{transfer}[0] } } } );
+$task{'init'} = { submit( "$ldir/init", $site, @task ) };
+@last_task = ( 'init' );
+
+#
+# make seqexec log into new workdir -- AFTER it has been created
+#
+$tc{$site}{seqexec}{profile}{env}{'SEQEXEC_PROGRESS_REPORT'} =
+    File::Spec->catfile( $sc{$site}->{workdir}, $rdir, 'seqexec.log' );
+
+#
+# TASK: create NE corpus, if creation was requested
+#
+if ( $create_ne ) {
+    @task = 
+	( { tr => 'old-chinese-nematch',
+	    in => "\@{corpus}",
+	    istat => [ "\@{corpus}" ],
+	    out => "\@{corpus_ne}",
+	    ostat => [ "\@{corpus_ne}" ],
+
+	    # must run on gatekeeper due to outside access restrictions
+	    profile => { condor => { 
+		'globusscheduler' => $sc{$site}{contact}{transfer}[0] } } } );
+
+    $task{'nematch'} = { submit( "$ldir/nematch", $site, @task ) };
+    $parent{'nematch'} = [ @last_task ];
+    @last_task = ( 'nematch' );
+}
+
+#
+# TASK: split corpus splits the corpus into N pieces
+#
+if ( defined $corpus_ne ) {
+    @task = 
+	( { tr => 'mkdir', 
+	    arg => [ qw(-m 2755 -p split-corpus split-ne-corpus split-byline) ] } );
+    if ( $sorted ) {
+	push( @task,
+	      { tr => 'sorted-split', 
+		arg => [ '--sort', '@{corpus.map}', 
+			 qw(${chunk_size} @{corpus} split-corpus/corpus. @{corpus_ne} split-ne-corpus/corpus.) ],
+		istat => [ '@{corpus}', '@{corpus_ne}' ],
+		ostat => [ '@{corpus.map}' ] } );
+	      
+    } else {
+	push( @task,
+	      { tr => 'split-corpus', 
+		arg => [ qw(${chunk_size} @{corpus} split-corpus/corpus.) ] },
+	      { tr => 'split-corpus', 
+		arg => [ qw(${chunk_size} @{corpus_ne} split-ne-corpus/corpus.) ] } );
+    }
+} else {
+    @task = 
+	( { tr => 'mkdir', 
+	    arg => [ qw(-m 2755 -p split-corpus) ] } );
+    if ( $sorted ) {
+	push( @task,
+	      { tr => 'sorted-split', 
+		arg => [ '--sort', '@{corpus.map}',
+			 qw(${chunk_size} @{corpus} split-corpus/corpus.) ],
+		istat => [ '@{corpus}' ],
+		ostat => [ '@{corpus.map}' ] } );
+
+    } else {
+	push( @task,
+	      { tr => 'split-corpus', 
+		arg => [ qw(${chunk_size} @{corpus} split-corpus/corpus.) ] } );
+    }
+}
+$task{'split-corpus'} = { submit( "$ldir/split-corpus", $site, @task ) };
+$parent{'split-corpus'} = [ @last_task ];
+@last_task = ( 'split-corpus' );
+
+#
+# add corpus chunks to replica catalog
+#
+for ( my $i=1; $i <= $xlate{chunks}; ++$i ) {
+    my $id = sprintf "%0*d", log10($xlate{chunks}), $i;
+    $rc{$site}{"corpus.$id"} = "split-corpus/corpus.$id";
+    if ( defined $corpus_ne ) {
+	$rc{$site}{"corpus.ne.$id"} = "split-ne-corpus/corpus.$id";
+    } else {
+	# no NE corpus, use plain
+	$rc{$site}{"corpus.ne.$id"} = "split-corpus/corpus.$id";
+    }
+}
+
+#
+# TASK: for each chunks, run the task workflow
+#
+my ($task,%green);
+for ( my $i=1; $i <= $xlate{chunks}; ++$i ) {
+    my $s = sprintf '%0*d', log10($xlate{chunks}), $i;
+    my $wd = File::Spec->catdir( $sc{$site}{'wn_tmp'}, "$user-$s-" . randstr()  );
+    
+    # set cache to include grammar pack in its own production directory
+    $rc{$site}{"grammar-pack-$s"} = File::Spec->catdir( 'grammar-pack', "grammar-pack-$s" );
+
+    @task = 
+	( { tr => 'mkdir', 
+	    arg => [ '-m', '2755', '-p', $wd, 'intermediary', 'logs' ] },
+
+	  { tr => 'disk-free',
+	    arg => [ '-h', $wd ] } );
+
+    if ( ! defined $halfway || $halfway == 1 ) {
+	push( @task,
+	      { tr => 'identity',
+		dir => $wd,
+		istat => [ "\@{corpus.$s}" ],
+		ostat => [ "\@{rules.id1.$s}" ],
+		arg => [ "--infile=\@{corpus.$s}", 
+			 "--outfile=\@{rules.id1.$s}", 
+			 '--xrs-baseid=-100000000' ] },
+
+	      # NEW: 2006-06-02
+	      # Steve's fix for ill identity rules that are covered by Ulf's rules
+	      { tr => 'id-rule-grep',
+		dir => $wd,
+		in => "\@{rules.id1.$s}", 
+		out => "\@{rules.id.$s}", 
+		istat => [ "\@{rules.id1.$s}" ],
+		ostat => [ "\@{rules.id.$s}" ] } );
+
+	#
+	# TASK: if there are any green rules, do some green rules
+	#
+	%green = ();		# which LFNs do we need to combine later
+	if ( $config{green} ) {
+	    die "ERROR: (Old) green rules require an entity-tagged corpus"
+		unless defined $corpus_ne;
+	    my $green_dir = File::Spec->catdir( $wd, "green-rules-$s" );
+	    push( @task,
+		  { tr => 'mkdir', 
+		    dir => $wd,
+		    arg => [ qw(-m 2755 -p), $green_dir ] }, 
+		  { tr => 'green-rules', 
+		    dir => $wd,
+		    arg => [ "\@{corpus.ne.$s}", $green_dir, '1' ],
+		    err => "logs/green-rules-$s.log" },
+		  { tr => 'green-cat', 
+		    dir => $wd,
+		    arg => [ '-c' , '"cat ' . $green_dir . '/rules/entrules.* | sed -e \'s/$/ ne-rules=1/\'"' ],
+		    out => "\@{green.$s.tmp.1}",
+		    err => "!logs/green-rules-$s.log" },
+
+		  # NEW: 2006-06-02
+		  # Steve mentioned I need to post-process old green rules like Ulf's rules	      
+		  { tr => 'remove-occ-ulf',
+		    dir => $wd,
+		    in => "\@{green.$s.tmp.1}",
+		    istat => [ "\@{green.$s.tmp.1}" ],
+		    out => "\@{green.$s.tmp.2}",
+		    err => "logs/remove-occ-ulf-$s.log", 
+		    ostat => [ "\@{green.$s.tmp.2}" ] },
+
+		  { tr => 'sort',
+		    dir => $wd,
+		    arg => [ qw(-u) ],
+		    in => "\@{green.$s.tmp.2}",
+		    istat => [ "\@{green.$s.tmp.2}" ],
+		    ostat => [ "\@{green.$s.cat}" ],
+		    out => "\@{green.$s.cat}" } );
+
+	    $green{"green.cat.$s"} = "\@{green.$s.cat}" unless $config{ulf};
+	}
+
+	if ( $config{ulf} ) {
+	    # add Ulf green rule processing. For Arabic, these are brand-new
+	    # rules, nothing to merge with. For Chinese, Ulf rules merge with
+	    # existing old green rules.
+
+	    # always run Ulf green rule extractor on plain corpus
+	    push( @task,
+		  { tr => 'green-rules-ulf',
+		    arg => [ $ulfmode{$mode} ],
+		    dir => $wd,
+		    in => "\@{corpus.$s}",
+		    istat => [ "\@{corpus.$s}" ],
+		    out => "\@{ulf-rules.$s.tmp.1}",
+		    err => "logs/green-rules-ulf-$s.log",
+		    ostat => [ "\@{ulf-rules.$s.tmp.1}" ] },
+	      
+		  { tr => 'remove-occ-ulf',
+		    dir => $wd,
+		    in => "\@{ulf-rules.$s.tmp.1}",
+		    istat => [ "\@{ulf-rules.$s.tmp.1}" ],
+		    out => "\@{ulf-rules.$s.tmp.2}",
+		    err => "!logs/remove-occ-ulf-$s.log", 
+		    ostat => [ "\@{ulf-rules.$s.tmp.2}" ] },
+
+		  { tr => 'zmove', 
+		    dir => $wd,
+		    tag => 1,	# removable for production
+		    arg => [ "\@{ulf-rules.$s.tmp.1}", "intermediary/ulf-rules.1.$s.gz" ] },
+		  
+		  { tr => 'sort',
+		    dir => $wd,
+		    arg => [ qw(-u) ],
+		    in => "\@{ulf-rules.$s.tmp.2}",
+		    istat => [ "\@{ulf-rules.$s.tmp.2}" ],
+		    ostat => [ "\@{ulf-rules.$s.cat}" ],
+		    out => "\@{ulf-rules.$s.cat}" },
+		  
+		  { tr => 'zmove', 
+		    dir => $wd,
+		    tag => 1,	# removable for production
+		    arg => [ "\@{ulf-rules.$s.tmp.2}", "intermediary/ulf-rules.2.$s.gz" ] } );
+	    $green{"ulf-rules.cat.$s"} = "\@{ulf-rules.$s.cat}";
+
+	    # filter old green rules with new green rules
+	    if ( $config{green} ) {
+		push( @task, 
+		      { tr => 'old-green-rule-filter',
+			dir => $wd,
+			arg => [ "\@{ulf-rules.$s.cat}" ],
+			in => "\@{green.$s.cat}",
+			out => "\@{z-filter.$s.cat}",
+			err => "logs/old-green-rule-filter-$s.log",
+			istat => [ "\@{green.$s.cat}" ],
+			ostat => [ "\@{z-filter.$s.cat}" ] },
+
+		      { tr => 'zmove', 
+			dir => $wd,
+			tag => 1,	# removable for production
+			arg => [ "\@{green.$s.cat}", "intermediary/green.cat.$s.gz" ] } );
+		$green{"filter.cat.$s"} = "\@{z-filter.$s.cat}";
+	    }
+	}
+
+	if ( defined $halfway ) {
+	    # short-cut: skip corpus filter by re-using a previous filtering
+	    # from a different directory on the remote shared space. This will
+	    # shave significant processing time to find bugs in the later stages
+	    # of the pipeline.
+	    # FIXME: This is not cross-site portable. 
+ 	    my $rulegz = File::Spec->catfile( $halfwaypath, "rules.cf.$s.gz" );
+	    push( @task, 
+		  { tr => 'gunzip',
+		    dir => $wd,
+		    in  => $rulegz, 
+		    out => "\@{rules.cf.$s}",
+		    istat => [ $rulegz ],
+		    ostat => [ "\@{rules.cf.$s}" ] } );
+	} else {
+	    # long-way: do corpus filtering (default action)
+	    push( @task,
+		  { tr => 'corpus-filter', 
+		    dir => $wd,
+		    arg => [ '--infile', $config{rules}, '--test-corpus', "\@{corpus.$s}" ],
+		    istat => [ $config{rules}, "\@{corpus.$s}" ],
+		    out => "\@{rules.cf.$s}",
+		    err => "logs/corpus-filter-$s.log" } );
+	}
+
+	push( @task,
+	      { tr => 'malformed-rules',
+		in => "\@{rules.cf.$s}", 
+		dir => $wd,
+		out => "\@{rules.mr.$s}",
+		err => "logs/malformed-rules-$s.log" },
+	      
+	      { tr => 'zmove', 
+		dir => $wd,
+		tag => 1,	# removable for production
+		arg => [ "\@{rules.cf.$s}", "intermediary/rules.cf.$s.gz" ] },
+	      
+	      { tr => 'beam-pruning', 
+		dir => $wd,
+		out => "\@{rules.bp.$s}", 
+		err => "logs/beam-pruning-$s.log",
+		istat => [ "\@{rules.mr.$s}" ],
+		arg => [ '--infile', "\@{rules.mr.$s}", 
+			 '--k', '${topk}',
+			 '--prob-type', '${prob_type}', 
+			 '--keep-min', '${keep_min}',
+			 '--non-lex-min-count', '${non_lex_min}' ] },
+	      
+	      { tr => 'zmove',
+		dir => $wd,
+		tag => 1,
+		arg => [ "\@{rules.mr.$s}", "intermediary/rules.mr.$s.gz" ] } );
+
+
+	if ( $config{nonlex} ) {
+	    # adding non-lexicalized rule filter
+	    push( @task, 
+		  { tr => 'non-lexical',
+		    dir => $wd,
+		    arg => [ '-f-lex' ],
+		    in => "\@{rules.bp.$s}",
+		    out => "\@{rules.nlr.$s}",
+		    err => "logs/non-lexical-$s.log" },
+		  { tr => 'zmove',
+		    dir => $wd,
+		    tag => 1,
+		    arg => [ "\@{rules.bp.$s}", "intermediary/rules.bp.$s.gz" ] } );
+	    
+	    # which rules to combine
+	    my @arg = ( "\@{rules.nlr.$s}" );
+	    push( @arg, sort values %green ) if ( scalar %green );
+	    push( @arg, "\@{rules.id.$s}" );
+	    
+	    push( @task,
+		  { tr => 'combine',
+		    dir => $wd,
+		    istat => [ @arg ],
+		    arg => [ @arg ],
+		    out => "\@{rules.cmb.$s}",
+		    err => "logs/combine-$s.log" },
+		  { tr => 'zmove',
+		    dir => $wd,
+		    tag => 1,
+		    arg => [ "\@{rules.nlr.$s}", "intermediary/rules.nlr.$s.gz" ] },
+		  { tr => 'zmove',
+		    dir => $wd,
+		    tag => 1,
+		    arg => [ "\@{rules.id.$s}", "intermediary/rules.id.$s.gz" ] } );
+	} else {
+	    # no non-lexicalized rule filter
+	    
+	    # which rules to combine
+	    my @arg = ( "\@{rules.bp.$s}" );
+	    push( @arg, sort values %green ) if ( scalar %green );
+	    push( @arg, "\@{rules.id.$s}" );
+	    
+	    push( @task, 
+		  { tr => 'combine',
+		    dir => $wd,
+		    istat => [ @arg ],
+		    arg => [ @arg ],
+		    out => "\@{rules.cmb.$s}",
+		    err => "logs/combine-$s.log" },
+		  { tr => 'zmove',
+		    dir => $wd,
+		    tag => 1,
+		    arg => [ "\@{rules.bp.$s}" ,"intermediary/rules.bp.$s.gz" ] },
+		  { tr => 'zmove',
+		    dir => $wd,
+		    tag => 1,
+		    arg => [ "\@{rules.id.$s}", "intermediary/rules.id.$s.gz" ] } );
+	}
+
+	foreach my $green ( keys %green ) {
+	    # may not be executed at all
+	    push( @task,
+		  { tr => 'zmove',
+		    dir => $wd,
+		    tag => 1,
+		    arg => [ $green{$green}, "intermediary/$green.gz" ] } );
+	}
+    } elsif ( defined $halfway && $halfway == 2 ) {
+	# short-cut: skip corpus filter thru combine by re-using a previous 
+	# filtering from a different directory on the remote shared space. 
+	# This will shave significant processing time to find bugs in the 
+	# later stages of the pipeline.
+	# FIXME: This is not cross-site portable. 
+	my $rulegz = File::Spec->catfile( $halfwaypath, "rules.cmb.$s.gz" );
+	push( @task, 
+	      { tr => 'gunzip',
+		dir => $wd,
+		in  => $rulegz, 
+		out => "\@{rules.cmb.$s}",
+		istat => [ $rulegz ],
+		ostat => [ "\@{rules.cmb.$s}" ] } );
+    }
+    #
+    # post-condition: rules.cmb.$s contains now the combined rules from
+    # the different processing lines:
+    # [1] identity rules
+    # [2] main line from GHKM rule file
+    # [3] green rules (option for Arabic w/!Ulf)
+    #
+
+    if ( ! defined $halfway || $halfway < 3 ) {
+	push( @task, 
+	      { tr => 'bin-filter',
+		dir => $wd,
+		arg => [ '-f' ],
+		in => "\@{rules.cmb.$s}",
+		out => "\@{rules.bif.$s}",
+		err => "logs/bin-filter-$s.log" },
+	      { tr => 'zmove',
+		dir => $wd,
+		tag => 1,
+		arg => [ "\@{rules.cmb.$s}", "intermediary/rules.cmb.$s.gz" ] },
+
+	      # new decoder weight format after bin filtering
+	      { tr => 'weight-format',
+		dir => $wd,
+		arg => [ '--input', "\@{rules.bif.$s}",
+			 '--output', "\@{rules.wf.$s}",
+			 '--use-glue', 'true' ],
+		err => "logs/weight-format-$s.log" },
+	      { tr => 'zmove',
+		dir => $wd,
+		tag => 1,
+		arg => [ "\@{rules.bif.$s}", "intermediary/rules.bif.$s.gz" ] },
+
+	      # model1 steps between weight format and "true" binarization
+	      { tr => 'model1-invers',
+		dir => $wd,
+		arg => [ $config{model1inv} ],
+		in => "\@{rules.wf.$s}",
+		out => "\@{rules.m1i.$s}",
+		err => "logs/model1-invers-$s.log" },
+	      { tr => 'zmove',
+		dir => $wd,
+		tag => 1,
+		arg => [ "\@{rules.wf.$s}", "intermediary/rules.wf.$s.gz" ] },
+	      { tr => 'model1-normal',
+		dir => $wd,
+		arg => [ $config{model1nrm} ],
+		in => "\@{rules.m1i.$s}",
+		out => "\@{rules.m1n.$s}",
+		err => "logs/model1-normal-$s.log" },
+	      { tr => 'zmove',
+		dir => $wd,
+		tag => 1,
+		arg => [ "\@{rules.m1i.$s}", "intermediary/rules.m1i.$s.gz" ] },
+
+	      # binarization
+	      { tr => 'binarization',
+		dir => $wd,
+		arg => [],
+		in => "\@{rules.m1n.$s}",
+		out => "\@{rules.bin.$s}",
+		err => "logs/binarization-$s.log" },
+	      { tr => 'zmove',
+		dir => $wd,
+		tag => 1,
+		arg => [ "\@{rules.m1n.$s}", "intermediary/rules.m1n.$s.gz" ] },
+
+	      # unknown word rules
+	      { tr => 'unknown-adder',
+		dir => $wd,
+		arg => [ '-r', "\@{rules.bin.$s}",
+			 '-f', "\@{corpus.$s}", 
+			 '-c', 'true',
+			 '-o', "\@{rules.uwr.$s}" ],
+		err => "logs/unknown-adder-$s.log",
+		istat => [ "\@{rules.bin.$s}", "\@{corpus.$s}" ],
+		ostat => [ "\@{rules.uwr.$s}" ] },
+	      { tr => 'zmove',
+		dir => $wd,
+		tag => 1,
+		arg => [ "\@{rules.bin.$s}", "intermediary/rules.bin.$s.gz" ] },
+
+	      # independent archiver replaces grammar packing
+	      { tr => 'archive-grammar',
+		dir => $wd,
+		arg => [ '-i', "\@{rules.uwr.$s}",
+			 '-o', "\@{rules.gar.$s}" ],
+		err => "logs/archive-grammar-$s.log",
+		istat => [ "\@{rules.uwr.$s}" ],
+		ostat => [ "\@{rules.gar.$s}" ] },
+	      { tr => 'zmove',
+		dir => $wd,
+		tag => 1,
+		arg => [ "\@{rules.uwr.$s}", "intermediary/rules.uwr.$s.gz" ] },
+	      { tr => 'zmove',
+		dir => $wd,
+		tag => 1,
+		arg => [ "\@{rules.gar.$s}", "intermediary/rules.gar.$s.gz" ] },
+	      { tr => 'rm',
+		arg => [ '-rf', $wd ] } );
+
+	$task{"rule-prep-$s"} = { submit( "$ldir/rule-prep-$s", $site, @task ) };
+	$parent{"rule-prep-$s"} = [ @last_task ];
+	push( @{$parent{"rule-prep-$s"}}, 'green' ) if exists $task{'green'};
+
+	#
+	# TASK: decode
+	#
+	@task = 
+	    ( { tr => 'mkdir', 
+		arg => [ '-m', '2755', '-p', $wd ] } );
+    } elsif ( $halfway == 3 ) {
+	# 
+	# short-cut directly to the decoder. Symlink .gar file
+	#
+	push( @task, 
+	      { tr => 'link',
+		arg => [ '-s', 
+			 File::Spec->catfile( $halfwaypath, "rules.gar.$s.gz" ),
+			 "intermediary/rules.gar.$s.gz" ] } );
+    } else {
+	die "FATAL: This code branch must not happen";
+    }
+
+    if ( defined $corpus_ne ) {
+	# by-line splitting
+	push( @task, 
+	      { tr => 'split-byline',
+		in => "\@{corpus.ne.$s}",
+		out => "logs/byline-split-$s.log",
+		err => "logs/byline-split-$s.log",
+		dir => $wd,
+		arg => [ '--translated-to', "\@{$user-byline.$s}",
+			 '--untranslated-to', "\@{$user-corpus.$s}"
+                           ,'--consumed-to', "\@{$user-foreign-byline.$s}"
+                       ] } );
+    } else {
+	# regular preparations
+	push( @task,
+	      { tr => 'sentence-processing',
+		in => "\@{corpus.$s}",
+		dir => $wd,
+		out => "\@{$user-corpus.$s}",
+		err => "logs/sentence-processing-$s.log" } );
+    }
+    
+    push( @task,
+	  { tr => 'gunzip',
+	    dir => $wd,
+	    in  => "intermediary/rules.gar.$s.gz",
+	    out => "\@{rules.gar.$s}",
+	    istat => [ "intermediary/rules.gar.$s.gz" ],
+	    ostat => [ "\@{rules.gar.$s}" ] },
+
+	  { tr => 'decoder',
+	    out => "\@{decoder-$s.log}",
+	    err => "\@{decoder-$s.log}",
+	    # istat => [ '${nts_file}', "\@{sp-corpus.$s}", "\@{rules.gar-pack-$s}" ],
+	    arg => [ '--grammar-archive', "\@{rules.gar.$s}",
+		     '--foreign', "\@{$user-corpus.$s}",
+		     '--use-cube-heap', 'true',
+#		     '--weight-string', '\'${feature:all}' . ',text-length:${feature:text-length}\'',
+		     '--weight-string', '\'${feature:all}\'',
+		     '--weight-lm-ngram', '${feature:lm-cost}',
+#		       '--weight-text-length', '${feature:text-length}',
+		     '--nbests', '25000',
+		     '--prior-file', '${nts_file}',
+		     '--prior-bonus-count', '100',
+		     '--lm-ngram', '${lm}',
+		     '--quote-never', 'true'
+                     ,'--tag-span-max-edges',$tag_hist,
+                     ,'--virt-span-max-edges',$virt_hist,
+                     ,'--cube-heap-fuzz-exp',$cube_fuzz,
+                     ,'--span-max-edges',$tag_hist+$virt_hist,
+                     @decoder_options
+                   ] } );
+
+    if ( defined $corpus_ne ) {
+	# by-line merging
+	push( @task, 
+	      { tr => 'mv',
+		dir => $wd,
+		arg => [ "\@{decoder-$s.log}", "\@{decoder-$s.tmp}" ],
+		istat => [ "\@{decoder-$s.log}" ],
+		ostat => [ "\@{decoder-$s.tmp}" ] },
+
+	      { tr => 'paste-byline',
+		in => "\@{decoder-$s.tmp}",
+		dir => $wd,
+		arg => [ '--translated-from', "\@{$user-byline.$s}",
+			 '--output', "\@{decoder-$s.log}" ],
+		out => "logs/byline-paste-$s.log",
+		err => "logs/byline-paste-$s.log" } );
+    }
+
+    push( @task,
+	  { tr => 'rm',
+	    arg => [ '-rf', $wd ] } );    
+
+    $task{"decoder-$s"} = { submit( "$ldir/decoder-$s", $site, @task ) };
+    $parent{"decoder-$s"} = [ ( defined $halfway && $halfway == 3 ) ? 
+			      @last_task : "rule-prep-$s" ];
+}
+@last_task = grep { /^decoder-\d+/ } keys %task;
+
+#
+# TASK: run the extract 1-best, combine, and (optionally) score
+#
+@task = ();
+my @istat = ();
+my @arg = ();
+for ( my $i=1; $i <= $xlate{chunks}; ++$i ) {
+    my $s = sprintf '%0*d', log10($xlate{chunks}), $i;
+    push( @task, { tr => 'extract-hypothesis',
+		   arg => [ '--infile', "\@{decoder-$s.log}" ],
+		   istat => [ "\@{decoder-$s.log}" ],
+		   err => "logs/hypothesis-$s.log",
+		   out => "\@{translation-$s.out}" } );
+    push( @arg, "\@{translation-$s.out}" );
+    push( @istat, "\@{translation-$s.out}" );
+}
+
+if ( $sorted ) {
+    push( @task, 
+	  { tr => 'sorted-merge', 
+	    arg => [ '--map', '@{corpus.map}', @arg ], 
+	    istat => [ @istat, '@{corpus.map}' ],
+	    out => '@{1best.hyp}' } );
+} else {
+    push( @task, 
+	  { tr => 'cat', 
+	    arg => [ @arg ], 
+	    istat => [ @istat ],
+	    out => '@{1best.hyp}' } );
+}
+
+push( @task, 
+      { tr => 'count-empty',
+	out => '@{empty.out}',
+	istat => [ '@{1best.hyp}' ],
+	arg => [ '@{1best.hyp}' ] } );
+
+if ( @english > 0 ) {
+    # only BLEU sore, if gold standards are known
+    push( @task, 
+	  { tr => 'bleu-score', 
+	    out => '@{score.out}', 
+	    istat => [ @english, '@{1best.hyp}' ],
+	    arg => [ @english, qw(-hyp @{1best.hyp} -bleu -bleuNistVersion) ] } );
+} else {
+    warn "Info: Skipping BLEU scoring task (no gold standards)\n"
+	if ( $main::debug );
+}
+$task{'1best'} = { submit( "$ldir/1best", $site, @task ) };
+$parent{'1best'} = [ @last_task ];
+@last_task = ( '1best' );
+
+if ( $nbest > 1 ) {
+    # 
+    # TASK: run the extract k-best, combine, no scoring here
+    #
+    @task = ( { tr => 'mkdir',
+		arg => [ qw(-m 2755 -p n-best) ] } );
+    my @suffix = ( qw(bnd deriv evcb feats fvcb grammar hyp log_prob phrasal_tran_bnd) );
+    my %arg = ();
+    for ( my $i=1; $i <= $xlate{chunks}; ++$i ) {
+	my $s = sprintf '%0*d', log10($xlate{chunks}), $i;
+	push( @task,
+	      { tr => 'run-one-nbest',
+		arg => [ '-c', defined $corpus_ne ? "\@{corpus.ne.$s}" : "\@{corpus.$s}",
+			 '-r', "intermediary/rules.wf.$s.gz",
+			 '--chunk-size', $xlate{'chunk_size'},
+			 '--this-chunk', $i,
+			 '-P', "n-best/corpus.$s",
+			 "\@{decoder-$s.log}" ],
+		out => "n-best/corpus.$s.out",
+		err => "n-best/corpus.$s.err" } );
+
+	foreach my $suffix ( @suffix ) {
+	    push( @{$arg{$suffix}}, "n-best/corpus.$s.$suffix" );
+	}
+    }
+    
+    # concatinate all important intermediary results
+    for my $suffix ( qw(hyp log_prob phrasal_tran_bnd feats) ) {
+	if ( $suffix eq 'log_prob' ) {
+	    if ( $sorted ) {
+		push( @task,
+		      { tr => 'cut-reorder',
+			arg => [ '--map', '@{corpus.map}', @{$arg{$suffix}} ],
+			out => "\@{$suffix.final}" } );
+	    } else {
+		push( @task,
+		      { tr => 'cat',
+			arg => [ @{$arg{$suffix}} ],
+			out => "\@{$suffix.final}" } );
+	    }
+	} else {
+	    if ( $sorted ) {
+		push( @task,
+		      { tr => 'cut-reorder',
+			arg => [ '--map', '@{corpus.map}', '--cut', 
+				 @{$arg{$suffix}} ],
+			out => "\@{$suffix.final}" } );
+	    } else {
+		push( @task,
+		      { tr => 'cat',
+			arg => [ @{$arg{$suffix}} ],
+			out => "\@{$suffix.tmp}" },
+
+		      { tr => 'cut',
+			in => "\@{$suffix.tmp}",
+			arg => [ '-f', '2-' ],
+			out => "\@{$suffix.final}" } );
+	    }
+	}
+    }
+
+    # drop weights into one file
+    push( @task,
+	  { tr => 'echo',
+	    arg => [ 'xrs-fields', '${feature:__all__}', ],
+	    out => "\@{weights.txt}" } );
+
+    # sgmlize these
+    push( @task,
+	  { tr => 'sgmlize',
+	    arg => [ '--new',
+		     '--tstmaster', $xlate{tstmaster},
+		     '--score', "\@{log_prob.final}",
+		     '--hyp', "\@{hyp.final}",
+		     '--bnd', "\@{phrasal_tran_bnd.final}",
+		     '--weight-file', "\@{weights.txt}",
+		     '--feat-file', "\@{feats.final}" ],
+	    out => "\@{final.sgml}",
+	    err => "logs/final.err" } );
+
+    $task{'nbest'} = { submit( "$ldir/nbest", $site, @task ) };
+    # $parent{'nbest'} = [ grep { /^decoder-\d+/ } keys %task ];
+    $parent{'nbest'} = [ @{$parent{'1best'}} ];
+    push( @last_task, 'nbest' );
+}
+
+#
+# TASK: email results
+#
+if ( @english > 0 ) {
+    my $tmp = File::Spec->catdir( $sc{$site}{'wn_tmp'}, "$user-" . randstr() . '.txt' );
+    @task = 
+	( { tr => 'cat',
+	    arg => [ '@{score.out}', '@{empty.out}' ],
+	    istat => [ '@{score.out}', '@{empty.out}' ],
+	    ostat => [ $tmp ],
+	    out => $tmp },
+
+	  { tr => 'mail',
+	    arg => [ '-s', "\'Results from $ldir\'", "$user\@isi.edu" ],
+	    in => $tmp,
+	    istat => [ $tmp ],
+	    profile => { condor => { 'globusscheduler' => $sc{$site}{contact}{transfer}[0] } } },
+
+	  { tr => 'rm',
+	    istat => [ $tmp ],
+	    arg => [ $tmp ] } );
+
+    $task{'result'} = { submit( "$ldir/result", $site, @task ) };
+    # $parent{'result'} = [ @last_task ];
+    # @last_task = ( 'result' );
+    $parent{'result'} = [ '1best' ];
+    foreach ( @last_task ) { $_ = 'result' if $_ eq '1best' }
+} else {
+    warn "Info: Skipping result mailing task (no scores)\n"
+	if ( $main::debug );
+}
+
+# 
+# write the dag file
+#
+my $dagfn = File::Spec->catfile( $ldir, 'rpds.dag' );
+open( DAG, ">$dagfn" ) || die "FATAL: open $dagfn: $!\n";
+
+# preamble
+print DAG "# version : $main::version\n";
+print DAG "# created : ", POSIX::strftime( "%Y-%m-%dT%H:%M:%SZ", gmtime() ), "\n";
+print DAG "# creator : $user\n";
+print DAG "# basedir : ", dirname( File::Spec->rel2abs($dagfn) ), "\n";
+print DAG "# filename: ", basename($dagfn), "\n";
+print DAG "#\n\n";
+
+print DAG "#\n# job descriptions\n#\n";
+@task = sort { $task{$a}->{id} <=> $task{$b}->{id} } keys %task;
+my %id = ();
+for ( my $i=0; $i < @task; ++$i ) {
+    my $id = sprintf 'ID%0*u', log10(@task), $task{$task[$i]}->{id};
+    $id{$task[$i]} = 0 ? $id : ($id = $task[$i]);
+    printf DAG "JOB %s %s\n", $id, basename( $task{$task[$i]}{subfn} );
+    printf DAG "SCRIPT POST %s %s -n -e %s\n", $id, $exitpost, $task{$task[$i]}{out};
+    printf DAG "RETRY %s $dagman_retries UNLESS-EXIT 42\n\n", $id;
+}
+
+print DAG "\n#\n# job dependencies\n#\n";
+foreach my $parent ( sort keys %parent ) {
+    @task = sort { $task{$a}->{id} <=> $task{$b}->{id} } @{$parent{$parent}};
+    print DAG "PARENT ", join(' ', map { $id{$_} } @task), ' CHILD ', $id{$parent}, "\n";
+}
+close DAG;
+
+exit 0;

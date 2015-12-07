@@ -1,0 +1,12 @@
+import type ; 
+type.register-suffixes C : CPP ;
+
+project gzstream
+  : requirements <include>.
+  : usage-requirements <include>.
+  ;
+
+lib gzstream
+  : gzstream.C
+    /site-config//z
+  ;

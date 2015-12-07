@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+SRCDIR=$(dirname $BASH_SOURCE)
+. $SRCDIR/../start-python.sh
+
+$SRCDIR/mergeconfig.py $($SRCDIR/gatherconfig)

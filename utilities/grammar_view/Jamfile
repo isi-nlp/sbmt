@@ -1,0 +1,17 @@
+import sbmt-util ;
+import package ;
+
+
+project grammar_view ;
+
+exe grammar_view
+  : grammar_view.cpp
+    ..//grammar_args
+    ..//sbmt
+    ..//boost_program_options
+    ..//graehl
+    ..//xrsparse
+  : <include>.. 
+  ;
+
+sbmt-util.install install : : grammar_view ;

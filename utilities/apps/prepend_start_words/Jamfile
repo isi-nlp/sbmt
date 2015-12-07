@@ -1,0 +1,5 @@
+exe prepend_start_words
+  : prepend_start_words.cpp
+    /gusc//gusc
+    /boost/program_options//boost_program_options
+  ;

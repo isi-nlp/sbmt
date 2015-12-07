@@ -1,0 +1,1 @@
+NP-C(NPB(DT("the") x0:JJ x1:CD x2:NNS) x3:PP) ->  x3 x0 x1 x2 ### id=1

@@ -1,0 +1,11 @@
+import sbmt-util ;
+import python ;
+
+python-extension _lattice
+  : lib/lattice_py.cpp
+    /boost/python//boost_python/
+    ../gusc//gusc
+  : <link>shared
+  :
+  : /boost/python//boost_python
+  ;

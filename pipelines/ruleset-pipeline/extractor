@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import sys
+import subprocess
+import itertools
+
+def get_args(opts):
+    args = '-x - -t radu-new'.split() 
+    args += opts['option-string'].split()
+    args += ['-l', '%s:%s' %(opts['node-limit'],opts['compose-limit'])]
+    args += ('-G - -g %s' % opts['wsd-size']).split()
+    return args
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-n',dest='name',nargs='*',default=[])
+parser.add_argument('-s',dest='subcorpora',action='store_true')
+parser.add_argument('-c',dest='config',default='',nargs='?')
+parser.add_argument('-m',dest='models',nargs='*',default=[])
+
+d = parser.parse_args()
+
+config = cfg.load_config(d.config)
+steps = cfg.steps(config,d.models)
+
+execs = {}
+for step in steps:
+    if step.stage == 'ghkm':
+        execs[step.name] = step.execute
+
+ext = config['rule-extraction']['extractor']
+opts = config['rule-extraction']['extraction-options']
+if 'subcorpora' in opts:
+    for k,v in opts['subcorpora'].iteritems():
+        opts['subcorpora'][k] = cfg.merge_configs(v,opts)
+
+xline = 0
+for line in sys.stdin:
+    part = line.strip().split('\t')
+    etree,fstr,align = part[0],part[1],part[2]
+    args = []
+    if d.subcorpora:
+        args = get_args(opts['subcorpora'][part.pop()])
+    else:
+        args = get_args(opts)
+    part = part[3:]
+    print >> sys.stderr, ' '.join([ext]+args)
+    extract = subprocess.Popen([ext]+args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=open('/dev/null'))
+    rules, _ = extract.communicate("\n".join([etree,fstr,align,""]))
+    
+    rules = rules.strip().split('\n')
+    for name,p in itertools.izip(d.name,part):
+        if len(rules):
+            data = '\n'.join('\t'.join([str(xline),etree,fstr,align,p,rule]) for rule in rules)
+            augment = subprocess.Popen([execs[name]], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            newrules,_ = augment.communicate(data)
+            if newrules:
+                rules = [ r for r in newrules.strip().split('\n') ]
+            else:
+                rules = []
+    for r in rules:
+        print r
+    xline += 1
+
+

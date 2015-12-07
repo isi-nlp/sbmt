@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+from __future__ import with_statement
+import threading, os, re, sys, subprocess as sprc
+print >> sys.stderr, 'FEED:', sys.version
+rank = os.getenv('OMPI_COMM_WORLD_RANK','?')
+sys.stderr.write('FEED:' + '|'.join(sys.argv) + '\n')
+subproc = sprc.Popen(sys.argv[1:],stdin=sprc.PIPE,stdout=sprc.PIPE)
+lock = threading.Lock()
+def log(f):
+    sys.stderr.write('FEED[%s]: %s\n' % (rank,f))
+
+def send():
+    try:
+        while True:
+            log('send waiting for line')
+            line = sys.stdin.readline()
+            log('sending line=%s...' % line[:256])
+            if line == '':
+                break
+            instruct = open(line.rstrip())
+            for ln in instruct:
+                    with lock:
+                        subproc.stdin.write(ln)
+            instruct.close()
+        with lock:
+            subproc.stdin.close()
+    except Exception as e:
+        sys.stderr.write('FEED: exception in send: %s' % e)
+        pass
+
+def recv():
+    try:
+        id=re.compile(r'sent=([0-9]*)')
+        while True:
+            log('recv line')
+            line = subproc.stdout.readline()
+            log('recv line=%s...' % line[:256])
+            if line == '':
+                break
+            m = id.search(line)
+            sys.stdout.write('%s\t%s' % (m.group(1),line))
+        with lock:
+            subproc.stdin.close()
+            log('waiting to close proc')
+            subproc.wait()
+    except Exception as e:
+        log('exception in recv: %s' % e)
+        pass
+    log('recv ending')
+
+tsend = threading.Thread(target=send)
+tsend.daemon = True
+tsend.start()
+recv()
+sys.exit(subproc.returncode)

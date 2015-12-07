@@ -1,0 +1,32 @@
+---------------------
+treelib: Tree Library
+Bryant Huang
+---------------------
+version 1.0.0 (2/20/2007):
+	- made the code recoginize (__LW_AT_ tokenes in leaves.
+      by passing terminal information to TreeNode constructor.
+
+version 0.2.3 (7/8/2004):
+	- added tokenization conversion functions for PTB <-> decoder
+	- now possible to disable automatic lowercasing
+	- added function for printing only leaves
+	- updated test files to demonstrate new functionality
+	- added debugging flags in build scripts
+
+version 0.2.2.1 (6/29/2004):
+	- created a more detailed error message for propagateHeadInfo()
+	- moved using namespace * from TreeNode.h to TreeNode.cpp
+	- FIX: readCollins() was not handling "//NN" properly, since the first occurrence of '/' was used as a divider; now the last occurrence is used
+	
+version 0.2.2 (6/24/2004):
+	- FIX: separated TreeNode declaration and definition code into include/treelib/TreeNode.h and src/treelib/TreeNode.cpp
+	- FIX: friend operator<< functions were not correctly placed in treelib namespace
+	- tree leaves read in as lowercase automatically
+	
+version 0.2.1 (6/22/2004):
+	- relocated include/* header files to include/treelib/*
+	- placed Tree* classes into treelib namespace
+	- updated test files and documentation to reflect these changes
+
+version 0.2 (6/21/2004):
+	- first general release

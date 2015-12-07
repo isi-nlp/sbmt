@@ -1,0 +1,15 @@
+import sbmt-util ;
+project archive_grammar ;
+
+exe archive_grammar
+  : archive_grammar.cpp 
+    /graehl//graehl
+    /sbmt_decoder//sbmt
+    /boost/program_options//boost_program_options
+    /world//pthread
+  ;
+  
+sbmt-util.install install
+  : 
+  : archive_grammar
+  ;

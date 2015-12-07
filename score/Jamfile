@@ -1,0 +1,15 @@
+import sbmt-util ;
+
+project score : requirements <include>. ;
+
+exe scoreTranslation
+  : scoreTranslation.cc
+  ;
+
+sbmt-util.install install 
+ : # no directives
+ : scoreTranslation 
+ : # no libs
+ : # no headers
+ : bleu.pl
+ ;  

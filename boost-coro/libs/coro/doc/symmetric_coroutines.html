@@ -1,0 +1,225 @@
+<html><head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title> Symmetric coroutines</title>
+<link rel="stylesheet" href="files/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.70.1">
+<link rel="start" href="index.html" title="Chapter&nbsp;1.&nbsp;Boost.Coroutine">
+<link rel="up" href="advanced.html" title=" Advanced concepts">
+<link rel="prev" href="advanced.html" title=" Advanced concepts">
+<link rel="next" href="finite_state_machines.html" title=" Finite state machines">
+</head><body link="#0000ff" alink="#0000ff" bgcolor="white" text="black" vlink="#840084">
+<table width="100%" cellpadding="2">
+<tbody><tr><td valign="top"><img alt="boost.png (6897 bytes)" src="files/boost.png" width="277" height="86"></td>
+<td align="center"><a href="http://www.boost.org/">Home</a></td>
+<td align="center"><a href="http://www.boost.org/doc/libs">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="http://www.boost.org/users/index.html">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="advanced.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="advanced.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="finite_state_machines.html"><img src="files/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="coroutine.symmetric_coroutines"></a> Symmetric coroutines</h3></div></div></div>
+<a name="symmetric_coroutines.introduction"></a><h4>
+<a name="id2618379"></a>Introduction</h4>
+<p>
+The type of coroutines we have described so far is usually referred as
+<span class="emphasis"><em>asymmetric</em></span>. The asymmetry is due to the fact that the caller/callee
+relation between a coroutine's context and caller's context is
+fixed. The control flow must necessarily go from the caller context to
+the coroutine context and back to the caller. In this model a
+coroutine <span class="bold"><strong>A</strong></span> can obviously call coroutine <span class="bold"><strong>B</strong></span>, but <span class="bold"><strong>A</strong></span> becomes the
+caller. <span class="bold"><strong>B</strong></span> cannot directly yield to the caller of <span class="bold"><strong>A</strong></span> but must
+relinquish control to <span class="bold"><strong>A</strong></span> by yielding. For example, this control flow is not
+possible for example:</p>
+<a name="symmetric_example"></a><p></p>
+<pre class="programlisting"><code class="literal"><span class="bold"><strong>A</strong></span> yield to <span class="bold"><strong>B</strong></span> yield to <span class="bold"><strong>C</strong></span> yield to <span class="bold"><strong>A</strong></span> yield to <span class="bold"><strong>B</strong></span> ... etc
+</code></pre>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/caution.png"></span> This is not completely true. We will <a href="symmetric_coroutines.html#symmetric_coroutines.symmetric_and_asymmetric_coroutine_transformation">show</a> a code transformation that demonstrates how <span class="emphasis"><em>asymmetric</em></span> coroutines have the same
+expressive power of <span class="emphasis"><em>symmetric</em></span> coroutines.</td></tr></tbody>
+</table></div>
+<p>
+Control flow with <span class="emphasis"><em>symmetric</em></span> coroutines instead is not stack-like. A
+coroutine can always yield freely to any other coroutine and is not
+restricted to return to its caller. The <a href="symmetric_coroutines.html#symmetric_example">previous</a> control flow is possible.</p>
+<a name="symmetric_coroutines.syntax"></a><h4>
+<a name="id2618533"></a>Syntax</h4>
+<p>
+While <span class="emphasis"><em>asymmetric</em></span> coroutines are the main abstraction provided by
+Boost.Coroutine, a <span class="emphasis"><em>symmetric</em></span> coroutine facility is also provided.</p>
+<p>
+The <a href="">coroutine</a> class template has a <code class="computeroutput"><a href="">yield_to</a><span class="special">()</span></code> member
+function that stops the current coroutine and yields
+control to a different <a href="">coroutine</a>. It works exactly like
+<code class="computeroutput"><a href="">yield</a><span class="special">()</span></code>, except that the control is not returned to the caller
+but is given to another coroutine, specified as the first
+argument. The target coroutine can be any other coroutine as long as
+one of these conditions is true:</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+Has not been started yet.
+</li>
+<li>
+Is stopped in a call to <code class="computeroutput"><a href="">yield</a></code>.
+</li>
+<li>
+Is stopped in a call to <code class="computeroutput"><a href="">yield_to</a></code>.
+</li>
+</ul></div>
+<p>
+From the above conditions it follows that a <a href="">coroutine</a> can yield to
+itself (in this case <code class="computeroutput"><a href="">yield_to</a></code> is as if had returned immediately).</p>
+<p>
+If  coroutine  <span class="bold"><strong>A</strong></span>  yields to coroutine <span class="bold"><strong>B</strong></span>, the caller
+of <span class="bold"><strong>A</strong></span> becomes the caller of <span class="bold"><strong>B</strong></span>. If <span class="bold"><strong>B</strong></span> ever does a normal yield, the
+control is given back to the caller of <span class="bold"><strong>A</strong></span>.</p>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/caution.png"></span> Do not confuse <span class="emphasis"><em>calls</em></span> with <span class="emphasis"><em>yields to</em></span>. The first
+verb implies an invocation of <code class="computeroutput"><a href="">coroutine</a><span class="special">::</span><span class="keyword">operator</span><span class="special">()</span></code>, while the
+second an invocation of <code class="computeroutput"><a href="">coroutine</a><span class="special">::</span><a href="">yield_to</a></code>. A coroutine
+that yields to a second <span class="bold"><strong>does not</strong></span> call the second one.</td></tr></tbody>
+</table></div>
+<p>
+As Boost.Coroutine strives for type safety, it requires that the return type
+of the yielded coroutine be the same of the yielder. For example,
+given these three coroutines:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">typedef</span>&nbsp;<a href="">coroutine</a><span class="special">&lt;</span><span class="keyword">int</span><span class="special">(</span><span class="keyword">char</span><span class="special">*,</span><span class="keyword"> float</span><span class="special">&amp;)&gt;</span><span class="identifier"> coroutine1_type</span><span class="special">;</span><span class="keyword">
+typedef</span>&nbsp;<a href="">coroutine</a><span class="special">&lt;</span><span class="keyword">int</span><span class="special">(</span><span class="keyword">int</span><span class="special">,</span><span class="keyword"> float</span><span class="special">)&gt;</span><span class="identifier"> coroutine2_type</span><span class="special">;</span><span class="keyword">
+typedef</span>&nbsp;<a href="">coroutine</a><span class="special">&lt;</span><span class="keyword">void</span><span class="special"> *(</span><span class="keyword">const</span><span class="special">&amp;</span><span class="keyword"> char</span><span class="special">)&gt;</span><span class="identifier"> coroutine3_type</span><span class="special">;</span><span class="identifier">
+
+coroutine1_type</span><span class="identifier"> coroutine1</span><span class="special">(</span><span class="identifier">coroutine1_body</span><span class="special">);</span><span class="identifier">
+coroutine2_type</span><span class="identifier"> coroutine2</span><span class="special">(</span><span class="identifier">coroutine2_body</span><span class="special">);</span><span class="identifier">
+coroutine3_type</span><span class="identifier"> coroutine2</span><span class="special">(</span><span class="identifier">coroutine3_body</span><span class="special">);</span></code></pre>
+<p>
+This code is legal:</p>
+<pre class="programlisting"><code class="literal"><span class="comment">//in coroutine1_body:
+</span><span class="identifier">self</span><span class="special">.</span><a href="">yield_to</a><span class="special">(</span><span class="identifier">coroutine2</span><span class="special">,</span><span class="number"> 10</span><span class="special">,</span><span class="number"> 0.0</span><span class="special">);</span></code></pre>
+<p>
+This is not:</p>
+<pre class="programlisting"><code class="literal"><span class="comment">//in coroutine1_body
+</span><span class="identifier">self</span><span class="special">.</span><a href="">yield_to</a><span class="special">(</span><span class="identifier">coroutine3</span><span class="special">,</span><span class="char"> 'a'</span><span class="special">);</span><span class="comment"> // return type mismatch!
+</span></code></pre>
+<p>
+There is no restriction on the argument type.</p>
+<div class="informaltable"><table class="table">
+<colgroup><col></colgroup>
+<tbody><tr><td class="blurb">
+<span class="inlinemediaobject"><img src="files/caution.png"></span><code class="computeroutput"><a href="">yield_to</a><span class="special">()</span></code> is like <code class="computeroutput"><span class="keyword">goto</span></code> on steroid. While it
+can be extremely expressive and powerful, if it used without care and
+discipline can easily lead to spaghetti code.</td></tr></tbody>
+</table></div>
+<a name="symmetric_coroutines.producer_consumer_revisited__again_"></a><h4>
+<a name="id2619192"></a>Producer/consumer revisited (again)</h4>
+<p>
+We have explored the <a href="producer_consumer1.html" title=" Example: the producer/consumer pattern">consumer</a> and
+<a href="coroutines.html#producer_consumer2">producer</a> driven versions of this path
+before. In this third installment we will implement the pattern with
+the producer and the consumer as peer symmetric
+coroutines. The implementation is straight forward. These the our
+consumer and the producer bodies:</p>
+<pre class="programlisting"><code class="literal"><span class="keyword">void</span><span class="identifier"> producer_body</span><span class="special">(</span><span class="identifier">producer_type</span><span class="special">::</span><span class="identifier">self</span><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="identifier"> 
+                   std</span><span class="special">::</span><span class="identifier">string</span><span class="identifier"> base</span><span class="special">,</span><span class="identifier"> 
+                   consumer_type</span><span class="special">&amp;</span><span class="identifier"> consumer</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+  std</span><span class="special">::</span><span class="identifier">sort</span><span class="special">(</span><span class="identifier">base</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span><span class="identifier"> base</span><span class="special">.</span><span class="identifier">end</span><span class="special">());</span><span class="keyword">
+  do</span><span class="special"> {</span><span class="identifier">
+    self</span><span class="special">.</span><span class="identifier">yield_to</span><span class="special">(</span><span class="identifier">consumer</span><span class="special">,</span><span class="identifier"> base</span><span class="special">);</span><span class="special">
+  }</span><span class="keyword"> while</span><span class="special"> (</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">next_permutation</span><span class="special">(</span><span class="identifier">base</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span><span class="identifier"> base</span><span class="special">.</span><span class="identifier">end</span><span class="special">()));</span><span class="special">
+}</span><span class="keyword">
+
+void</span><span class="identifier"> consumer_body</span><span class="special">(</span><span class="identifier">consumer_type</span><span class="special">::</span><span class="identifier">self</span><span class="special">&amp;</span><span class="identifier"> self</span><span class="special">,</span><span class="keyword"> 
+                   const</span><span class="identifier"> std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&amp;</span><span class="identifier"> value</span><span class="special">,</span><span class="identifier">
+                   producer_type</span><span class="special">&amp;</span><span class="identifier"> producer</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+  std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="identifier"> value</span><span class="special"> &lt;&lt;</span><span class="string"> "\n"</span><span class="special">;</span><span class="keyword">
+  while</span><span class="special">(</span><span class="keyword">true</span><span class="special">)</span><span class="special"> {</span><span class="identifier">
+    std</span><span class="special">::</span><span class="identifier">cout</span><span class="special"> &lt;&lt;</span><span class="identifier"> self</span><span class="special">.</span><span class="identifier">yield_to</span><span class="special">(</span><span class="identifier">producer</span><span class="special">)&lt;&lt;</span><span class="string"> "\n"</span><span class="special">;</span><span class="special">
+  }</span><span class="special"> 
+}</span></code></pre>
+<p>
+Creating the coroutines themselves is done as usual:</p>
+<pre class="programlisting"><code class="literal"><span class="identifier">producer_type</span><span class="identifier"> producer</span><span class="special">;</span><span class="identifier">
+consumer_type</span><span class="identifier"> consumer</span><span class="special">;</span><span class="identifier">
+  
+producer</span><span class="special"> =</span><span class="identifier"> producer_type</span><span class="special">
+  (</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">
+   (</span><span class="identifier">producer_body</span><span class="special">,</span><span class="identifier"> 
+    _1</span><span class="special">,</span><span class="string"> 
+    "hello"</span><span class="special">,</span><span class="identifier"> 
+    boost</span><span class="special">::</span><span class="identifier">ref</span><span class="special">(</span><span class="identifier">consumer</span><span class="special">)));</span><span class="identifier">
+
+consumer</span><span class="special"> =</span><span class="identifier"> consumer_type</span><span class="special">
+  (</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">
+   (</span><span class="identifier">consumer_body</span><span class="special">,</span><span class="identifier"> 
+    _1</span><span class="special">,</span><span class="identifier">
+    _2</span><span class="special">,</span><span class="identifier">
+    boost</span><span class="special">::</span><span class="identifier">ref</span><span class="special">(</span><span class="identifier">producer</span><span class="special">)));</span></code></pre>
+<p>
+Note how we default construct both <code class="computeroutput"><span class="identifier">producer</span></code> and <code class="computeroutput"><span class="identifier">consumer</span></code> before
+actually initializing them with the bodies: we need to pass to
+each coroutine a reference to the other. Also note the use of
+<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">ref</span></code> to prevent <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span></code> to try to copy our non copyable
+coroutines.</p>
+<p>
+We can start the machinery indifferently from the producer:</p>
+<pre class="programlisting"><code class="literal"><span class="special">...</span><span class="identifier">
+producer</span><span class="special">();</span><span class="special">
+...</span></code></pre>
+<p>
+Or from the consumer:</p>
+<pre class="programlisting"><code class="literal"><span class="special">...</span><span class="identifier">
+consumer</span><span class="special"> (</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">());</span><span class="special">
+...</span></code></pre>
+<p>
+We need to provide an argument to the consumer because it expect to
+receive a value the first time it is called. For simplicity we
+provided an empty string. A better solution would have had the
+consumer accept <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">optional</span><span class="special">&lt;</span><span class="keyword">const</span><span class="identifier"> std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&amp;&gt;</span></code>.</p>
+<a name="symmetric_transformation"></a><p></p>
+<a name="symmetric_coroutines.symmetric_and_asymmetric_coroutine_transformation"></a><h4>
+<a name="id2620126"></a>Symmetric and asymmetric coroutine transformation</h4>
+<p>
+It can be demonstrated <a href="bibliography.html#moura-04-04">[Moura04]</a> that both symmetric and
+asymmetric coroutines have the same expressive power, that is each
+type can be expressed in term of the other. We now will show how.</p>
+<p>
+An asymmetric coroutine call can be implemented with <code class="computeroutput"><a href="">yield_to</a></code> by
+yielding to the called coroutine and passing as a parameter a
+reference to the caller coroutine. <code class="computeroutput"><a href="">yield</a></code> can be implemented 
+with a <code class="computeroutput"><a href="">yield_to</a></code> the caller. This transformation is extremely
+simple and intuitive. In fact the lowest levels of the
+library only deal with a special <code class="computeroutput"><span class="identifier">swap_context</span></code>
+function. <code class="computeroutput"><span class="identifier">swap_context</span></code> works as an
+argument-less <code class="computeroutput"><a href="">yield_to</a></code>. Both <code class="computeroutput"><a href="">yield</a></code> and <code class="computeroutput"><a href="">yield_to</a></code> are
+implemented in terms of this function.</p>
+<p>
+Implementing <code class="computeroutput"><a href="">yield_to</a></code> with only asymmetric coroutines is a bit
+more involved, but still straight forward. In fact we already did
+implement a form of it in our <a href="multitasking.html#coroutine_scheduler">scheduler
+example</a>. A dispatch loop invokes the first coroutine. This
+coroutine then chooses the next coroutine to run by returning to the
+dispatcher the address of the target coroutine. The dispatch loop then
+execute that coroutine and so on.</p>
+<p>
+In conclusion Boost.Coroutine could implement only one of the two
+models and not loose expressiveness. Given a choice we would implement
+asymmetric coroutines because they are simpler to understand, safer
+and have a broader application. We decided to provide both models for
+convenience.</p>
+</div>
+<table width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright © 2006 Giovanni P. Deretta</small></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="advanced.html"><img src="files/prev.png" alt="Prev"></a><a accesskey="u" href="advanced.html"><img src="files/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="files/home.png" alt="Home"></a><a accesskey="n" href="finite_state_machines.html"><img src="files/next.png" alt="Next"></a>
+</div>
+</body></html>

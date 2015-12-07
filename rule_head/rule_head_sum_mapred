@@ -1,0 +1,260 @@
+#!/usr/bin/env python
+
+import sys, itertools, optparse, re, rule_head
+from rule_head import wb_prob
+
+cutoff = 1e-5
+
+# reduce-input:  nt\tid\theadword\tcount
+
+def bkfprobs(ntfile):
+    tbl = {}
+    for line in ntfile:
+        d = {}
+        v = line.strip().split()
+        nt = v[0]
+        c = int(v[1])
+        total = 0.0
+        
+        count = 0
+        for k,v in rule_head.unflatten_pairs(v[2:]):
+            val = float(v)
+            d[k] = val
+            total += val
+            count += 1
+
+        tbl[nt] = d
+        print >> sys.stderr, "%s: %s" % (nt,total) 
+    return tbl
+
+def ntcounts(ntfile):
+    tbl = {}
+    N = 0
+    for line in ntfile:
+        d = {}
+        v = line.strip().split()
+        nt = v[0]
+        n = int(v[1])
+        N += n
+        c = int(v[2])
+        total = 0.0
+        
+        for k,vs in rule_head.unflatten_pairs(v[3:]):
+            val = int(vs)
+            p = float(val)  / float(n)
+            d[k] = p
+            total += p
+        tbl[nt] = (n,d)
+        print >> sys.stderr, "%s: %s" % (nt,total) 
+    return tbl
+
+def counts(ntc):
+    tbl = {}
+    total = 0
+    for nt,(n,d) in ntc.iteritems():
+        total += n
+        m = 0
+        for w,nn in d.iteritems():
+            tbl.setdefault(w,0)
+            tbl[w] += nn
+            m += nn
+    return total,tbl
+    
+class simple_backoff:
+    def __init__(self,nt):
+        self.primary = ntcounts(nt)
+        
+    def get(self,nt,w):
+        n = self.primary[nt][0]
+        c = len(self.primary[nt][1])
+        count = self.primary[nt][1].get(w,0)
+    
+    def items(self,nt):
+        return self.primary.get(nt,(0,{}))[1].iteritems()
+
+class backoff:
+    def __init__(self,ntf,prior,m):
+        self.m = m
+        self.primary = ntcounts(ntf)
+        self.bn,_ = counts(self.primary)
+        self.secondary = bkfprobs(prior)
+        
+    def primary_prob_(self,p,w,n,c,b):
+        bp = b.get(w,0.0)
+        m = self.m
+        bbp = 1.0 / float(len(b) + 1)
+        return wb_prob(n,c,p,wb_prob(self.bn,len(b),bp,bbp,m),m)
+    
+    def secondary_prob_(self,bp,n,c,bc):
+        m = self.m
+        bbp = 1.0 / float(bc + 1)
+        return wb_prob(n,c,0,wb_prob(self.bn,bc,bp,bbp,m),m)
+    def tertiary_prob_(self,n,c,bc):
+        bbp = 1.0 / float(bc + 1)
+        m = self.m
+        return wb_prob(n,c,0,wb_prob(self.bn,bc,0,bbp,m),m)
+    
+    def get(self,nt,w):
+        n,d = self.primary[nt]
+        c = len(d)
+        count = d.get(w,0)
+        b = self.secondary.get(nt,{})
+        return self.primary_prob_(d.get(w,0),w,n,c,b)
+        
+    def items(self,nt):
+        total = 0
+        n,d = self.primary[nt]
+        b = self.secondary.get(nt,{})
+        c = len(d)
+        bc = len(b)
+        for w,pp in d.iteritems():
+            p = self.primary_prob_(pp,w,n,c,b)
+            total += p
+            yield w,p
+        for w,bp in b.iteritems():
+            if w not in d:
+                p = self.secondary_prob_(bp,n,c,bc)
+                total += p
+                yield w,p
+        p = self.tertiary_prob_(n,c,bc)
+        total += p
+        yield "<unk>",p
+        
+        print >> sys.stderr, 'backoff: %s mass=%s' % (nt,total)
+
+def wb_primary_wt(n,c,m):
+    return float(n) / (float(n) + float(c) * float(m))
+    
+def wb_backoff_wt(n,c,m):
+    return (float(c) * float(m)) / (float(n) + float(c) * float(m))
+
+def map_input(input,ntsum,bkff,mult):
+    backoff_scores = {}
+    for line in input:
+        hwtbl = rule_head.hw_table(line)
+        nt = hwtbl.lhs_root
+        n = hwtbl.count
+        rprob = float(n)/float(ntsum[nt])
+        total = 1.0
+        if hwtbl.hwpos.is_lex:
+            yield nt,hwtbl.hwpos.word,rprob
+        else:
+            cnt = hwtbl.hwpos.root
+            dist = hwtbl.hwpos.distribution
+            c = len(dist)
+            total = wb_backoff_wt(n,c,mult)
+            for word,primary in dist.iteritems():
+                p = wb_primary_wt(n,c,mult) * primary
+                total += p
+                yield nt,word,rprob*p
+            backoff_scores.setdefault(cnt,{})
+            backoff_scores[cnt].setdefault(nt,0.0)
+            backoff_scores[cnt][nt] += rprob*wb_backoff_wt(n,c,mult)        
+    for cnt,bscrs in backoff_scores.iteritems():
+        for w,scr in bkff.items(cnt):
+            for nt,bkfwt in bscrs.iteritems():
+                yield nt,w,bkfwt*scr
+                
+        print >> sys.stderr, "backoffs", cnt
+    
+def combine(inp,outp,lines,tbl = {}, sofar = 0):
+    def clear_out(tbl):
+        x = 0
+        for nt,b in tbl.iteritems():
+            for w,p in b.iteritems():
+                print >> outp, '%s\t%s\t%s' % (nt,w,p)
+                x += 1
+        print >> sys.stderr, "### dump %s items ###" % x
+        tbl = {}
+    
+    for nt,w,p in inp:
+        tbl.setdefault(nt,{})
+        tbl[nt].setdefault(w,0.0)
+        tbl[nt][w] += p
+        sofar += 1
+        if sofar >= lines:
+            clear_out(tbl)
+            sofar = 0
+            tbl = {}
+    clear_out(tbl)
+
+def reduce_input(inp):
+    for line in inp:
+        try:
+            nt,h,c = line.strip().split('\t')
+        except:
+            print >> sys.stderr, line
+            raise
+        yield nt,h,float(c)
+
+def reducer(inp):
+    for nt,sub in itertools.groupby(reduce_input(inp),lambda x : x[0]):
+        dist = {}
+        for _,head,scr in sub:
+            dist.setdefault(head,0.0)
+            dist[head] += scr
+        yield nt,dist
+
+def reduce(inp,ntcount,outp):
+    for nt,dist in reducer(inp):
+        outp.write('%s\t%s %s' % (nt,ntcount[nt],len(dist)))
+        pl = dist.items()
+        pl.sort(lambda x,y : cmp(y[1],x[1]))
+        total = 0.0
+        for h,cn in pl:
+            total += cn
+            outp.write(' %s %s' % (h,cn))
+        outp.write('\n')
+        print >> sys.stderr, "%s: %s" % (nt,total)
+        
+def map(inp,outp,ntmap,smooth,mult):
+    combine(map_input(inp,ntmap,smooth,mult),outp,50000000)
+
+def lexfree_table(lfree_file):
+    ntmap = {}
+    for line in lfree_file:
+        nt,n = line.strip().split('\t')
+        ntmap[nt] = int(n)
+    return ntmap
+
+def smooth_table(sfile):
+    tbl = {}
+    try:
+        for line in open(sfile):
+            t = {}
+            ss = line.strip().split()
+            for w,p in rule_head.unflatten_pairs(ss[2:]):
+                t[w] = float(p)
+            tbl[ss[0]] = t
+    except IOError:
+        pass
+    return tbl
+    
+parser = optparse.OptionParser()
+parser.add_option('-r','--reduce', dest='mapper', action='store_false', default=True)
+parser.add_option('-l','--lex-free-table', dest='lexfree')
+parser.add_option('-s','--smooth-table',dest='smooth_table', default="")
+parser.add_option('-b','--backoff-smooth-table',dest='backoff_smooth_table', default="")
+parser.add_option('-m','--witten-bell-diversity-multiplier', dest='mult',type='float', default=1.0)
+
+if __name__ == '__main__':
+    opts,_ = parser.parse_args()
+    if opts.mapper:
+        bkf = None
+        if opts.backoff_smooth_table:
+            bkf = backoff(open(opts.smooth_table),open(opts.backoff_smooth_table),opts.mult)
+        else:
+            bkf = simple_backoff(open(opts.smooth_table))
+        map( sys.stdin \
+           , sys.stdout \
+           , lexfree_table(open(opts.lexfree)) \
+           , bkf
+           , opts.mult \
+           )
+    else:
+        reduce( sys.stdin \
+              , lexfree_table(open(opts.lexfree)) \
+              , sys.stdout \
+              )
+
+        

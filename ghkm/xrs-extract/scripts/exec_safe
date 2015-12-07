@@ -1,0 +1,4 @@
+#!/home/nlg-01/blobs/bash3/bin/bash
+
+. /home/nlg-01/blobs/bashlib/latest/bashlib.sh
+exec_safe $*

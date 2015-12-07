@@ -1,0 +1,12 @@
+project source_structure ;
+
+exe source_structure_test
+    : source_structure.cpp
+    /sbmt_decoder//sbmt
+    ;
+
+lib source_structure
+  : source_structure_info.cpp
+    source_structure_constructor.cpp
+    /sbmt_decoder//sbmt
+  ;

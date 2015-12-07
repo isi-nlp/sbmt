@@ -1,0 +1,23 @@
+In /auto/hpc-22/dmarcu/nlg/summer04/resources/radu-parser/EVENTS
+there are 12 events files.
+Here is a clasiffication according to the number of lexical items 
+contained per event in these files, and how to find them for each event:
+
+* 2 non-lexical event files 
+	- events.PTB2-MT.headframe.nvo		: take all
+	- events.PTB2-MT.mod.nvo		: take all
+* 6 uni-lexical event files
+	- events.PTB2-MT.headframe.voc.all	: if $1=="+head-1+", take if voc($4)
+							: if $1=="+frame-1+", take if voc($6)
+	- events.PTB2-MT.mod.cp2-2.voc.all	: take if voc($10)
+	- events.PTB2-MT.mod1.voc.all		: take if voc($9) [NB: consider {...} 1 field]
+	- events.PTB2-MT.mod2-2.voc.all		: take if voc($14)[NB: consider {...} 1 field]
+	- events.PTB2-MT.prior.voc.all		: if $1=="+rior-0+", take if voc($5)
+							: if $1=="+rior-1+", take if voc($3)
+	- events.PTB2-MT.pt.voc.all		: take if voc($4)
+* 3 bi-lexical event files
+	- events.PTB2-MT.mod.cp1.voc.all	: take if voc($5) && voc($8)
+	- events.PTB2-MT.mod2-1+l+.voc.all	: take if voc($9) && voc($15) [NB: {...} 1 field]
+	- events.PTB2-MT.mod2-1+r+.voc.all	: take if voc($9) && voc($15) [NB: {...} 1 field]
+* 1 tri-lexical event file
+	- events.PTB2-MT.mod.cp2-1.voc.all	: take if voc($5) && voc($8) && voc($12)

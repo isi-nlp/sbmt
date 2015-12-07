@@ -1,0 +1,25 @@
+This directory contains code for building and using biglm files.
+
+Making a biglm:
+
+make_biglm <arpa-file> <means-file> <biglm-file>
+
+<arpa-file>	the original LM, in ARPA (SRI-LM) format
+<means-file>	output of quantize.py
+<biglm-file>	where to put the new biglm file
+
+Using a biglm:
+
+big_lm lm("<biglm-file>");
+int n = lm.get_order();
+
+vector<string> words;
+// fill words
+
+vector<word_type> ids(words.size());
+
+for (int i=0; i<words.size(); i++)
+  ids[i] = lookup_word(words[i]);
+
+for (int i=1; i<ids.size(); i++)
+  cout << lookup_ngram(&ids[max(0,i-n+1)], n) << endl;

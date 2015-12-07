@@ -1,0 +1,5 @@
+exe LangModel
+  : [ glob *.cpp ]
+    /lw/Common//LWCommon
+    /lw/LangModel//LWLangModel
+  ;

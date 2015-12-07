@@ -1,0 +1,61 @@
+\data\
+ngram 1=14
+ngram 2=21
+ngram 3=13
+
+\1-grams:
+-1.00000 These -0.0
+-1.00000 @ -0.0
+-1.00000 people -0.0
+-1.00000 coming -0.0
+-1.00000 from -0.0
+-1.00000 France -0.0
+-20.0000 Francepillow -0.0
+-1.00000 and -0.0
+-1.00000 Russia -0.0
+-1.00000 include -0.0
+-1.00000 returning -0.0
+-1.00000 astronauts -0.0
+-0.00000 . -0.0
+-15.00000 </s> -0.0
+-25.00000 <s> -0.0
+
+\2-grams:
+-1.00 <s> These -0.0
+-1.00 These @ -0.0
+-1.00 @ people -0.0
+-1.00 people include -0.0
+-2.00 include astronauts -0.0
+-2.00 astronauts coming -0.0
+-2.00 astronauts returning -0.0
+-1.00 coming from -0.0
+-1.00 returning from -0.0
+-9.00 coming to -0.0
+-6.00 returning to -0.0
+-2.00 to France -0.0
+-2.00 to Russia -0.0
+-1.00 from France -0.0
+-2.00 from Russia -0.0
+-6.00 Russia and -0.0
+-2.00 and France -0.0
+-1.00 France and -0.0
+-1.00 and Russia -0.0
+-1.00 Russia </s> -0.0
+-2.00 France </s> -0.0
+
+\3-grams
+-1.00 <s> These @
+-1.00 <s> Those @
+-1.00 These @ people
+-1.00 These @ goats
+-2.00 @ people include
+-4.00 people include astronauts
+-8.00 people include victims
+-1.00 include astronauts coming
+-1.00 include astronauts returning
+-2.00 astronauts coming from
+-4.00 astronauts returning from
+-5.00 returning from France
+-6.00 returning from Russia
+
+\end\

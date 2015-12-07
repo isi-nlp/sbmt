@@ -1,0 +1,23 @@
+2009-04-29 Built new tarball based on Google Summer of Code 2006 tarball,
+tweaked as follows:
+
+- Support Mac OS X 10.5 (Leopard). 10.5 supports the Posix swapcontext()
+  family of functions.
+
+- Support Mac OS X 10.4 (Tiger), based on the GNU Pth library
+  (http://www.gnu.org/software/pth/). 10.4 does *not* support the Posix
+  swapcontext() family of functions.
+
+- Fix Windows "never heard of CreateFiber()" build errors.
+
+- Support building with gcc 3.3, which lacks __attribute__((__noreturn__)).
+
+- Enlarge default stack size from 8K to 64K. It's too easy to hit an 8K stack
+  limit, especially on a 64-bit machine.
+
+- Use mmap() whenever available for allocating stack, for better stack-overflow
+  detection.
+
+- Fix a couple of omitted #includes.
+
+- Per Robert Ramey, include the generated .html documentation files as well.

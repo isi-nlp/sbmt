@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+
+import cfg, argparse, os, sys, decodescript, re
+
+parser = argparse.ArgumentParser()
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument('-p','--progress',action='store_true')
+group.add_argument('-j','--tune',action='store_true')
+d = cfg.parse_args(parser,config='$outdir/tune.config')
+
+nodes = 2
+nodefile = os.getenv('PBS_NODEFILE')
+nodeset = set()
+if nodefile:
+    for v,line in enumerate(open(nodefile)):
+        nodeset.add(line.rstrip())
+nodes = max(len(nodeset),1) + 1
+unodesfile = open(os.path.join(d.tmpdir,'nodefile'),'w')
+for f in nodeset:
+    print >> unodesfile, f
+unodesfile.close()
+
+mp = {}
+
+mp['nodes'] = nodes
+mp['miradir'] = d.config['tuner']['arow']['exec-dir']
+os.environ['PYTHONPATH'] = os.path.join(mp['miradir'],'lib')+':'+os.environ['PYTHONPATH']
+os.environ['LD_LIBRARY_PATH'] = os.path.join(mp['miradir'],'lib')+':'+os.environ['LD_LIBRARY_PATH']
+mp['outdir'] = d.outdir
+mp['tmpdir'] = d.tmpdir
+mp['scorer'] = 'IBM'
+mp['weights'] = ','.join(d.config['tuner']['arow']['initial-weights'])
+mp['frates'] = ','.join(d.config['tuner']['arow']['initial-feature-learning-rates'])
+mp['omit'] = ','.join(d.config['tuner']['arow']['omitted-features'])
+mp['src'] = d.config['corpus']
+mp['refs'] = d.config['lctokrefs'] #' '.join(d.lctokrefs)
+mp['scriptdir'] = d.scriptdir
+mp['initrate'] = d.config['tuner']['arow']['initial-learning-rate']
+mp['ratedecay'] = d.config['tuner']['arow']['learning-rate-decay']
+mp['tunescriptdir'] = os.path.join(d.rootdir,'tune-pipeline','scripts')
+mp['cprep'] = d.config['cprep']
+mp['nodefile'] = os.path.join(d.tmpdir,'nodefile')
+if not d.progress:
+    cfg.execute(d,'rm -f %s %s' % (os.path.join(d.outdir,'epoch.scores'),os.path.join(d.outdir,'.epoch.scores.new')))
+    cfg.execute(d,'rm -f %s' % os.path.join(d.outdir,'mira.out'))
+    cfg.execute(d,'rm -f %s' % os.path.join(d.outdir,'trainer.weights'))
+    cfg.execute(d,'ln -fs %s %s' % (os.path.join(mp['cprep'],'corpus'), d.tmpdir)) 
+
+    capturecmd = "$scriptdir/capture-env $$(env | egrep '^(MPI|PBS)' | sed -e 's/=.*$$//' | tr '\\n' ' ') > $tmpdir/settings"
+    capturecmd = cfg.PTemplate(capturecmd).substitute(mp)
+    cfg.execute(d,capturecmd)
+
+    decodescript.write_script(d,'forest')
+
+    cmd = '. $tmpdir/settings && python $miradir/trainer.py $miradir/sbmt_decoder.py' + \
+          ' -d $tmpdir/decoder -p -S $outdir/STOP -W $outdir/trainer.weights -B $scorer -g $cprep' + \
+          ' --feature-weights $weights' + \
+          ' --delete-features $omit' + \
+          ' --holdout 0.1' + \
+          ' --initial-learning-rate $initrate' + \
+          ' --learning-rate-decay $ratedecay' + \
+          ' --initial-feature-learning-rates $frates' + \
+          ' $src $refs'
+    cmd = cfg.PTemplate(cmd).substitute(mp)
+    mp['cmd'] = cmd
+
+    mpirun = 'mpirun --mca mpi_leave_pinned 1 --mca btl_openib_want_fork_support 1 --bynode -x PYTHONPATH -x PATH -np $nodes /bin/sh -c "$cmd" > $outdir/mira.out'
+    mpirun = cfg.PTemplate(mpirun).substitute(mp)
+    cfg.execute(d,mpirun)
+
+cfg.execute(d,cfg.PTemplate('$tunescriptdir/mira-sum -b -d $outdir $src $refs').substitute(mp))
+
+if not d.progress:
+    iter = -1
+    scr = 0.
+    for line in open(os.path.join(d.outdir,'epoch.scores')):
+        if line[0] != "#":
+            m = re.match(r'(\d+)\s+([-0-9.]+).*',line)
+            i = int(m.group(1))
+            s = float(m.group(2))
+            if s >= scr:
+                scr = s
+                iter = i
+
+    bestw = os.path.join(d.outdir,'weights.final')
+
+    if iter >= 0 and not os.path.exists(bestw):
+        rw = os.path.join(d.outdir,'weights.'+str(iter))
+        cfg.execute(d,'ln -s %s %s' % (rw,bestw))

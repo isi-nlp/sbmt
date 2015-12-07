@@ -1,0 +1,62 @@
+# variable definitions
+#
+CXX    		= g++
+LIBS   		= -lm -lstdc++
+ifndef ARCH_FLAGS 
+ARCH_FLAGS = -march=pentium4 -m32
+ ifeq ($(shell uname -m),x86_64)
+  ARCH_FLAGS = -march=athlon64
+ endif
+endif
+COMMON_FLAGS 	= -Wall -Winline -pedantic $(ARCH_FLAGS)
+DEBUG_FLAGS 	= -g $(COMMON_FLAGS)
+NORMAL_FLAGS 	= -g $(COMMON_FLAGS)
+NODEBUG_FLAGS 	= -g -finline -funroll-loops -DNDEBUG $(COMMON_FLAGS)
+PROFILE_FLAGS 	= -pg -g -DNDEBUG $(COMMON_FLAGS)
+INCLUDES	= 
+CFLAGS	 	= $(DEBUG_FLAGS)
+
+OBJS = Rule.o RuleNode.o Test.o 
+
+# default
+all: test
+
+# target for building default
+#  $@ is a built in variable that tells it to substitute the target name
+#  $^ is a built in variable that tells it to substitute the dependencies
+#
+test: ${OBJS}
+	${CXX} ${CFLAGS} -o $@ $^ ${LIBS}
+
+stats: Rule.o RuleNode.o Stats.o
+	${CXX} ${CFLAGS} -o $@ $^ ${LIBS}
+
+lr-stats: Rule.o RuleNode.o CalcLRStats.o
+	${CXX} ${CFLAGS} -o $@ $^ ${LIBS}
+
+# automatically make dependencies for the objects
+# 
+#
+deps: 
+	makedepend *.cpp *.cc
+
+# target to clean up extra files
+#
+clean:
+	rm -f *.o core.*
+
+# generic (usually built in) target to compile a .c file to a .o file with
+#  the same name ($< is a built in variable telling it to substitute the name
+#   of the file in there)
+#
+.cc.o:
+	${CXX} ${CFLAGS} ${INCLUDES} -c $<
+.cpp.o:
+	${CXX} ${CFLAGS} ${INCLUDES} -c $<
+
+# DO NOT DELETE
+
+Rule.o: Rule.h RuleNode.h
+RuleNode.o: RuleNode.h
+Test.o: Rule.h
+

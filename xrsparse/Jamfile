@@ -1,0 +1,9 @@
+project xrsparse 
+  : requirements <include>. 
+  : usage-requirements <include>.
+  ;
+
+lib xrsparse : src/xrs.cpp /gusc//gusc /boost/thread ;
+
+# exe xrstest : src/main.cpp xrsparse : <include>. ;
+# exe brftest : src/brf.cpp xrsparse : <include>. ;

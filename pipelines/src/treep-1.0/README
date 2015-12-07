@@ -1,0 +1,231 @@
+Treep 1.0, 13 Aug 2002
+
+Concept by David Chiang <dchiang@cis.upenn.edu> and Daniel M. Bikel
+<dbikel@cis.upenn.edu>. C implementation by David Chiang, copyright
+(c) 2002 (see file 'COPYING').
+
+What is Treep?
+--------------
+
+Treep stands for Tree Processor. It takes as input a sequence of
+phrase-structure trees and modifies their labels according to a set of
+rules. Its envisioned purpose is as a front-end to the trainer of a
+statistical parser. See David Chiang and Daniel M. Bikel, "Recovering
+latent information in treebanks," _Proceedings of COLING '02_, 2002.
+
+Getting started
+---------------
+
+This program has been successfully compiled under Linux, Solaris, and
+Darwin.
+
+1. Run the following commands in the top-level directory:
+	./configure
+	make
+
+2. The resulting binary is named "treep", and several example rule
+sets are provided, whose filenames end with ".rules".
+
+3. Usage: treep reads from standard input, processes it according to
+the rule sets specified on the command line, then writes the result to
+standard output. For example, to mark the Penn Treebank according to
+Magerman's rules:
+
+	tgrep TOP | treep magerman.rules
+
+where tgrep is a tool from the Penn Treebank distribution that prints
+out the entire Treebank. You can specify more than one rule set:
+
+	treep collins.rules collins2.rules
+
+is equivalent to
+
+	treep collins.rules | treep collins2.rules
+
+but the former is faster.
+
+Command-line options
+--------------------
+
+-d<string>	specify what characters are delimiters (default "-=|")
+-s		strict checking of rules (default is off)
+-p		pretty-print trees (default is one per line)
+
+Writing a rule set
+------------------
+
+Several example rule sets are provided in the distribution:
+
+	collins.rules		Collins' Model 1 (1997)
+	collins2.rules		Collins' Model 2 (1999), to be used
+				 following collins.rules
+	magerman.rules		Magerman's SPATTER rules for Penn Treebank
+	xia-chinese-head.rules	Xia's Chinese head rules
+	xia-chinese-arg.rules	Xia's Chinese arg rules, to be used
+				 following xia-chinese-head.rules
+	bikel-chiang.rules	Bikel and Chiang (2000)'s Chinese rules
+
+A rule set is essentially a context-free grammar which is used to
+process the input trees. Special operators in the grammar specify how
+the input trees should be modified.
+
+A rule set consists of a series of productions and macro definitions:
+
+<rule-set> ::= <production> <rule-set> 
+             | <macro-definition> <rule-set>
+             | <empty>
+<production> ::= <label-pattern> -> <structure-pattern> ;
+<macro-definition> ::= <symbol> -> <label-pattern> ;
+
+The rule set is interpreted top-to-bottom, so that earlier productions
+take priority over later productions, and later macro definitions
+override earlier ones.
+
+The comment character is '#', and causes everything from the comment
+character to the end of the line to be ignored, as in the Bourne
+shell.
+
+The label pattern language: basics
+----------------------------------
+
+The basic label pattern is just a symbol, for example:
+
+	NP
+
+A symbol may contain alphanumerics, underscores '_', and square
+brackets '[', ']'. It may contain special characters if surrounded by
+double quotes:
+
+	"-ADV"
+
+The current label implementation (see below about writing your own)
+divides a Treebank-II-style tag into several pieces:
+
+	NP-ADV-1=2  has  NP -ADV -1 =2
+	-NONE--H    has  -NONE- -H
+
+A symbol X matches a label Y just in case X is equal to one of Y's
+pieces.
+
+The structure pattern language
+------------------------------
+
+The basic structure pattern is just a sequence of label patterns. The
+following regular-expression-like operators are also available, and
+have the same meaning as in Perl:
+
+	x|y	match x or y (preferably x)
+	x*	match 0 or more x's (as many as possible)
+	x*?	match 0 or more x's (as few as possible)
+	x?	match 0 or 1 x's (preferably 1)
+	x??	match 0 or 1 x's (preferably 0)
+
+There are also asymmetric concatenation operators:
+
+	x>y	match xy, giving priority to x's preferences
+	x<y	match xy, giving priority to y's preferences
+
+The purpose of these is to give control over what Perl calls the
+"pecking order." The pattern
+
+	(a|b)>(c|d)
+
+would prefer to match 'ad' over 'bc' (because the preference for 'a'
+is stronger), as in Perl, whereas
+
+	(a|b)<(c|d)
+
+would prefer to match bc over ad (because the preference for 'c' is
+stronger). You may still concatenate patterns without any operator:
+
+	(a|b)(c|d)
+
+Treep will interpret this as '(a|b)>(c|d)', and issue a warning if
+the choice of direction would have made a difference. Note that
+operatorless concatenation has higher precedence than '<' and '>'.
+
+For completeness, there are also directional Kleene stars:
+
+	>*	like *  using > to concatenate
+	>*?	like *? using > to concatenate
+	<*	like *  using < to concatenate
+	<*?	like *? using < to concatenate
+
+As with concatenation, Treep will interpret the operators '*' and
+'*?' as '>*' and '>*?', respectively. Since we don't envision any
+real-world uses of these operators, Treep will never issue a warning
+for '*' or '*?'  unless you specify the '-s' (strict) flag.
+
+Labels are modified using the special operators:
+
+	+<symbol>	set <symbol>
+	-<symbol>	clear <symbol>
+
+So if the pattern 
+
+	NP + "-H" - "-A"
+
+matches the label 'NP-A', the '-A' tag will be removed, and a '-H' tag
+added. These operators have higher precedence than the '|' operator
+and concatenation.
+
+More about label patterns
+-------------------------
+
+There is a special label pattern
+
+	.	wildcard
+
+which matches any label.
+
+Label patterns also allow the following Boolean operators:
+
+	&	logical and
+	,	logical or
+	!	logical not
+
+Note that the ',' operator is commutative, unlike the '|' operator.
+
+You can also write macro definitions for label patterns. For example,
+after the definition,
+
+	arg := "-SBJ","-OBJ";
+
+the symbol 'arg' gets expanded everywhere to '"-SBJ","-OBJ"'. You may
+also use macros with the '+' and '-' operators, although you will get
+an error if the macro expands to anything but another symbol.
+
+The default label implementation divides a Treebank-II-style tag into
+pieces such that all but the first piece starts with a delimiter. The
+default set of delimiters is '-=|'; you can change this using the '-d'
+option.
+
+Should you need to use Treep on a treebank with a more complicated
+label inventory, you can reimplement label.c and label.h, which need
+to define a type called 'label' and six functions:
+
+int label_to_string(label l, char *s, size_t n);
+
+Put a string representation of l into the buffer s, which is of size n.
+
+label label_from_string(const char *s);
+
+Build a new label out of the string representation in s. If you want
+to use s, you should copy it rather than keep a pointer to it.
+
+void label_delete(label l);
+
+Delete l.
+
+int label_match(label l, const char *s);
+
+Does l match the symbol s?
+
+int label_set(label l, const char *s);
+
+Set the symbol s in l.
+
+int label_reset(label l, const char *s);
+
+Clear the symbol s in l.
+

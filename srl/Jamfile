@@ -1,0 +1,10 @@
+import sbmt-util ;
+
+project srl ;
+
+lib srl
+  : agreement/info.cpp
+    /sbmt_decoder//sbmt
+  ;
+
+sbmt-util.install install : : srl ;

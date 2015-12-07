@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+import itertools
+
+def unflatten_pairs(lst):
+    x = 0
+    p = ''
+    for n in lst:
+        x += 1
+        if x % 2 == 0:
+            yield p,n
+        else:
+            p = n
+
+def ruledata(rstr):
+    lst = rstr.split()
+    id = lst[0]
+    lst = list(unflatten_pairs(lst[1:]))
+    m = collections.defaultdict(list)
+    for y,x in lst:
+        m[y].append(x)
+    return id,m
+
+
+for rulestuff, group in itertools.groupby(d.rstrip('\n').split('\t') for d in sys.stdin, lambda d : d[0]):
+    ruleid, align = ruledata(rulestuff)
+    m = collections.defaultdict(dict)
+    for d in group:
+        y,x,score = d[-3],d[-2],float(d[-1])
+        m[y][x] = score
+    p = 0.
+    for y,ay in align.iteritems:
+        if y != 'NULL':
+            p *= sum(m[y][x] for x in ay) / float(len(ay))
+    print '%s\t'ruleid 

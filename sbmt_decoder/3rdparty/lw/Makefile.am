@@ -1,0 +1,2 @@
+SUBDIRS = Shared Horse
+

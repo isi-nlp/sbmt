@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+SBMTHADOOP=$(dirname $(dirname $0))
+$SBMTHADOOP/count -k2
+

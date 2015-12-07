@@ -1,0 +1,12 @@
+##### LIBRARY #####
+lib = Environment(CCFLAGS = '-g', CPPPATH = 'include', LINKFLAGS = '-static')
+lib.StaticLibrary('lib/treelib', ['src/treelib/TreeNode.cpp'])
+
+##### TEST PROGRAMS #####
+test = Environment(CCFLAGS = '-g', CPPPATH = 'include', LIBS = ['treelib', 'pcre++', 'pcre'], LIBPATH = ['lib'], LINKFLAGS = '-static')
+
+# treelib-test driver program
+test.Program('test/treelib-test', 'test/treelib-test.cpp')
+
+# treelib-test-ext driver program
+#test.Program('test/treelib-test-ext', 'test/treelib-test-ext.cpp')

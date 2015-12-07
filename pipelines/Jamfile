@@ -1,0 +1,34 @@
+project pipelines ;
+
+import sbmt-util ;
+import option ;
+import stage ;
+
+local prefix = [ option.get prefix : "" ] ;
+
+if ! $(prefix)
+{
+    if [ modules.peek : NT ] { prefix = C:\\$(name) ; }
+    else if [ modules.peek : UNIX ] { prefix = /usr/local ; }        
+}
+
+exec-locate = [ option.get exec-prefix : $(prefix) ] ;
+
+rule glob-leaves ( )
+{
+    leaves = ;
+    for x in [ glob-tree * : .* *~ *.pyc src Jam* ]
+    {
+       if ! [ glob $(x)/* ] # best directory test i could figure... empty directories break it.
+       {
+          leaves += $(x) ;
+       }
+    }
+    return $(leaves) ;
+}
+
+stage.install install 
+            : [ glob-leaves ]
+            : <location>$(exec-locate)
+              <install-source-root>.
+            ;

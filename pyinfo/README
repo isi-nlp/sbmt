@@ -1,0 +1,118 @@
+Python info types
+2008 May 16
+
+Building
+--------
+
+You will need the shared library libbpython2.5.so, which the default
+Python distribution does not build. Under Linux, run configure like
+this (in a Bourne shell):
+
+    ./configure --prefix=<root> --enable-shared
+    export LD_RUN_PATH=<root>/lib 
+    make
+
+where <root> is the root of the directory where you want Python
+installed. This has not always worked for me -- you might have to edit
+the Makefile directly to have LDFLAGS=-Wl,-R<root>/lib .
+
+There is a working installation at 
+    /nfs/prokofiev/chiang/pkg/python at ISI
+    /home/nlg-01/chiangd/pkg64/python at HPC
+
+Next, make sure that Boost.Build can find it. Your user-config.jam
+should have the line:
+    using python : 2.5 : <root> ;
+
+Then add pyinfo//pyinfo to the list of targets that
+utilities/xrs_info_decoder//xrs_info_decoder is built from. I don't
+know if LD_PRELOAD works or not.
+
+Then build the xrs_info_decoder as usual; to install the pysbmt
+library too, bjam pyinfo//install .
+
+Running the decoder
+-------------------
+
+xrs_info_decoder --python-module <module-name>(,<module-name>)*
+
+This will cause the named Python module(s) to be loaded, which need to
+make the appropriate calls to register any new info types. These info
+types will then be available to the decoder using --use-info or -u
+just like any other info type (the order of the command-line arguments
+does not matter).
+
+Writing the Python module
+-------------------------
+
+See example.py for an example. The key points:
+
+* register_info_factory_constructor("infoname", InfoFactory)
+
+This tells the decoder to make the info factory *InfoFactory*
+available under the name "infoname". Note that there is no
+info-factory-factory as in the native C++ interface. As a result, your
+Python info types cannot receive any command-line options. You should
+hard-code any options into the Python file.
+
+* class InfoFactory: (or whatever you want to call it)
+
+This class must implement the following methods:
+    rule_heuristic(self, grammar, rule)
+        returns a float (negative log-probability)
+    scoreable_rule(self, grammar, rule)
+	returns a bool
+    create_info(self, grammar, rule, child_infos)
+        child_infos is a list
+        returns an iterator over (info, weighted-cost, heuristic)
+        info can be anything
+        weighted-cost and heuristic are floats (negative log-probabilities)
+    component_scores(self, grammar, rule, child_infos, result)
+        returns a sequence (or any iterable) of scores
+    component_score_names(self)
+        returns a sequence (or any iterable) of feature names
+
+* register_rule_property_constructor("infoname", "propname", reader)
+
+This tells the decoder that when info type "infoname" is used, it
+should scan rule property "propname" using the function *reader*,
+which maps from strings to arbitrary objects. You will see the output
+of reader when you call grammar.rule_property(rule, "propname").
+
+The pysbmt module
+-----------------
+
+This module exposes parts of libsbmt to Python. If you should need to
+access the module directly, you can do "import pysbmt" in your
+module. You don't need to worry about paths; it's built into the
+decoder.
+
+However, if you want to import pysbmt in stand-alone Python code
+(i.e., outside the decoder), you will need to set both PYTHONPATH and
+LD_LIBRARY_PATH to include <root>/lib .
+
+Usage of this library is pretty similar to libsbmt:
+
+Grammar methods:
+- rule_has_property, rule_property: access rule properties using your
+  registered rule property constructors
+- is_complete_rule, get_syntax: access xRS rule corresponding to
+  binarized rule
+- label: convert internal tokens into strings
+
+SyntaxRule only has attributes, not methods:
+- lhs_preorder is a sequence of LHS (English) nodes, in top-down order
+- lhs_root is the LHS (English) root
+- rhs is a sequence of RHS (French) nodes
+
+The nodes of a rule have the following methods and attributes:
+- token (attribute): label
+- lexical: is the label a terminal symbol
+- indexed: is the label a variable
+- lhs_preorder_position (attribute of RHS nodes): position of
+  coindexed node on LHS
+- rhs_position (attribute of LHS nodes): position of coindexed node on
+  RHS
+- is_leaf (LHS nodes only): is the node a leaf node
+- children (LHS nodes only): iterator over child nodes
+

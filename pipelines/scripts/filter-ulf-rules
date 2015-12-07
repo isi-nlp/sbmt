@@ -1,0 +1,22 @@
+#!/usr/bin/env perl
+#
+# Filter some gunk from Ulf-generate stuff
+#
+use 5.006;
+use strict;
+
+my $flag = 1;
+while ( <> ) {
+    if ( $flag ) {
+	## this affects only the first line
+	s/^\xEF\xBB\xBF//;	# remove BOM
+	$flag = 0;
+    }
+    # skip bodily comment lines
+    next if /^[%\$]{3}/;
+    # skip empty lines
+    next if /^\s*$/;
+
+    # ok
+    print ;
+}

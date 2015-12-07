@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import os.path
+
+parser = argparse.ArgumentParser()
+parser.add_argument('file')
+args = cfg.parse_args(parser)
+
+bindir = args.config['variables']['rhbin']
+
+hp = args.hadoop
+
+hp.mapreduce( mapper = os.path.join(bindir,'target_word_features') + ' ' + os.path.abspath(args.file)
+            , input = 'rules'
+            , output = 'part.targetwords' )

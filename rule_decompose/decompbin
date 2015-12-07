@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+qual=`dirname $0`
+if [ "x$qual" != "x" ]; then qual="$qual/"; fi
+pos=0
+io[0]="-"
+io[1]="-"
+args=""
+
+while [ "x$1" != "x" ]; do
+    while getopts "i:o:p:nht:v:" opt; do
+        case "$opt" in
+            'i')
+                io[0]=$OPTARG
+            ;;
+            'o')
+                io[1]=$OPTARG
+            ;;
+            'p')
+                args="$args --pointer-features $OPTARG"
+            ;;
+            'n')
+                args="$args -n"
+            ;;
+            'v')
+                args="$args -v $OPTARG"
+            ;;
+            't')
+                args="$args -t $OPTARG"
+            ;;
+        esac
+    done
+    shift $(($OPTIND - 1))
+    if [ "x$1" != "x" ]; then
+        io[$pos]=$1
+        pos=$(($pos + 1))
+    fi
+    shift 1
+    OPTIND=1
+done
+
+${qual}lhs_size_map "${io[0]}" | sort -n | sed -e 's/^[0-9]* //' | ${qual}decompose -o "${io[1]}" $args
+        

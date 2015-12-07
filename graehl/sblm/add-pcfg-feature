@@ -1,0 +1,68 @@
+#!/usr/bin/env pypy
+#-*- python -*-
+
+#hadoop mapper for PCFG: sbmt training format tree input -> parent children\t1
+
+version="0.1"
+
+test=True
+test_in='1000.eng-parse'
+
+import os,sys
+sys.path.append(os.path.realpath(os.path.dirname(sys.argv[0])))
+
+from pcfg import *
+
+import unittest
+
+import tree
+import optparse
+
+from graehl import *
+from dumpx import *
+
+
+### main:
+
+def main(opts):
+    log("add-pcfg-feature v%s"%version)
+    log(' '.join(sys.argv))
+    p=PCFG(opts.pcfg,opts.featname)
+
+    out=open_out(opts.output)
+    for line in open_in(opts.input):
+        try:
+            (t,rhs,iattr,_,_,_)=parse_sbmt_rule(line)
+        except:
+            warn("Couldn't parse line as sbmt rule: %s\n\tline: %s"%(except_str(),line))
+        if t is None:
+            continue
+        id=find_rule_id(line,iattr)
+        cost=0
+        missing=0
+        feats=p.accum_costs(p.cost(lhs_pcfg_event(n)) for n in t.preorder() if not n.is_terminal())
+        if len(feats):
+            out.write("id=%s\t%s\n"%(id,pairlist_str(feats)))
+        else:
+            out.write("id=%s\n"%id)
+            #TODO: should we always write id=n\t\n even if all feats were sparse?
+    info_summary()
+import optfunc
+
+default_in='-'
+default_out='-'
+rest_=[]
+@optfunc.arghelp('input','input file here (None = STDIN should be default in production)')
+def options(pcfg='',input=default_in,output=default_out,featname='pcfg',asprob=True,test=False,rest_=()):
+    if rest_:
+        dump('rest_=',rest_)
+        assert(len(rest_)==1)
+        pcfg=rest_[0]
+#    if test:
+#        sys.argv=sys.argv[0:1]
+#        input=test_in
+#        pcfg=test_pcfg
+    main(Locals())
+
+optfunc.main(options)
+

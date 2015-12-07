@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+
+import argparse
+import cfg
+import os.path
+
+parser = argparse.ArgumentParser()
+parser.add_argument('type', choices=['trivial_cond_prob', 'phrase_pef', 'phrase_pfe'])
+
+args = cfg.parse_args(parser)
+type = args.type
+script = ''
+
+scriptdir = args.config['variables']['rhsdir']
+#dir = os.path.dirname(os.path.dirname(__file__))
+#scriptdir = os.path.abspath(os.path.join(dir,'scripts'))
+
+if type == 'trivial_cond_prob':
+    script = "trivial_cond_prob.pl"
+elif type == 'phrase_pef':
+    script = "phrase_pef.pl"
+elif type == 'phrase_pfe':
+    script = "phrase_pfe.pl"
+
+script = os.path.join(scriptdir,script)
+condprob = os.path.join(scriptdir,'condprob')
+name_attr = os.path.join(scriptdir,'name_attr') + ' ' + type
+hp = args.hadoop
+
+cfgsarg = ''
+if args.config_files:
+    cfgsarg = '-c ' + args.config_files
+mp = { 'script':script
+     , 'type':type
+     , 'condprob':condprob
+     , 'config':cfgsarg }
+hp.start()
+hp.syscall('%(condprob)s rules attr.%(type)s "%(script)s" %(config)s' % mp)
+
+hp.mapreduce( mapper=name_attr
+            , reducer='NONE'
+            , input='attr.%s' % type
+            , output='part.%s' % type
+            )
+
+hp.remove('attr.%s' % type)

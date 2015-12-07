@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+
+import os, sys, optparse, re
+
+parser = optparse.OptionParser()
+
+parser.add_option( '-m'
+                 , '--modulo'
+                 , default = 1
+                 , type = 'int'
+                 , dest = 'modulo' )
+
+parser.add_option( '-k'
+                 , '--offset'
+                 , default = 1
+                 , type = 'int'
+                 , dest = 'offset' )
+                 
+parser.add_option( '-f'
+                 , '--format'
+                 , default = "%id\t%line"
+                 , dest = 'format'
+                 , type = 'string' )
+                 
+(opts,args) = parser.parse_args(sys.argv[1:])
+
+n = opts.modulo
+k = opts.offset
+f = opts.format
+
+f = re.sub(r'%line\b','%(line)s',f)
+f = re.sub(r'%id\b','%(id)d',f)
+
+try :
+    for line in sys.stdin:
+        rline = line.rstrip('\n')
+        print f % { 'id' : k , 'line' : rline }
+        k += n
+except IOError, e:
+    if e.errno == 32: # broken pipe
+        pass
+    else:
+        raise e

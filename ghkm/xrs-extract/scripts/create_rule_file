@@ -1,0 +1,128 @@
+#!/usr/bin/perl
+
+########################################################################
+# Merge counts, add normalization counts (lhscount, rootcount, etc),
+# and produce a rule file.
+# (step 6: of 'the_button.failsafe')
+#
+# Note: this script does not specify how commands are run
+# ('normal', 'failsafe', or 'condor'). This must be defined in
+# ../perl-src/xrs/exec.pm.
+#
+# Author: Michel Galley (michel.galley@ieee.org)
+########################################################################
+
+use strict;
+use vars qw($BASEDIR $DBDIR $DBROOT $FILE_SIZES $COUNT_IDS $LHS_NORMCOUNTS $EMFILE);
+
+BEGIN {
+  my $trueloc = $0;
+  while (-l $trueloc) { $trueloc = readlink($trueloc); }
+  $BASEDIR = `dirname $trueloc`; chop $BASEDIR;
+  $BASEDIR = "$BASEDIR/..";
+  push @INC, "$BASEDIR/perl-src";
+}
+
+use xrs::env  qw($BINDIR $SCRIPTDIR $EXEC_SAFE);
+use xrs::exec qw(&runme);
+
+######################################################
+# Command-line arguments:
+
+die "Usage: $0 <config-file> <mode>\n"
+  unless $#ARGV==1;
+my $CONFIG     = $ARGV[0];
+my $MODE       = $ARGV[1];
+
+my $use_bz2 = 1;
+
+if( (!defined $ARGV[2]) || $ARGV[2] eq "bz2"){
+	$use_bz2 = 1;
+} else {
+	if($ARGV[2] eq "gz"){
+		$use_bz2 = 0;
+	} else {
+		die "FATAL: unrecogized compression format $$ARGV[2]!\n";
+	}
+}
+
+my $use= $ARGV[1];
+
+######################################################
+# Load configuration file:
+
+require $CONFIG;
+my $DBROOT  = "extract";
+my @thresholds = split(/,/,$FILE_SIZES);
+my @countIDs   = split(/,/,$COUNT_IDS);
+my $lhs_norm_str = ($LHS_NORMCOUNTS) ? '' : '-L';
+my $DB = "$DBDIR/$DBROOT.db";
+my $tmpdir = "$DBDIR/tmp";
+my $mergeid = (scalar @countIDs == 1) ? $countIDs[0] : 'merged';
+
+######################################################
+# MODE 1: either counts or fraccounts:
+if(scalar @countIDs == 1) {
+
+  foreach my $t (@thresholds) {
+	  if($use_bz2) {
+		 runme( 
+			cmd => "$BINDIR/print_rules_fast -f $countIDs[0] -D $DB $tmpdir/$DBROOT*.OUT.count ".
+				   " -t $t $lhs_norm_str | bzip2 -c",
+		   stdout => "$DBDIR/size$t.rules.bz2",
+			mode => $MODE );
+	} else {
+		 runme( 
+			cmd => "$BINDIR/print_rules_fast -f $countIDs[0] -D $DB $tmpdir/$DBROOT*.OUT.count ".
+				   " -t $t $lhs_norm_str | gzip ",
+		   stdout => "$DBDIR/size$t.rules.gz",
+			mode => $MODE );
+
+	}
+  }
+
+} else {
+######################################################
+# MODE 2: 2+ count identifiers:
+
+  # For each counting identifier (count and/or fraccount), merge counts in one single file:
+  foreach my $id (@countIDs) {
+	 runme( 
+		cmd => "$BINDIR/add_weights -f $id -D $DB $tmpdir/$DBROOT*.OUT.count",
+		stdout => "$tmpdir/merged.$id",
+		mode => $MODE );
+  }
+
+  # For each threshold value:
+  foreach my $t (@thresholds) {
+	 # For each counting identifier (count and/or fraccount):
+	 # compute sum for each normalization group (LHS and/or root):
+	 foreach my $id (@countIDs) {
+		runme( 
+		  cmd => "$BINDIR/add_norm_counts -D $DB -w $tmpdir/merged.$id ".
+					"-f $id -t $t $lhs_norm_str",
+		  stdout => "$tmpdir/normalized.size$t.$id",
+		  mode => $MODE );
+	 }
+	 # If needed, merge all counts (including normalization counts) into one single file:
+	 if($mergeid eq 'merged') {
+		 runme(
+			cmd => "$BINDIR/merge_weights $tmpdir/normalized.size$t.{$COUNT_IDS} $EMFILE",
+			stdout => "$tmpdir/normalized.size$t.merged",
+			mode => $MODE );
+	 }
+	 # Print rules with count fields:
+	 if( $use_bz2){
+		 runme(
+			 cmd => "$BINDIR/print_rules -D $DB -w $tmpdir/normalized.size$t.$mergeid | bzip2 -c",
+			 stdout => "$DBDIR/size$t.rules.bz2",
+			 mode => $MODE );
+	 } else {
+		 runme(
+			 cmd => "$BINDIR/print_rules -D $DB -w $tmpdir/normalized.size$t.$mergeid | gzip ",
+			 stdout => "$DBDIR/size$t.rules.gz",
+			 mode => $MODE );
+
+	 }
+  }
+}

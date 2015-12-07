@@ -1,0 +1,9 @@
+#!/usr/bin/perl -p
+
+# Convert 'radu' format (i.e. no probabilities)
+# into 'radu-new'. Sets logp = 0.
+
+s=\)= \)=g;
+s=(\([^~ ]+~[^~ ]+~[\d]+~[\d]+) =$1 -0 =g;
+s=([^~ ]+)/([^~ ]+)=($2 $1)=g;
+s= += =g;

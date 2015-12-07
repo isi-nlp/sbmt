@@ -1,0 +1,56 @@
+import sbmt-util ;
+
+project rule_decompose 
+      :
+      : usage-requirements <include>. 
+      ;
+
+require = <library>/sbmt_decoder//sbmt 
+          <library>/xrsparse 
+          <library>/graehl
+          <library>/boost/program_options
+        ;
+
+lib binalgo 
+  : binalgo.cpp 
+  : $(require)
+  : $(require)
+  ;
+
+exe justdecomp
+  : justdecomp.cpp
+    binalgo
+  : $(require)
+  ;
+
+exe minfilter : minfilter.cpp /xrsparse ;
+
+exe leaflm
+  : leaflm.cpp
+    binalgo
+  : $(require)
+  ;
+
+exe decompose 
+  : decompose.cpp 
+    binalgo
+  : $(require) 
+  ;
+
+exe lhs_size_map 
+  : lhs_size_map.cpp 
+    binalgo
+  ;
+
+sbmt-util.install install 
+  : 
+  : decompose 
+    justdecomp
+    lhs_size_map 
+    leaflm
+    minfilter
+  : # no libs
+  : # no headers
+  : decompbin
+    train2rule
+  ;

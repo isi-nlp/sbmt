@@ -1,0 +1,236 @@
+#!/usr/bin/env perl
+#
+# create XML output from the post-processed n-best list data files
+# wei-sgmlize
+#
+use 5.006;
+use strict;
+use warnings;
+use Data::Dumper;
+
+# Wei Wang: added check of numbers when using the + on attribute values.
+#           removed a={{{...}}} before incrementing attribute values.
+# Jens: My version already checked that the key is loosely an identifier,
+#       and that the value is numerical. I am ignoring symbolic values. 
+require 'libgraehl.pl';
+
+use XML::Generator;
+my $X = XML::Generator->new(':pretty');
+
+sub trim($) {
+    # purpose: remove leading and trailing whitespaces
+    # paramtr: $s (IN): some string
+    # returns: trimmed string
+    local $_ = shift;
+    s/^\s+//;
+    s/\s+$//;
+    $_;
+}
+
+my $epsilon = 0.1;		# max diff between score and dot product
+my $tstmaster;
+my $score_file;
+my $hyp_file;
+my $bnd_file;
+my $weight_file;
+my $f_file;
+my $outfile = '-';		# default to STDOUT
+my $MAX_NBEST = 2500;
+my $words_file;
+my $deriv_file;
+my $parse_file;
+my $warnings = ~0;
+my $dummy;
+my $show_features = 0;
+my $no_components = 0;
+my @options=(
+    'generate sgml for translations',
+    ['tstmaster=s' => \$tstmaster, 
+     'tstmaster files. Multiple masters are separated by a colon'],
+    ['hyp=s' => \$hyp_file, 'hyps'],
+    ['nbest=i' => \$MAX_NBEST, 'maximum n-best'],
+    ['outfile=s' => \$outfile, 'output file (default stdout)' ],
+    ['weight-file=s' => \$weight_file, 'weights'],
+    ['warnings=i' => \$warnings, 'warning message verbosity' ],
+    ['show-features' => \$show_features, 'add a comment with the feature names into head'],
+    ['no-components!' => \$no_components],
+);
+
+my ($usageproc,@opts)=getoptions_usage_verbose(@options);
+
+if ( defined $outfile && length($outfile) && $outfile ne '-' ) {
+    # re-direct stdout without using shell redirects ;-)
+    open( STDOUT, ">$outfile" ) || die "ERROR: open $outfile: $!\n";
+    select STDOUT;
+}
+
+
+open(TSTMASTER, "<$tstmaster") || die "ERROR: open $tstmaster: $!\n";
+open(HYP_FILE, "<$hyp_file") || die "ERROR: open $hyp_file: $!\n";
+open(W_FILE, "<$weight_file") || die "ERROR: open $weight_file: $!\n"; 
+
+
+# get the weight string.
+my $line = <W_FILE>;
+chomp($line);
+close W_FILE;
+$line =~ s/^xrs-fields\s+//;
+
+my $feature_string = '';
+my $weights_string = '';
+my @feature_v = ();
+my @weights_v = ();
+my %feature = ();
+unless ($no_components) {
+foreach my $pair ( split /,/, $line ) {
+    next unless index($pair,':') > 0;
+    my ($f,$w) = map { trim($_) } split /:/, $pair, 2;
+    ### NEW: 2007-03-02 (jsv): decoder uses "lm-cost" everywhere
+    ### $f='lmcost' if ( $newflag && $f eq 'lm-cost' );
+    unless ( exists $feature{$f} ) {
+	$feature_string .= " $f";
+	push( @feature_v, $f );
+	$weights_string .= " $w";
+	push( @weights_v, $w );
+    } else {
+	warn "# duplicate feature $f, last one wins!\n";
+    }
+    $feature{$f} = $w;
+}
+} else {
+    $feature_string = "combined";
+    push(@feature_v, "combined");
+    $weights_string = "1.0";
+    push(@weights_v, 1.0);
+    $feature{"combined"} = 1.0;
+}
+
+sub adjust {
+    my $what = shift;
+    my $value = shift;
+
+    push( @weights_v, $value );
+    push( @feature_v, $what );
+    $feature_string .= " $what";
+    $weights_string .= " $value";
+    $feature{$what} = $value;
+}
+
+$feature_string = trim($feature_string);
+print STDERR $weights_string, ' ', $feature_string, "\n";
+my @fv = sort @feature_v;
+
+print "<!DOCTYPE tstset SYSTEM \"tstset.dtd\">\n";
+my $seedoc = 0;
+my $hyp_line = <HYP_FILE>;
+my $hyp_lineno = 1;
+my $element = 'tstset';
+while( <TSTMASTER> ){
+    if ( /\<(tstset|srcset).*?\ssrclang=/i ) {
+	s/srcset/tstset/;
+	substr($_,-2,0," trglang=\"English\"") unless /trglang/;
+	print $_;
+	print "<weights logbase=\"0.1\">$weights_string<\/weights>\n"; 
+	print "<!-- features: $feature_string -->\n" if $show_features;
+    }
+    if ( /<doc/i && /docid=\s*\"(.*?)\".*>/i ) {
+	print "<doc docid=\"$1\">\n";
+    } elsif ( /<audiofile/i && /fileid=\s*\"(.*?)\".*>/i ) {
+	print "<doc docid=\"$1\">\n";
+    }
+    if ( /<seg\s+(?:seg)?id=\"?(\d+)\"?.*>/ ) {
+	print "<seg segid=\"$1\">\n";
+
+        while (1) {
+	    # print out the hyps.
+            if (!defined($hyp_line)) { last; }
+	    $hyp_line =~ /^NBEST sent=(\d+) nbest=(\d+) totalcost=([0-9-.]+).* hyp=\{\{\{(.*?)\}\}\}/ or last;
+	    my ($lineno,$nbestno,$totalcost,$nbesthyp) = ($1,$2 + 1,$3,$4);
+	    if ($lineno != $hyp_lineno) { last; }
+            my $unksym = '@UNKNOWN@';
+            $nbesthyp =~ s/$unksym//g;
+            $nbesthyp = join(' ',split(/\s+/, $nbesthyp));
+	    print "  <hyp score=\"$totalcost\" id=\"$nbestno\">\n";
+
+	    my $empty = 0;
+	    if ( $nbesthyp =~ /^[. ]*$/ ) {
+		# empty or virtually empty hypothesis
+		print STDERR "Warning: Empty hypothesis {{{$nbesthyp}}} in hyp_file, sentence  $lineno, creating fake alignment.\n";
+		$empty = 1;
+		$nbesthyp = '.';
+	    }
+	    print "      ", $X->words($nbesthyp), "\n";
+	
+	    my $scores;
+	    unless ($no_components) {
+		$scores = $hyp_line;
+	    } else {
+		$scores = " combined=$totalcost\n";
+	    }
+	    chomp $scores;
+
+	    my %attr = ();
+	    while ( $scores =~ /\s([a-zA-Z][-a-z_A-Z0-9]*)=([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)/g ) {
+		my ($k,$v) = ($1,$2);
+		$attr{$k} += $v;
+	    }
+
+	    print "      <scores>";
+	    my $remember_sum = 0.0;
+	    for my $w ( @feature_v ) {
+		if ( exists $attr{$w} ) {
+		    my $x = $attr{$w};
+		    $remember_sum += $x * $feature{$w};
+		    print " $x";
+		} else {
+		    print " 0" ; 
+		}
+	    }
+	    print "</scores>\n";
+
+	    # our own sanity check
+	    if ( abs($totalcost - $remember_sum) > $epsilon ) {
+		printf STDERR "Warning: score=%.3f != dotprod=%.3f\n", $totalcost, $remember_sum;
+		print STDERR "$scores\n" if ($warnings & 0x01);
+		
+		if ( ($warnings & 0x02) ) {
+		    my %seen = map { $_ => 1 } @feature_v;
+		    foreach my $k ( sort keys %attr ) {
+			if ( exists $feature{$k} ) {
+			    print STDERR '* ';
+			} else {
+			    print STDERR '  ';
+			}
+			print STDERR "$k=$attr{$k}";
+			if ( exists $feature{$k} ) {
+			    delete $seen{$k};
+			    printf STDERR ' x %.6g', -$feature{$k};
+			    printf STDERR ' = %.6g', -$attr{$k} * $feature{$k};
+			}
+			print STDERR "\n";
+		    }
+		    printf STDERR "= dotproduct=%.6g\n", $remember_sum;
+		    foreach my $k ( sort keys %seen ) {
+			print STDERR "U $k\n";
+		    }
+		    print STDERR "\n";
+		}
+	    }
+	    print "  <\/hyp>\n";
+	    $hyp_line = <HYP_FILE>;
+	}
+	print "<\/seg>\n";
+        $hyp_lineno += 1;
+    }
+
+    print "<\/doc>\n" if /\<\/(DOC|audiofile)\s*\>?/i;
+}
+
+# FIXME: This may not match the original opening tag (e.g. if it was srcset).
+print "<\/$element>\n";
+
+close HYP_FILE;
+close TSTMASTER;
+
+warn "# done\n";
+exit 0;

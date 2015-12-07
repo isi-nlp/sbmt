@@ -1,0 +1,40 @@
+NNP("77") -> "c1" ### start=0 end=1 id=1 gt_prob=e^-0.7 count=1 align={{{[#s=1 #t=1 0,0]}}} textf=ab textf2={{{cd ef}}}
+VBD("reiterated") -> "c2" ### start=1 end=2 id=2 gt_prob=e^-0.8 count=1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{0:.9,1:.1}}}
+NN("opposition") -> "c3" ### start=2 end=3 id=3 gt_prob=e^-0.7 count=1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{1:.8,0:.2}}}
+NN("acceptance") -> "c3" ### start=2 end=3 id=4 gt_prob=e^-0.31 count=1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{0:.7,1:.3}}}
+NPB(JJ("foreign") JJ("military") NNS("forces")) -> "c4" "c5" ### start=3 end=5 id=5 gt_prob=e^-0.8 count=1 align={{{[#s=2 #t=3 0,0 1,1 1,2]}}} rvd_root={{{1:1}}}
+NPB(JJ("freaky") JJ("eucalyptus") NNS("trees")) -> "c4" "c5" ### start=3 end=5 id=6 gt_prob=e^-.019 count=1 align={{{[#s=2 #t=3 0,0 1,1 1,2]}}} rvd_root={{{0:1}}}
+NN("69") -> "c6" ### start=5 end=6 id=7 gt_prob=e^-.012 count=1 align={{{[#s=1 #t=1 0,0]}}}
+NPB(DT("the") x0:NN) -> x0 ### start=5 end=6 id=8 gt_prob=e^-0.8 count=1 align={{{[#s=1 #t=2 0,1]}}} rvd_root={{{0:1}}} rvd_vars={{{0:0.3,1:0.7}}} rvd_var_indicators={{{1}}}
+NP-C(x0:NPB PP(IN("of") x1:NP-C)) -> x1 x0 ###  start=3 end=6 id=9 gt_prob=e^-0.7 count=1 align={{{[#s=2 #t=3 0,2 1,0]}}} rvd_root={{{1:1}}} rvd_vars={{{0:0.4,1:0.6 0:0.2,1:0.8}}} rvd_var_indicators={{{1 1}}}
+NNP(x0:NP-C) -> x0 ### start=0 end=1 id=10  gt_prob=e^-0.87 count=1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{1:1}}}
+NNP(x0:NPB) -> x0 ### start=0 end=1 id=11  gt_prob=e^-.019 count=1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{0:1}}}
+NP-C(NPB(x0:NNP)) -> x0 ###  start=0 end=1 id=12 gt_prob=e^-5 count=1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{1:1}}}
+NP-C(NPB(PRP$("its") x0:NN) PP(TO("to") x1:NP-C)) -> x0 x1 ### start=2 end=6 id=13 gt_prob=e^-0.01 count=1 align={{{[#s=2 #t=4 0,1 1,3]}}} 
+S(x0:NP-C VP(x1:VBD x2:NP-C)) -> x0 x1 x2 ### start=0 end=6 id=14 gt_prob=e^-0.18 count=1 align={{{[#s=3 #t=3 0,0 1,1 2,2]}}} rvd_root={{{1:1}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 1 0}}}
+S(S(x0:NP-C VP(x1:VBD x2:NP-C))) -> x0 x1 x2 ### start=0 end=6 id=15 gt_prob=e^-0.1 count=1 align={{{[#s=3 #t=3 0,0 1,1 2,2]}}} rvd_root={{{1:1}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 0 1}}}
+S(x0:NP-C ADVP("conversely") VP(x1:VBD x2:NP-C)) -> x2 x1 x0 ### start=0 end=6 id=16 gt_prob=e^-0.2 count=1 align={{{[#s=3 #t=4 0,3 1,2 2,0]}}} rvd_root={{{0:1}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 0 1}}}
+S(x0:NP-C ADVP("really") VP(x1:VBD x2:NP-C)) -> x0 x1 x2 ### start=0 end=6 id=17 gt_prob=e^-0.1 count=1 align={{{[#s=3 #t=4 0,0 1,2 2,3]}}} rvd_root={{{1:1}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 1 0}}}
+VP(x0:VBD x1:NP-C) -> x0 x1 ### start=0 end=6 id=18 gt_prob=e^-0.37 count=1 align={{{[#s=2 #t=2 0,0 1,1]}}} rvd_root={{{1:1}}} rvd_vars={{{0:0.05,1:0.95 0:0.5,1:0.5}}} rvd_var_indicators={{{1 1}}}
+S(x0:NP-C x1:VP) -> x0 x1 ### start=0 end=6 id=19 gt_prob=e^-.118 count=1 align={{{[#s=2 #t=2 0,0 1,1]}}} rvd_root={{{1:1}}} rvd_vars={{{1:0.05,0:0.95 0:0.85,1:0.15}}} rvd_var_indicators={{{1 1}}}
+NNP(x0:VP) -> x0 ### id=20 gt_prob=e^-.0199 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{1:1}}}
+NNP(x0:S) -> x0 ### id=21 gt_prob=e^-.01 align={{{[#s=1 #t=1 0,0]}}} rvd_vars={{{}}} rvd_var_indicators={{{0}}}
+S(x0:NP-C) -> x0 ### start=0 end=6 id=22 gt_prob=e^-0.5 count=1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{0:1}}} rvd_vars={{{}}} rvd_var_indicators={{{0}}}
+NP-C(x0:NPB) -> x0 ### start=3 end=5 id=23 gt_prob=e^-.01 count=1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{1:1}}} rvd_vars={{{}}} rvd_var_indicators={{{0}}}
+CD("99") -> "c5" ### start=3 end=4 id=24 gt_prob=e^0 count=1 align={{{[#s=1 #t=1 0,0]}}} rvd_root={{{1:1}}}
+NPB(x0:VBD x1:CD x2:NNP x3:NN) -> x2 x0 x3 "c4" x1 ### start=0 end=4 id=25 gt_prob=e^-.11 count=1 align={{{[#s=5 #t=4 0,2 1,0 2,3 4,1]}}} rvd_root={{{0:1}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 0 1 0}}}
+NPB(x0:VBD x1:CD x2:NNP x3:NN) -> x0 x2 x3 "c4" x1 ### start=0 end=4 id=26 gt_prob=e^-.11 count=1 align={{{[#s=5 #t=4 0,2 1,0 2,3 4,1]}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 0 1 0}}}
+NPB(x0:VBD x1:CD x2:NNP x3:NN) -> x2 x0 x3  x1 ### start=0 end=4 id=27 gt_prob=e^-.11 count=1 align={{{[#s=4 #t=4 0,2 1,0 2,3 3,1]}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 0 1 0}}}
+NPB(x0:NNP x1:CD x2:VBD x3:NN) -> x0 x2 x3  x1 ### start=0 end=4 id=28 gt_prob=e^-.11 count=1 align={{{[#s=4 #t=4 0,0 1,2 2,3 3,1]}}} rvd_root={{{1:1}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 0 1 0}}}
+NPB(x0:VBD x1:NN x2:NNP x3:CD) -> x2 x0 x1  x3 ### start=0 end=4 id=29 gt_prob=e^-.11 count=1 align={{{[#s=4 #t=4 0,2 1,0 2,1 3,3]}}} rvd_root={{{1:1}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 0 1 0}}}
+NPB(x0:NNP x1:NN x2:VBD x3:CD) -> x0 x2 x1  x3 ### start=0 end=4 id=30 gt_prob=e^-.11 count=1 align={{{[#s=4 #t=4 0,0 1,2 2,1 3,3]}}} rvd_root={{{0:1}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 0 1 0}}}
+NPB(x0:VBD x1:CD x2:NNP x3:NN) -> x3 x0 x2  x1 ### start=0 end=4 id=31 gt_prob=e^-.11 count=1 align={{{[#s=4 #t=4 0,3 1,0 2,2 3,1]}}} rvd_root={{{1:1}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 0 1 0}}}
+NP-C(JJ("fake") x0:NPB) -> "c1" "c2" x0 "c4" ### start=3 end=5 id=32 gt_prob=e^-.01 count=1 align={{{[#s=4 #t=2 0,0 3,0 2,1]}}} rvd_root={{{1:1}}}
+NPB(x0:NN x1:CD x2:VBD x3:NNP) -> x2 x0 x3  x1 ### start=0 end=4 id=33 gt_prob=e^-.11 count=1 align={{{[#s=4 #t=4 0,2 1,0 2,3 3,1]}}} rvd_root={{{0:0.8,1:0.2}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 0 1 0}}}
+NPB(x0:NNP x1:CD x2:VBD x3:NN) -> x2 x0 x3  x1 ### start=0 end=4 id=34 gt_prob=e^-.11 count=1 align={{{[#s=4 #t=4 0,2 1,0 2,3 3,1]}}} rvd_root={{{1:1}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 0 1 0}}}
+S(x0:NP-C VP(x1:VBD x2:NP-C)) -> x0 x1 x2 ### start=0 end=6 id=35 gt_prob=e^-0.1 count=1 align={{{[#s=3 #t=3 0,0 1,1 2,2]}}} rvd_root={{{0:1}}} rvd_vars={{{1:0.1,0:0.9 0:0.35,1:.65}}} rvd_var_indicators={{{0 1 1}}}
+S(NP-C(x0:NPB PP(x1:NP-C)) VP(x2:VBD x3:NP-C)) -> x1 x0 x2 x3 ### start=0 end=6 id=36 gt_prob=e^-0.1 count=1 align={{{[#s=4 #t=4 0,1 1,0 2,3 3,3]}}} rvd_root={{{1:1}}}
+S(NP-C(NPB(x0:NNP)) VP(x1:VBD NP-C(x2:NPB PP(x3:NP-C)))) -> x0 x1 x2 x3 ### start=0 end=6 id=37 gt_prob=e^-0.1 count=1 align={{{[#s=4 #t=4 0,0 1,1 2,2 3,3]}}} rvd_vars={{{0:0.11,1:0.89}}} rvd_var_indicators={{{0 0 1 0}}}
+S(NP-C(NPB(x0:VBD)) VP(x1:NNP NP-C(x2:NPB PP(x3:NP-C)))) -> x1 x0 x2 x3 ### start=0 end=6 id=38 gt_prob=e^-0.1 count=1 align={{{[#s=4 #t=4 0,1 1,0 2,2 3,3]}}} rvd_vars={{{0:0.12,1:0.88}}} rvd_var_indicators={{{0 0 1 0}}}
+S(NP-C(NPB(x0:NPB)) VP(x1:NNP NP-C(x2:VBD PP(x3:NP-C)))) -> x1 x2 x0 x3 ### start=0 end=6 id=39 gt_prob=e^-0.1 count=1 align={{{[#s=4 #t=4 0,1 1,2 2,0 3,3]}}} rvd_root={{{0:1}}} rvd_vars={{{0:0.13,1:0.87}}} rvd_var_indicators={{{0 0 1 0}}}
+S(NP-C(NPB(x0:NP-C)) VP(x1:VBD NP-C(x2:NPB PP(x3:NNP)))) -> x3 x1 x2 x0 ### start=0 end=6 id=40 gt_prob=e^-0.1 count=1 align={{{[#s=4 #t=4 0,3 1,1 2,2 3,0]}}} rvd_vars={{{0:0.1,1:0.9}}} rvd_var_indicators={{{0 0 1 0}}}

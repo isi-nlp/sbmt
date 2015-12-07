@@ -1,0 +1,6 @@
+exe view_runtime_infos
+  : view_runtime_infos.cpp
+    ../../../sbmt_decoder/builtin_infos
+    /boost/program_options//boost_program_options
+    /sbmt_decoder//sbmt
+  ;

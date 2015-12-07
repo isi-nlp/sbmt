@@ -1,0 +1,52 @@
+2006-01-25  Jonathan Graehl  <graehl@isi.edu>
+
+	* Rule.cc (segment_rule_string): use find_rule_delims_in_order that skips quoted strings
+	(BOOST_AUTO_UNIT_TEST) (if -DTEST)
+
+2006-01-24  Jonathan Graehl  <graehl@isi.edu>
+
+	* Rule.cc (init): -Dcomment_fixme to get old (buggy) end of line comments back
+
+2005-09-28  Jonathan Graehl  <graehl@isi.edu>
+
+	* Rule.h: bad_format exception, constructor and create both call
+	init.
+
+2005-09-01  Wei Wang  <wwang@i02>
+
+	* added the clear method into the Rule class.
+	* Beautified the formats.
+	* added a README.
+
+2005-09-01  Liang Huang  <lhuang3@caelum.cis.upenn.edu>
+
+	* Rule.cc: fixed two bugs:
+		1. now able to detect quotes mismatch
+		2. escaping the stuff inside quotes to white spaces before searching for delimiters.
+			e.g.  "###" -> "###" ###  is an OK rule now (the RuleReader will crash before).
+		   the RuleReader will throw an exception (should be caught by outside caller) if the rule is malformated.
+
+
+2005-08-17  Wei Wang  <wwang@languageweaver.com>
+
+	* Added methods:
+		Rule:: constructAlignmentString();
+		Rule::string parseTreeString(const char* format = "radu");
+    		string lhs_yield_string(vector<string>* strvec = NULL);
+    		string rhs_string(bool pos_only=false, bool addQuote=true, 
+	   These methods are used to export a triple of e-parse, f-string,
+	   alignment from a rule --- so that we can do some rule extraction
+	   on them. These functionalitities are not used so far. They were
+	   added because I wanted to do rule decomposition using these
+	   strings, but I changed to other methods finaly.
+
+	* Interface changes: added the "addQuote" argument so that we 
+		can decide whether the lexical items will be surrounded
+		by quotes or not in the output format of the rule.
+		This doesnt affect the default behavior of these interfaces,
+		so modules depending on them run OK.
+
+	* Code before this modification can be retrieved via tag:
+		AUG-16
+
+

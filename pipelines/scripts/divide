@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+
+# usage: divide.py -k <k> [-l <l>]
+
+# input:  key \t value \t numerator \t denominator
+# output: value \t l=quotient
+#   where quotient is expressed in SBMT "e^..." format
+# if l not specified, quotient is displayed raw
+# if more than one value, labels after the first are adjoined with .x from 0 up
+
+import sys
+import math
+import argparse
+from decimal import *
+import itertools
+
+parser = argparse.ArgumentParser(description="divide numerators, denominators, represent in exp notation")
+parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="input file")
+parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
+parser.add_argument("--keylength", "-k", type=int, default=1, help="length of key (number of fields in key")
+parser.add_argument("--noexp", action='store_false', dest='addexp', default=True, help="turn off addition of e^ before -log prob (use this for decomp)")
+parser.add_argument("--label", "-l", default=None, help="feature label (default blank)")
+try:
+    args = parser.parse_args()
+except IOError, msg:
+    parser.error(str(msg))
+
+n_keys = args.keylength
+label = args.label
+
+
+def logdiv(n,d):
+    if n == 0 or d == 0:
+        return -100
+    else:
+        return max(math.log(n/d),-100)
+
+probpat = 'e^%f' if args.addexp else '%f'
+if label is not None:
+    probpat = "%s="+probpat
+for line in args.infile:
+    fields = line.rstrip().split("\t")
+    value = fields[n_keys:-2]
+    numerators = [ Decimal(f) for f in fields[-2].split() ]
+    denominators = [ Decimal(f) for f in fields[-1].split() ]
+
+    if label is None:
+        pairs = itertools.izip(numerators,denominators)
+        probs = ' '.join(probpat % logdiv(n,d) for (n,d) in pairs)
+    else:
+        labels = [label]+["%s.%d" % (label, x) for x in range(len(numerators)-1)]
+        pairs = itertools.izip(labels,numerators,denominators)
+        probs = ' '.join(probpat % (l, logdiv(n,d)) for (l,n,d) in pairs)
+    args.outfile.write("%s\t%s\n" % ("\t".join(value), probs))

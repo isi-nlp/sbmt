@@ -1,0 +1,13 @@
+
+argmin
+written by Joseph Turian
+
+Agenda-based inference to find the lowest-cost derivation
+
+See design.txt for documentation of the code design.
+
+Copyright (c) 2006, Information Sciences Institute. All rights reserved.
+
+**
+
+$Id: README 1254 2006-09-17 00:25:16Z jturian $

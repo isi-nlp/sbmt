@@ -1,0 +1,8 @@
+project tbb_alloc ;
+
+lib tbb_alloc 
+  : tbb_alloc.cpp
+    /site-config//tbbmalloc
+  ;
+
+install(TARGETS tbb_alloc DESTINATION lib)

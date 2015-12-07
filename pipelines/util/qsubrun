@@ -1,0 +1,57 @@
+#!/usr/bin/python
+
+#######################################################################################################
+#
+# the purpose of this script is extend qsub to allow the execution of scripts with arguments, as in
+#    qsubrun myprogram arg1 arg2 ... argN
+#
+# myprogram can be any executable, but if it is a script containing PBS default parameters, then those
+# will be processed just like qsub does.
+# 
+# furthermore, if you want to override any of the PBS default parameters in the script, just pass them
+# at the command line, as in:
+#    qsubrun -lwalltime=20:00:00 -lnodes=10 -- myprogram arg1 arg2 ... argN
+#
+#######################################################################################################
+
+import subprocess
+import sys
+import re
+import os
+
+script = sys.argv[1:]
+qsub = ['qsub']
+qsubargs = []
+
+try:
+    k = script.index('--')
+    qsubargs = script[:k]
+    script = script[k+1:]
+except ValueError:
+    pass
+
+
+script[0] = os.path.abspath(script[0])
+qsubline = re.compile(r'^\s*#\s*PBS\s+(.+)$')
+
+qsub += ['-N', os.path.basename(script[0])]
+for line in open(script[0]):
+    line = line.rstrip('\n')
+    m = qsubline.match(line)
+    if m:
+        qsub += m.group(1).split()
+
+qsub = qsub + qsubargs
+script = ['echo', 'cd', '$PBS_O_WORKDIR', ';'] + script
+
+
+echo = subprocess.Popen(script, stdout=subprocess.PIPE)
+qsubrun = subprocess.Popen(qsub, stdin=echo.stdout)
+qsubrun.wait()
+echo.stdout.close()
+
+#print ' '.join(script) + ' | ' + ' '.join(qsub)
+
+
+
+    

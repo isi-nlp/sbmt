@@ -1,0 +1,35 @@
+import sbmt-util ;
+
+project /lw
+  : requirements
+    <define>__GCC3__=1
+    <define>LM_NO_COMMON_LIB=1
+	<define>LM_NO_QT=1
+	<define>SLM_SWAP_BYTES=1
+	<define>QT_THREAD_SUPPORT=1
+	<define>LM_NO_BDB_LIB=1
+	<define>NO_QT=1
+	<define>NOTRACE=1
+	<threading>multi
+	<include>.
+	<include>Shared
+  :
+    usage-requirements
+    <include>.
+    <include>Shared
+  ;
+
+use-project /lw/Common : Shared/Common ;
+use-project /lw/LangModel : Shared/Core/LangModel ;
+
+lib lw 
+  : Shared/Common//LWCommon
+    Shared/Core/LangModel//LWLangModel
+  ;
+
+sbmt-util.install install : <install-source-root>..
+                          : Horse/App/LangModel//LangModel
+                          : lw
+                          : Shared/Common/Vocab/Vocab.h ;
+
+explicit install ;

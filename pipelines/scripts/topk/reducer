@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+
+# usage: filter-topk.py [-k <k>] [--keep-min <keep-min>] [--non-lex-min <non-lex-min]
+
+# input:
+# signature \t count \t rule
+
+# output:
+
+# for lexical rules, keep the top <k> per signature and those that
+# have a count of at least <keep-min>
+
+# for nonlexical rules, keep those that have a count of at least <non-lex-min>
+
+import sys
+import getopt
+import itertools
+import heapq
+from decimal import *
+
+def input():
+    for line in sys.stdin:
+        yield line.rstrip().split("\t")
+
+if __name__ == "__main__":
+    opts, args = getopt.gnu_getopt(sys.argv[1:], 'k:', ['keep-min=', 'non-lex-min='])
+    opts = dict(opts)
+    k_lex = int(opts.get('-k',0))
+    k_nonlex = 0
+    mincount_lex = Decimal(opts.get('--keep-min', -1))
+    mincount_nonlex = Decimal(opts.get('--non-lex-min', -1))
+    
+    for sig, fields in itertools.groupby(input(), lambda fields: fields[0]):
+        if sig == "x0":
+            k, mincount = k_nonlex, mincount_nonlex
+        else:
+            k, mincount = k_lex, mincount_lex
+
+        if k:
+            topk = []
+            for _, count, rule in fields:
+                count = Decimal(count.split()[0])
+                heapq.heappush(topk, (count, rule))
+
+                while len(topk) > k and (mincount == -1 or topk[0][0] < mincount):
+                    heapq.heappop(topk)
+            for _, rule in topk:
+                print rule
+
+        elif mincount != -1:
+            for _, count, rule in fields:
+                count = Decimal(count.split()[0])
+                if count >= mincount:
+                    print rule
+                
+            
+        

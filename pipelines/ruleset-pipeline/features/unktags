@@ -1,0 +1,26 @@
+#!/usr/bin/env python
+
+import itertools
+import collections
+import cfg
+import argparse
+import sys
+import os.path
+import re
+
+parser = argparse.ArgumentParser()
+d = cfg.parse_args(parser)
+
+hp = d.hadoop
+
+tags = '\\n'.join(d.config['rule-extraction']['features']['unktags']['tags'])
+splitfile = os.path.join(d.outdir,'grammar.nt-split')
+toutfile = os.path.join(d.tmpdir,'grammar.unk-tags')
+unkcmd = 'echo -e "' + tags + '"'
+
+if os.path.exists(splitfile):
+    unkcmd += ' | ' + os.path.join(d.scriptdir,'ntsplit') + ' ' + splitfile
+hp.syscall(unkcmd + ' > ' + toutfile)
+hp.put(toutfile,'grammar.unk-tags.in')
+hp.mapreduce(mapper='cat', input='grammar.unk-tags.in', output='grammar.unk-tags', compress=False)
+hp.syscall('rm -f ' + toutfile)

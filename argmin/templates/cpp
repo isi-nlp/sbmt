@@ -1,0 +1,15 @@
+/*  $Id: cpp 1247 2006-09-15 20:08:35Z jturian $
+ *  Copyright (c) 2006, Information Sciences Institute. All rights reserved. */
+/*!
+ *  \file tmpl.cpp
+ *  $LastChangedDate: 2006-09-15 13:08:35 -0700 (Fri, 15 Sep 2006) $
+ *  $Revision: 1247 $
+ */
+
+
+namespace argmin {
+
+
+
+}	// namespace argmin
+

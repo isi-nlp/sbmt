@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+import argparse
+import os.path
+import cfg
+
+parser = argparse.ArgumentParser()
+args = cfg.parse_args(parser)
+hp = args.hadoop
+scriptdir = args.config['variables']['rhsdir']
+#dir = os.path.dirname(os.path.abspath(__file__))
+#scriptdir = os.path.join(os.path.dirname(dir),'scripts')
+
+mapper = os.path.join(scriptdir,"add_discrete_feats.pl")
+
+
+hp.mapreduce( mapper=mapper
+            , reducer='NONE'
+            , input='rules'
+            , output='part.discrete'
+            )

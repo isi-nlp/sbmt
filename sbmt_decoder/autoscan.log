@@ -1,0 +1,14 @@
+autoscan: warning: missing AC_C_INLINE wanted by: 
+	src/dictionary.cpp:53
+	src/dictionary.cpp:72
+autoscan: warning: missing AC_HEADER_STDBOOL wanted by: 
+	include/sbmt/token.hpp:31
+	include/sbmt/token.hpp:37
+	include/sbmt/token.hpp:39
+	include/sbmt/detail/tok_storage.hpp:30
+	include/sbmt/detail/tok_storage.hpp:32
+	src/tok_storage.cpp:8
+	src/tok_storage.cpp:14
+	test/test_token.cpp:50
+autoscan: warning: missing AC_PROG_RANLIB wanted by: 
+	config/ltmain.sh:6809

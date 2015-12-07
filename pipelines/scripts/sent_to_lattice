@@ -1,0 +1,108 @@
+#!/usr/bin/env perl
+#
+# This perl works on utf-8 characters
+#
+use v5.8.8;                     # must be UTF-8 correct for Han !!!
+use strict;
+use IO::Handle qw( );
+
+BEGIN {
+    # use very early - before loading most modules
+    delete $ENV{LANG};
+    $ENV{'LC_ALL'} = 'C';
+
+    binmode( STDIN,  ':utf8' ); 
+    binmode( STDOUT, ':utf8' );
+    binmode( STDERR, ':utf8' ); 
+}
+
+use utf8;
+use charnames qw(:full); 
+use File::Basename qw(basename); 
+use Getopt::Long;
+
+sub usage {
+    my $app = basename($0); 
+    print << "EOF";
+
+Usage:\t$app [options] < sentfile > latfile 
+Or:\t$app [options] sentfile > latfile
+
+ -h|--help    print this help and exit.
+ --start-id n lattice ID will begin with n and autoincrement
+ --mark [key] mark all words with key (default 'tok')
+ --glyph      create permutations for glyphs from the "Han" script,
+              separates word ABC into lattice {A,B,C,AB,BC,ABC}. 
+
+EOF
+    exit 1;
+}
+
+sub permute($$) {
+    # purpose: abcd -> a ab abc abcd b bc bcd c cd d
+    my $token = shift;
+    my $left = shift; 
+
+    # find single-glyph alternatives: a b c d
+    my @x = ();
+    push( @x, $1 ) while ( $token =~ /(\p{Han})/g );
+
+    if ( @x ) {
+	for ( my $i=0; $i < @x; ++$i ) {
+	    for ( my $j=$i; $j < @x; ++$j ) {
+		next if ( $i == 0 && $j == $#x ); # skip full word
+		print '  [', $left+$i, ',', $left+$j+1, '] "';
+		print join('',@x[$i..$j]), "\"; "; 
+	    }
+	}
+	$left+@x; 
+    } else {
+	$left+1; 
+    }
+}
+
+my $id = 1;
+my $mark = 'tok';
+my $glyph = 0;
+GetOptions( "help" => \&usage
+          , "start-id=i" => \$id
+	  , 'mark:s' => sub { if ( defined $_[1] ) {
+	      $mark = ( $_[1] ? $_[1] : undef ); }
+	    }
+	  , 'glyph' => \$glyph
+          )
+          ;
+          
+while (<>) {
+    s/\\/\\\\/g;
+    s/"/\\"/g;
+    s/^\s+//;
+    s/\s+$//;
+    my @words = split ;
+    if ( @words > 0 ) {
+	print "lattice id=\"$id\" { ";
+	$id++;
+	my $left = 0;
+	my $right = 1;
+	foreach my $word (@words) { 
+	    if ( defined $word && length($word) > 0 ) {
+		if ( $glyph ) {
+		    # create alternatives for Han scripts
+		    $right = permute($word,$left); 
+		}
+		# just copy the word over
+		print "[$left,$right] \"$word\"";
+		if ( defined $mark && $mark && $word ne '<foreign-sentence>' ) {
+		    print " $mark=\"10^-1\"";
+		}
+		print " ; ";
+		$left = $right; 
+		$right++;
+	    }
+	}
+	print "};\n";
+	STDOUT->flush();
+    } else {
+	warn "Warning: $.: Unable to produce a lattice for this sentence!\n";
+    }
+}

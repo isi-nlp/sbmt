@@ -1,0 +1,103 @@
+# Configuration file used by the Perl rule extraction
+# scripts (both 'the_button' and 'create_rule_file').
+
+######################################################
+# GENERAL PARAMETERS
+######################################################
+
+####
+# Directories:
+$BINDIR  = "$BASEDIR/bin";
+$SCRDIR  = "$BASEDIR/scripts";
+$TMPDIR  = "/tmp";
+# Directory (with write permissions) where to output everything 
+# (tmp files, rules, derivations, counts):
+$DBDIR   = "/home/nlg-01/mgalley/db/tiny-size4-u10-gale-v0.94";
+
+####
+# Steps:
+# (dependencies between steps: 1->2, 2->3, 3->4, 3->5, 4->6)
+$STEP_EXTRACT_FROM_DATA = 1; # 1) rule extraction       [N nodes]
+$STEP_ADD_RULES_TO_DB   = 1; # 2) DB creation           [1 node]
+$STEP_INDEX_RULES       = 1; # 3) rule indexing (in DB) [1 node]
+$STEP_DERIVATIONS       = 1; # 4) derivations + counts  [N nodes]
+$STEP_PRINT_NORM        = 1; # 5) normalization groups  [1 node]
+$STEP_SAVERULES         = 1; # 6) print final rule file [1 node]
+
+####
+# Program to submit commands to execute on the cluster:
+# (set this to "$SCRDIR/run.sh" if you want to run a 
+# non-parallel version of the program (e.g. if you just
+# want to test the script on a small segment of the data); 
+# set it to "$SCRDIR/qsubrun.sh" if you want to run rule
+# extraction on more than one node)
+$EXEC = "$SCRDIR/run.sh";
+#$EXEC = "$SCRDIR/qsubrun.sh";
+#$EXEC = "queue=marcu $SCRDIR/qsubrun.sh";
+
+######################################################
+# RULE EXTRACTION PARAMETERS (STEPS 1-4)
+######################################################
+
+####
+# Number of hpc nodes:
+$N_PAR   = 3;
+
+####
+# Input data:
+$DATADIR = "/home/nlg-03/wang11/resources/CtoE/gale/v1.0/training";
+$ARG_DAT = "$DATADIR/gale-CtoE";
+$ARG_FORMAT = "radu-new";
+
+####
+# Index of first and last e-tree/f-string/alignment triple:
+$START_DERIV = 1; 
+$END_DERIV =  1000;
+#$END_DERIV = 6177715;  # from `wc -l ${ARG_DAT}.a`
+
+####
+# Constraints on rule size during rule extraction:
+# (note: these constraints do not affect minimal rules)
+# Format is X:Y, where X is the maximum number of 
+# rules that will be extracted at each node, and Y is the
+# maximum size of the LHS (in number of internal nodes, not 
+# counting pre-terminals)
+$ARG_LIM  = "1000:4";
+
+####
+# Additional arguments to pass to 'extract':
+$EXTRACT_ARGS = "-U 10 -H";
+#$EXTRACT_ARGS = "-U 10";
+# If you don't want more than one attachment for any given 
+# unaligned foreign word (GHKM-1 behavior), or if you don't
+# want more than one minimal derivation per e-tree/f-string/alignment
+# triple, uncomment this:
+#$EXTRACT_ARGS = "-U 0 -H";
+
+######################################################
+# POST-PROCESSING PARAMETERS (STEP 6)
+######################################################
+
+####
+# Can further filter rules by size. Notes:
+# - these constraints _do_ affect minimal rules
+#   (hence, to get all minimal rules, set e.g. 1000)
+# - filtering is done just before collecting normalization counts
+# - each N in the list generates a file for rules of size<=N:
+$FILE_SIZES = "3,4";
+#$FILE_SIZES = "1000";
+
+####
+# Count identifiers. The extractor will compute 
+# normalization counts for each identifier
+# (possible values: 'count','fraccount','count,fraccout'):
+$COUNT_IDS = "count";
+#$COUNT_IDS = "count,fraccount";
+
+####
+# If set to 1, LHS normalization counts will be computed:
+$LHS_NORMCOUNTS = 0;
+
+######################################################
+# End.
+1;

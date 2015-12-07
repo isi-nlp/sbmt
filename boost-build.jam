@@ -1,0 +1,110 @@
+################################################################################
+#
+# lifted and slightly modified from boost-sandbox.
+# i am attempting to get the way we find boost to be more inline with how 
+# others do it.  i guess often people just set BOOST_ROOT and BOOST_BUILD_PATH
+# as an env var, and reference those VARS where appropriate.
+# in this file, i allow people to set
+# --boost
+# --boost-build
+# env BOOST
+# env BOOST_BUILD
+# and then export BOOST_ROOT, BOOST, BOOST_LOCATION (all set to same value)
+# for folks who assume that those should be present
+# 
+# the goal is to make it easier to make one's Jamfile less dependent on the 
+# toplevel Jamroot, i guess
+#
+# --Michael Pust
+#
+################################################################################
+
+rule first-non-empty ( name : variables * : defaulted )
+{
+    local retval ;
+    for x in $(variables)
+    {
+        if $(x)
+        {
+            if ! $(retval)
+            {
+                echo "*" $(name) "location set to" $(x) ;
+                retval = $(x) ;
+            }
+        }
+    }
+    if ! $(retval)
+    {
+        echo "*" $(name) "location not specified.  defaulting to" $(defaulted) ;
+        retval = $(defaulted) ; 
+    }
+    # the reason for not returning inside the for-loop: return does not break
+    # control.
+    return $(retval) ;
+}
+
+rule mypeek ( module-name ? : variables + )
+{
+    module $(<)
+    {
+        return $($(>)) ;
+    }
+}
+
+rule envvar ( var )
+{
+    return [ mypeek .ENVIRON : $(var) ] ;
+}
+
+rule clear-system-defaults ( variables + )
+{
+    for x in $(variables) 
+    {
+        if ! [ MATCH -s$(x)=(.*) : $(ARGV) ]
+        {
+            if ! [ envvar $(x) ]
+            {
+                $(x) = "" ;
+            }
+        }
+    }
+}
+
+#~ bjam has one or more of these paths hardcoded to some useless values...
+#~ here we nullify these variables unless they appear in a bjam -s command-line
+#~ switch, or as an environment variable
+clear-system-defaults 
+    BOOST_BUILD_PATH 
+    BOOST_BUILD 
+    BOOST_ROOT 
+    BOOST 
+    BOOST_LOCATION 
+  ;
+
+local boost-src = [ first-non-empty "boost"
+                  : [ MATCH --boost=(.*) : $(ARGV) ]
+                    [ MATCH --boost-location=(.*) : $(ARGV) ]
+                    $(BOOST)
+                    $(BOOST_LOCATION)
+                    $(BOOST_ROOT)
+                  : $(.boost-build-file:D)/../boost
+                  ]
+                  ;
+
+local boost-build-src = [ first-non-empty "boost-build" 
+                        : [ MATCH --boost-build=(.*) : $(ARGV) ]
+                          [ MATCH --boost-build-path=(.*) : $(ARGV) ]
+                          [ MATCH --boost-build-location=(.*) : $(ARGV) ]
+                          $(BOOST_BUILD)
+                          $(BOOST_BUILD_PATH)
+                        : $(boost-src)/tools/build/v2
+                        ]
+                        ;
+
+BOOST = $(boost-src) ;
+BOOST_ROOT = $(boost-src) ;
+BOOST_LOCATION = $(boost-src) ;
+BOOST_BUILD = $(boost-build-src) ;
+BOOST_BUILD_PATH = $(boost-build-src) ;
+
+boost-build $(boost-build-src) ;
