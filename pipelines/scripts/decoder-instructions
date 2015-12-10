@@ -1,0 +1,82 @@
+#!/usr/bin/env python
+import argparse
+import os.path
+import cfg
+import sys
+import subprocess
+import tempfile
+import string
+import re
+
+parser = argparse.ArgumentParser()
+parser.add_argument('rules')
+args = cfg.parse_args(parser,sys.argv[1:])
+steps = cfg.steps(args)
+
+extras = []
+for step in steps:
+    if step.stage == 'inline-extras':
+        extrascmd = step.execute
+        extra = subprocess.Popen( extrascmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True )
+        extras.append(extra)
+
+unkwords = subprocess.Popen( '%s/xrsdb_unknown_filter %s/xsearchdb' % (args.config['variables']['rhbin'], args.rules)
+                           , stdin=subprocess.PIPE
+                           , stdout=subprocess.PIPE
+                           , shell=True )
+
+lattice = subprocess.Popen( '%s/scripts/sent_to_lattice' % args.rootdir
+                          , stdin=subprocess.PIPE
+                          , stdout=subprocess.PIPE
+                          , shell=True )
+
+def allextras(line):
+    extrasfile = tempfile.NamedTemporaryFile(delete=False)
+    for extra in extras:
+        extra.stdin.write(line + '\n')
+        while True:
+            outline = extra.stdout.readline().strip()
+            if outline == '':
+                break
+            extrasfile.write(outline + '\n')
+    extrasfile.close()
+    unkwords.stdin.write(line + '\n')
+    candunks = unkwords.stdout.readline().strip()
+    unkrulecmd = os.path.join(args.config['variables']['rhbin'],'unknown_word_rules') + ' -c 1 --id-origin 600000000000 --unk-tag-file %s/grammar.unk-tags --xrs-rule-format --native-unk \'""UNK_F_HERE""\' -f- -r %s | %s/new_decoder_weight_format' % (args.rules,extrasfile.name,args.config['variables']['rhbin'])
+    unkrule = subprocess.Popen( unkrulecmd
+                              , stdin=subprocess.PIPE
+                              , stdout=subprocess.PIPE
+                              , shell=True )
+    unkrule.stdin.write(candunks + '\n')
+    unkrule.stdin.close()
+    while True:
+        outline = unkrule.stdout.readline().strip()
+        if outline == '':
+            break
+        yield outline
+    unkrule.wait()
+    os.unlink(extrasfile.name)
+
+def latline(line):
+    lattice.stdin.write(line + '\n')
+    return lattice.stdout.readline().strip()
+
+def mainrun():
+
+    while True:
+        line = sys.stdin.readline()
+        if line == '':
+            break
+        line = line.strip()
+        if line == '':
+            continue
+        allrules = allextras(line)
+        sys.stdout.write('push-inline-rules\n')
+        for rule in allrules:
+            sys.stdout.write(rule + '\n')
+        sys.stdout.write(';\n')
+        sys.stdout.write(latline('<foreign-sentence> ' + line + ' </foreign-sentence>') + '\n')
+        sys.stdout.write('pop-grammar ;\n\n')
+
+
+mainrun()
