@@ -37,14 +37,14 @@ lib gusc
 #  : /boost/python//boost_python
 #  ;
 
-unit-test check
-  : [ glob test/*.cpp ]
-    /boost/test//boost_unit_test_framework/<link>static
-    /boost/serialization//boost_serialization
-    /boost/filesystem//boost_filesystem
-    gusc
-  : <define>GUSC_TEST_DIR=$(test_dir) 
-  ;
+#unit-test check
+#  : [ glob test/*.cpp ]
+#    /boost/test//boost_unit_test_framework/<link>static
+#    /boost/serialization//boost_serialization
+#    /boost/filesystem//boost_filesystem
+#    gusc
+#  : <define>GUSC_TEST_DIR=$(test_dir) 
+#  ;
 
 exe fuzzycube
   : apps/fuzzycube.cpp

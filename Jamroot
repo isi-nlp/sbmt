@@ -159,7 +159,6 @@ alias install-pipeline
     /sbmt_decoder//install
     ./rule_head//install
     /utilities//install
-    #./utilities/xrs_info_decoder//install
     ./max_count_feature//install
     ./rule_length//install
     /gusc//install

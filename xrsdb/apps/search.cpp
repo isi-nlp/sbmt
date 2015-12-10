@@ -2214,6 +2214,22 @@ void pop_grammar( word_trie_stack& wts )
     wts.pop_back();
 }
 
+void push_inline_grammar( word_trie_stack& wts
+			, std::vector<std::string> const& fvec
+			, sbmt::weight_vector const& weights
+			, header& h )
+{
+    std::stringstream sstr;
+    BOOST_FOREACH(std::string const& str, fvec) {
+        sstr << str;
+    }
+    size_t sz;
+    boost::shared_array<char> buf;
+    boost::tie(buf,sz) = create_word_trie(sstr,weights,h);
+    wts.push_back(word_trie_data(buf,sz,null_sorter()));
+    SBMT_INFO_STREAM(decoder_domain, "inline grammar pushed");
+}
+
 void push_grammar( word_trie_stack& wts
                  , std::string const& fname
                  , sbmt::archive_type ar
@@ -3994,6 +4010,13 @@ int main(int argc, char** argv)
                                                   , boost::ref(opts) 
                                                   )
                                       );
+	    reader.set_push_inline_rules_callback(boost::bind( push_inline_grammar
+							     , boost::ref(wts)
+							     , _1
+							     , boost::cref(weights)
+							     , boost::ref(opts.h)
+							     )
+						  );
             reader.set_push_grammar_callback(boost::bind( push_grammar
                                                         , boost::ref(wts)
                                                         , _1

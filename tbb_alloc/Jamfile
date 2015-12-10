@@ -1,3 +1,5 @@
+import sbmt-util ;
+
 project tbb_alloc ;
 
 lib tbb_alloc 
@@ -5,4 +7,8 @@ lib tbb_alloc
     /site-config//tbbmalloc
   ;
 
-install(TARGETS tbb_alloc DESTINATION lib)
+sbmt-util.install install
+ :
+ :
+ : tbb_alloc
+ ;

@@ -4,7 +4,7 @@ require =
   <library>/RuleReader//RuleReader
   <library>/graehl//graehl
   <library>/boost/regex//boost_regex
-  <library>/boost/serialization//boost_serialization
+  # <library>/boost/serialization//boost_serialization
   <library>/boost/signals//boost_signals
   <library>/boost/thread//boost_thread
   <library>/boost/program_options//boost_program_options

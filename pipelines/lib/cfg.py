@@ -21,7 +21,7 @@ class PTemplate(string.Template):
         """
 
 stages_ = set(( 'ghkm', 'prefeature', 'feature', 'extract', 'training', 'extras', 'dictionary'
-              , 'post-process-extras', 'global-extras', 'lattice', 'decode' ))
+              , 'post-process-extras', 'global-extras', 'lattice', 'decode', 'inline-extras' ))
               
 
 

@@ -71,7 +71,7 @@ public:
             change_options_cb_type;
 
     typedef boost::function<void (std::vector<std::string> const&)> 
-            multipass_options_cb_type;
+            push_inline_rules_cb_type;
     
     typedef boost::function<void ( std::string const&
                                  , std::string const&
@@ -156,8 +156,8 @@ public:
     ///
     ////////////////////////////////////////////////////////////////////////////
     template <class CB>
-    void set_multipass_options_callback(CB cb)
-    { set_multipass_options_cb(cb); }
+    void set_push_inline_rules_callback(CB cb)
+    { set_push_inline_rules_cb(cb); }
 
     ////////////////////////////////////////////////////////////////////////////
     ///
@@ -188,7 +188,7 @@ public:
 private:
     void set_decode_forest_cb(decode_forest_cb_type cb);
     void set_load_dynamic_ngram_cb(load_dynamic_ngram_cb_type cb);
-    void set_multipass_options_cb(multipass_options_cb_type cb);
+    void set_push_inline_rules_cb(push_inline_rules_cb_type cb);
     void set_change_options_cb(change_options_cb_type cb);
     void set_load_grammar_cb(load_grammar_cb_type cb);
     void set_push_grammar_cb(push_grammar_cb_type cb);

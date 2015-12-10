@@ -30,7 +30,7 @@ template <class Token, class Archive> class on_brf;
 template <class Token, class Archive> class on_xrs;
 }
 
-enum archive_type { brf = 0, gar, text_gar, fat_gar, fat_text_gar };
+  enum archive_type { brf = 0, gar, text_gar, fat_gar, fat_text_gar, xrs, xrs_inline };
 std::ostream& operator<<(std::ostream&, archive_type const&);
 std::istream& operator>>(std::istream&, archive_type&);
 

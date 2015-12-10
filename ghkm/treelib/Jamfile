@@ -6,5 +6,5 @@ project treelib
 lib treelib
   : src/treelib/Tree.cpp
     src/treelib/TreeNode.cpp
-    /boost/regex
+    /boost/regex//boost_regex
   ;

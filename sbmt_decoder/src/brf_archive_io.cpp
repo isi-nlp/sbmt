@@ -15,6 +15,29 @@
 #include <algorithm>
 #include <iostream>
 
+namespace sbmt {
+
+  const char* archive_lbl[] = { "brf", "archive", "text-archive", "fat-archive", "fat-text-archive", "xrs", "xrs-inline" };
+
+  std::ostream& operator<<(std::ostream& os, archive_type const& a)
+  {
+    return os << archive_lbl[a];
+  }
+
+  std::istream& operator>>(std::istream& is, archive_type& a)
+  {
+    std::string s;
+    is >> s;
+    for (size_t i = 0; i != 7; ++i) if (s == archive_lbl[i]) {
+        a = archive_type(i);
+        return is;
+      }
+    throw std::runtime_error("archive_type enum unmatched");
+  }
+}
+#if 0
+
+
 using boost::archive::binary_oarchive;
 using boost::archive::binary_iarchive;
 using boost::archive::text_oarchive;
@@ -58,7 +81,7 @@ static const char archive_text_feature_label    = ARCHIVE_TEXT_FEATURE_LABEL;
 static const char archive_version_label         = ARCHIVE_VERSION_LABEL;
 
 namespace boost { namespace serialization {
-
+    
 // no-op
 template<class Ar>
 void serialize(Ar & ar, sbmt::fat_token_factory& tf, const unsigned int) {}
@@ -493,3 +516,4 @@ template class brf_fat_to_indexed_archive_reader_tmpl<binary_iarchive>;
 template class brf_fat_to_indexed_archive_reader_tmpl<text_iarchive>;
 
 } // namespace sbmt 
+#endif // 0

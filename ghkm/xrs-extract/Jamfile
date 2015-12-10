@@ -12,7 +12,7 @@ project xrs-extract
       <include>..
   ;
 
-obj TreeNode : c++-src/TreeNode.C : <optimization>off ;
+obj TreeNode : c++-src/TreeNode.C ;
 obj Tree : c++-src/Tree.C ;
 obj MyErr : c++-src/MyErr.C ;
 
@@ -23,7 +23,7 @@ exe fix_collins
     MyErr
     ../gzstream 
     ../treelib
-    /boost/regex 
+    /boost/regex//boost_regex 
   ;
 
 exe extract

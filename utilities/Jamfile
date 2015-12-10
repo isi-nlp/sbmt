@@ -17,7 +17,7 @@ alias boost_filesystem : /boost/filesystem ;
 alias boost_regex : /boost/regex ;
 alias boost_thread : /boost/thread ;
 alias boost_signals : /boost/signals ;
-alias boost_serialization : /boost/serialization ;
+#alias boost_serialization : /boost/serialization ;
 alias pthread : /world//pthread ;
 alias sbmt : /sbmt_decoder//sbmt ;
 alias graehl : /graehl//graehl ;
@@ -94,12 +94,9 @@ sbmt-util.install install-lvl
 
 alias install
     : install-lvl
-      # xrs_info_decoder//install
       splitnt//install
       gluetopmaroon//install
-      grammar_view//install
       target_word_features//install
-      archive_grammar//install
       decompose_dlm_events//install
       unknowns//install
     ;

@@ -74,7 +74,7 @@ struct decode_sequence_data
     decode_sequence_reader::set_weights_cb_type set_weights;
     decode_sequence_reader::load_dynamic_ngram_cb_type load_dynamic_ngram;
     decode_sequence_reader::change_options_cb_type change_options;
-    decode_sequence_reader::multipass_options_cb_type multipass_options;
+    decode_sequence_reader::push_inline_rules_cb_type push_inline_rules;
     decode_sequence_reader::load_grammar_cb_type load_grammar;        
     decode_sequence_reader::push_grammar_cb_type push_grammar;
     decode_sequence_reader::pop_grammar_cb_type pop_grammar;     
@@ -83,9 +83,9 @@ struct decode_sequence_data
     decode_sequence_reader::use_info_cb_type use_info;
     decode_sequence_reader::set_info_option_cb_type set_info_option;
 
-    void trigger_multipass_options()
+    void trigger_push_inline_rules()
     {
-        multipass_options(passes);
+        push_inline_rules(passes);
     }
     
     void trigger_load_grammar()
@@ -313,15 +313,15 @@ struct trigger_change_options
     decode_sequence_data& act;    
 };
 
-struct trigger_multipass_options
+struct trigger_push_inline_rules
 {
-    trigger_multipass_options(decode_sequence_data& act)
+    trigger_push_inline_rules(decode_sequence_data& act)
     : act(act) {}
 
     template <class IT>
     void operator()(IT begin, IT end) const
     {
-        act.trigger_multipass_options();
+        act.trigger_push_inline_rules();
     }
     
     decode_sequence_data& act;    
@@ -497,9 +497,10 @@ struct decode_sequence_grammar : public grammar<decode_sequence_grammar>
         rule<ST> weight_string_p;
         rule<ST> lex_string_p;
         rule<ST> until_newline_p;
+        rule<ST> until_empty_line_p;
         rule<ST> not_semicolon_line_p;
 
-        rule<ST> multipass_options_p;
+        rule<ST> push_inline_rules_p;
         rule<ST> newline_p;
         
         rule<ST> archive_file_p;
@@ -542,7 +543,7 @@ struct decode_sequence_grammar : public grammar<decode_sequence_grammar>
                         | force_decode_p [trigger_force_decode(self.sem)]
                         | decode_lattice_p [trigger_decode_lattice(self.sem)]
                         | decode_forest_p [trigger_decode_forest(self.sem)]
-                        | multipass_options_p [trigger_multipass_options(self.sem)]
+                        | push_inline_rules_p [trigger_push_inline_rules(self.sem)]
                         | set_info_opt_p 
                         | use_info_p 
                         | set_weights(var(self.sem.weights)) [ phoenix::bind(&decode_sequence_data::trigger_set_weights)(var(self.sem), var(self.sem.weights) = arg1)]
@@ -594,8 +595,8 @@ struct decode_sequence_grammar : public grammar<decode_sequence_grammar>
                 // >> newline_p
                 ;
 
-            multipass_options_p
-                = keyword_p("multipass-options") [clear_a(self.sem.passes)]
+            push_inline_rules_p
+                = keyword_p("push-inline-rules") [clear_a(self.sem.passes)]
                 >> *(not_semicolon_line_p [push_back_a(self.sem.passes)])
                 >> ch_p(';')
                 ;
@@ -659,7 +660,8 @@ struct decode_sequence_grammar : public grammar<decode_sequence_grammar>
                     ]
                 ;
             
-                    
+            until_empty_line_p 
+	      =   lexeme_d[*(anychar_p - ch_p('\n')) >> ch_p('\n') >> ch_p('\n')];
             until_newline_p 
                 =   lexeme_d[
                     *(anychar_p - ch_p('\n')) >> ch_p('\n')
@@ -696,13 +698,14 @@ struct decode_sequence_grammar : public grammar<decode_sequence_grammar>
             BOOST_SPIRIT_DEBUG_RULE( sequence_p );
             BOOST_SPIRIT_DEBUG_RULE( load_ngram_p );
             BOOST_SPIRIT_DEBUG_RULE( load_dynamic_ngram_p );
-            BOOST_SPIRIT_DEBUG_RULE( multipass_options_p );
+            BOOST_SPIRIT_DEBUG_RULE( push_inline_rules_p );
             BOOST_SPIRIT_DEBUG_RULE( change_options_p );
             BOOST_SPIRIT_DEBUG_RULE( load_grammar_p );
             BOOST_SPIRIT_DEBUG_RULE( decode_p );
             BOOST_SPIRIT_DEBUG_RULE( lex_string_p );
             BOOST_SPIRIT_DEBUG_RULE( weight_string_p );
             BOOST_SPIRIT_DEBUG_RULE( until_newline_p );
+	    BOOST_SPIRIT_DEBUG_RULE( until_empty_line_p );
             #endif
             
         }
@@ -847,8 +850,8 @@ void decode_sequence_reader::set_load_dynamic_ngram_cb(load_dynamic_ngram_cb_typ
 void decode_sequence_reader::set_change_options_cb(change_options_cb_type cb)
 { data->change_options=cb; }
 
-void decode_sequence_reader::set_multipass_options_cb(multipass_options_cb_type cb)
-{ data->multipass_options=cb; }
+void decode_sequence_reader::set_push_inline_rules_cb(push_inline_rules_cb_type cb)
+{ data->push_inline_rules=cb; }
 
 void decode_sequence_reader::set_load_grammar_cb(load_grammar_cb_type cb)
 { data->load_grammar = cb; }
