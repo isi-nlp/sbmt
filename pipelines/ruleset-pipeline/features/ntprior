@@ -50,8 +50,8 @@ hp = args.hadoop
 
 def make(step,file,file2):
     executable = os.path.abspath(sys.argv[0])
-    hp.mapreduce( mapper=executable + ' ' + step
-                , reducer=executable + ' reduce'
+    hp.mapreduce( mapper=executable + ' ' + step + ' -c ' + args.config_files
+                , reducer=executable + ' reduce' + ' -c ' + args.config_files
                 , input='training'
                 , output=file
                 , compress=False )

@@ -91,11 +91,12 @@ static bool find_rule_delims_in_order(const string &rule,const string &delim1,st
                 goto empty_quotes;
             break;
         case rule_inside_longquote:
-            if (c=='"')
+	    if (c=='"') {
                 if ((rule[i-1] == '@' && (rule[i+1] == '@' or rule[i+1] == '"')) or rule[i+1] == '@')
                     state=rule_inside_longquote;
                 else
                     state=rule_outside;
+	    }
             break;
         default:
             assert(0=="impossible state in find_rule_delims_in_order");

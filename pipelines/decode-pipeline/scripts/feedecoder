@@ -17,11 +17,8 @@ def send():
             log('sending line=%s...' % line[:256])
             if line == '':
                 break
-            instruct = open(line.rstrip())
-            for ln in instruct:
-                    with lock:
-                        subproc.stdin.write(ln)
-            instruct.close()
+            with lock:
+                subproc.stdin.write(line)
         with lock:
             subproc.stdin.close()
     except Exception as e:

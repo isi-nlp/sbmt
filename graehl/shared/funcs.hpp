@@ -255,7 +255,7 @@ template <class FloatVec> inline
 typename FloatVec::value_type
 normalize(FloatVec &vec)
 {
-    typedef typename FloatVec::iterator Iter;
+  //typedef typename FloatVec::iterator Iter;
     typedef typename FloatVec::value_type Float;
     Float n=norm(vec);
     if (n > 0)

@@ -7,12 +7,23 @@ class FileList(argparse.Action):
         setattr(namespace,self.dest,' '.join(os.path.abspath(v) for v in values))
 
 parser = argparse.ArgumentParser()
-parser.add_argument( 'cprep'
+parser.add_argument( 'rules'
                    , nargs='?'
-                   , help='corpus-prep output directory'
+                   , help='output directory of ruleset pipeline'
                    , action=cfg.store_abspath
                    , default=argparse.SUPPRESS
                    )
+parser.add_argument( 'corpus'
+                   , nargs='?'
+                   , help='plain corpus file, tokenized and cased consistent with training data'
+                   , action=cfg.store_abspath
+                   , default=argparse.SUPPRESS
+                   )
+parser.add_argument( '-s', '--corpus-config'
+                   , help='describes location of corpus, lc-tok-refs, detok-refs, byline-ne-corpus'
+                   , nargs='?'
+                   , default=argparse.SUPPRESS
+                   , action=cfg.store_corpus )
 parser.add_argument( '-a,', '--tuning-algorithm'
                    , help='tuning algorithm represented in "tuner" section of config file'
                    , default='mira' 
@@ -38,10 +49,9 @@ parser.add_argument( '-p', '--progress'
 parser.add_argument( '-S', '--stop'
                    , action='store_true'
                    , dest='stop'
-                   
                    )
 d = cfg.parse_args( parser
-                  , default='$cprep/corpus-prep.config'
+                  , default='$rules/rules.config'
                   , write='$outdir/tune.config'
                   , modeldir=True
                   , overwrite=False )

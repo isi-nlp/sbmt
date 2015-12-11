@@ -9,6 +9,7 @@ import hadoop
 import string
 import subprocess, shlex
 import argparse
+import errno
 
 class PTemplate(string.Template):
     pattern = r"""
@@ -289,6 +290,7 @@ def steps(dtm):
                 elif isinstance(sect['stages'],dict):
                     stagelist = [s for (t,s) in sect['stages'].iteritems()]
                 for s in stagelist:
+                  if active(s):
                     if s['stage'] == 'training':
                         dir = outdir
                     else:
@@ -462,6 +464,46 @@ def execute(d,cmd,*args,**mp):
     cmd = string.Template(cmd)
     cmd = cmd.safe_substitute(mp)
     d.hadoop.syscall(cmd)
+
+def resolve(filename):
+    try:
+        target = os.readlink(filename)
+    except OSError as e:
+        if e.errno == errno.EINVAL:
+            return os.path.abspath(filename)
+        raise
+    return os.path.normpath(os.path.join(os.path.dirname(filename), target))
+
+
+def wrt(wd,relpath):
+    curr = os.path.dirname(os.path.abspath(wd))
+    return os.path.normpath(os.path.join(curr,relpath))
+
+class store_corpus(argparse.Action):
+    def place(self,namespace,field,attr,values,scfg):
+        if field in scfg:
+            if not hasattr(namespace,field):
+                setattr(namespace,attr,wrt(values,scfg[field]))
+        else:
+            if not hasattr(namespace,field):
+                setattr(namespace,attr,None)
+    def placev(self,namespace,field,attr,values,scfg):
+        if field in scfg:
+            if not hasattr(namespace,field):
+               strv = ' '.join(wrt(values,f) for f in scfg[field])
+               setattr(namespace,attr,strv)
+        else:
+            if not hasattr(namespace,field):
+                setattr(namespace,attr,None)
+
+    def __call__(self,parser, namespace, values, option_string=None):
+        values = resolve(values)
+        scfg = load_config(values)
+        self.place(namespace,'corpus','corpus',values,scfg)
+        self.place(namespace,'byline-ne-corpus','necorpus',values,scfg)
+        self.place(namespace,'tstmaster','tstmaster',values,scfg)
+        self.placev(namespace,'lc-tok-refs','lctokrefs',values,scfg)
+        self.placev(namespace,'detok-refs','detokrefs',values,scfg)
 
 def parse_args( parser
               , cmdline = sys.argv[1:]

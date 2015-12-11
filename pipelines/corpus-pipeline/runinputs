@@ -8,46 +8,7 @@ import os, sys
 import itertools
 import yaml
 import errno
-
-def resolve(filename):
-    try:
-        target = os.readlink(filename)
-    except OSError as e:
-        if e.errno == errno.EINVAL:
-            return os.path.abspath(filename)
-        raise
-    return os.path.normpath(os.path.join(os.path.dirname(filename), target))
-
-
-def wrt(wd,relpath):
-    curr = os.path.dirname(os.path.abspath(wd))
-    return os.path.normpath(os.path.join(curr,relpath))
-
-class store_corpus(argparse.Action):
-    def place(self,namespace,field,attr,values,scfg):
-	if field in scfg:
-	    if not hasattr(namespace,field):
-                setattr(namespace,attr,wrt(values,scfg[field]))
-        else:
-            if not hasattr(namespace,field):
-                setattr(namespace,attr,None)
-    def placev(self,namespace,field,attr,values,scfg):
-        if field in scfg:
-            if not hasattr(namespace,field):
-               strv = ' '.join(wrt(values,f) for f in scfg[field])
-               setattr(namespace,attr,strv)
-        else:
-            if not hasattr(namespace,field):
-                setattr(namespace,attr,None)
-
-    def __call__(self,parser, namespace, values, option_string=None):
-        values = resolve(values)
-        scfg = cfg.load_config(values)
-        self.place(namespace,'corpus','corpus',values,scfg)
-        self.place(namespace,'byline-ne-corpus','necorpus',values,scfg)
-        self.place(namespace,'tstmaster','tstmaster',values,scfg)
-        self.placev(namespace,'lc-tok-refs','lctokrefs',values,scfg)
-        self.placev(namespace,'detok-refs','detokrefs',values,scfg)       
+ 
 parser = argparse.ArgumentParser()
 parser.add_argument('rules'
                    , help='output directory of the rule creation pipeline'
@@ -69,7 +30,7 @@ parser.add_argument( '-s', '--corpus-config'
                    , help='describes location of corpus, lc-tok-refs, detok-refs, byline-ne-corpus'
                    , nargs='?'
                    , default=argparse.SUPPRESS
-                   , action=store_corpus ) 
+                   , action=cfg.store_corpus ) 
 
 if __name__ == '__main__':
     d = cfg.parse_args( parser

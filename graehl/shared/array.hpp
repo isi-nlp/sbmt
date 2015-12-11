@@ -41,7 +41,7 @@ void resize_up_for_index(C &c,std::size_t i)
 template <class Vec>
 void remove_marked_swap(Vec & v,bool marked[]) {
     using std::swap;
-    typedef typename Vec::value_type V;
+    //typedef typename Vec::value_type V;
     unsigned sz=v.size();
     if ( !sz ) return;
     unsigned to, i = 0;
@@ -83,7 +83,7 @@ unsigned shuffle_removing(T *v,indices_after_removing const& ttable,Rewrite &r)
 template <class Vec,class P>
 void remove_if_swap(Vec & v,P const& pred) {
     using std::swap;
-    typedef typename Vec::value_type V;
+    //typedef typename Vec::value_type V;
     unsigned sz=v.size();
     if ( !sz ) return;
     unsigned to, i = 0;

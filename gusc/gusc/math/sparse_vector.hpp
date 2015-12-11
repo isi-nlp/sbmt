@@ -78,8 +78,8 @@ typename sparse_op_reduce_result<V1,V2,Product>::type
 sparse_pairwise_op_reduce(V1 const& v1, V2 const& v2, Product const& op, Sum const& reduce)
 {
     typedef typename sparse_op_reduce_result<V1,V2,Product>::type result_type;
-    typedef typename second_<typename boost::range_value<V1 const>::type>::type value1;
-    typedef typename second_<typename boost::range_value<V2 const>::type>::type value2;
+    //typedef typename second_<typename boost::range_value<V1 const>::type>::type value1;
+    //typedef typename second_<typename boost::range_value<V2 const>::type>::type value2;
 
     typename boost::range_iterator<V1 const>::type
         i1 = boost::begin(v1),

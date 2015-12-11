@@ -43,7 +43,6 @@ mp['maxrate'] = d.config['tuner']['mira']['max-learning-rate']
 mp['maxlen'] = d.config['tuner']['mira']['max-sentence-length']
 mp['badratio'] = d.config['tuner']['mira']['bad-sentence-threshold']
 mp['tunescriptdir'] = os.path.join(d.rootdir,'tune-pipeline','scripts')
-mp['cprep'] = d.config['cprep']
 mp['nodefile'] = os.path.join(d.tmpdir,'nodefile')
 mp['bindir'] = d.config['variables']['rhbin']
 mp['maxepochs'] = d.config['tuner']['mira']['max-epochs']
@@ -54,7 +53,6 @@ if not d.progress:
     cfg.execute(d,'rm -f %s %s' % (os.path.join(d.outdir,'epoch.scores'),os.path.join(d.outdir,'.epoch.scores.new')))
     cfg.execute(d,'rm -f %s' % os.path.join(d.outdir,'mira.out'))
     cfg.execute(d,'rm -f %s' % os.path.join(d.outdir,'trainer.weights'))
-    cfg.execute(d,'ln -fs %s %s' % (os.path.join(mp['cprep'],'corpus'), d.tmpdir)) 
 
     capturecmd = "$scriptdir/capture-env $$(env | egrep '^(MPI|PBS)' | sed -e 's/=.*$$//' | tr '\\n' ' ') > $tmpdir/settings"
     capturecmd = cfg.PTemplate(capturecmd).substitute(mp)
@@ -62,8 +60,8 @@ if not d.progress:
 
     decodescript.write_script(d,'forest')
 
-    cmd = '. $tmpdir/settings && python $miradir/trainer.py $miradir/sbmt_decoder.py' + \
-          ' -d $tmpdir/decoder -p -S $outdir/STOP -W $outdir/trainer.weights -B $scorer -g $cprep' + \
+    cmd = '. $tmpdir/settings && python $miradir/trainer.py $miradir/sbmt_decoder_inline.py' + \
+          ' -d $tmpdir/decoder -p -S $outdir/STOP -W $outdir/trainer.weights -B $scorer' + \
           ' -R $order' + \
           ' -M $maxepochs' + \
           ' -t $tmpdir' + \

@@ -11,7 +11,6 @@ def write_script(d, stage, weightstring=None):
     logdir = os.path.join(d.outdir,'logs')
     ruledir = d.config['rules']
     cfg.execute(d,'mkdir -p %s' % logdir)
-    cfg.execute(d,'ln -fs %s %s' % (os.path.join(d.config['cprep'],'corpus'), d.tmpdir))
     decodefile = os.path.join(d.tmpdir,'decoder')
     decodescript = open(decodefile,'w')
     infos = []
@@ -22,9 +21,7 @@ def write_script(d, stage, weightstring=None):
     print >> decodescript, 'set -e'
     print >> decodescript, 'set -o pipefail'
     #print >> decodescript, 'ulimit -c unlimited'
-    if stage == 'nbest':
-        print >> decodescript, 'read inst; rtvl=$?'
-        print >> decodescript, '( while [ $rtvl == 0 ]; do cat $inst; read inst; rtvl=$?; done ) | \\'
+    print >> decodescript, os.path.join(d.scriptdir,'decoder-instructions'), ruledir, ' | \\'
     print >> decodescript, d.config['decoder']['exec'], "%s/xsearchdb" % ruledir , '--multi-thread \\'
     if 'weights' in d.config:
         print >> decodescript, '  -w %s \\' % os.path.abspath(d.config['weights'])
@@ -44,10 +41,11 @@ def write_script(d, stage, weightstring=None):
     elif stage == 'forest':
         print >> decodescript, '  --output-format forest \\'
     if stage == 'nbest':
-        print >> decodescript, '  2> >(gzip > $LOG.gz) \\'
-        print >> decodescript, "|  perl -e '$| = 1; while (<>) { if (~/^.* sent=([^ ]*) .*$/){ print \"$1\\t$_\";} }'"
+        print >> decodescript, '  2> >(gzip > $LOG.gz)'
     elif stage == 'forest':
         print >> decodescript, " 2> >(gzip > $LOG.gz) | sed -u -e 's/@UNKNOWN@//g' " 
     decodescript.close()
     os.chmod(decodefile, stat.S_IRWXU | os.stat(decodefile)[stat.ST_MODE])
     return decodefile
+  else:
+    return os.path.join(d.tmpdir,'decoder')

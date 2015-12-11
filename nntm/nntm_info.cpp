@@ -22,8 +22,9 @@ public:
     
     info_accessors(lm_id_type start, lm_id_type end, lm_id_type null)
     : start(start)
+    , null(null)
     , end(end)
-    , null(null) {}
+    {}
 
     const_iterator left_begin(info_type const& n)
     {

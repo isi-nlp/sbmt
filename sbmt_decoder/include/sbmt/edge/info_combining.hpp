@@ -62,7 +62,7 @@ struct edge_constituent {
     typename result<edge_constituent(edge<Info> const*)>::type
     operator()(edge<Info> const* e) const
     {
-        typedef typename unqualified_result_of<SubInfoExtractor(Info const*)>::type info_t;
+       //typedef typename unqualified_result_of<SubInfoExtractor(Info const*)>::type info_t;
         //if (is_lexical(e.root())) return make_constituent(info_t(), e.root());
         //else
         return make_constituent(subinfo(&e->info()), e->root());

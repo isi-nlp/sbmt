@@ -57,16 +57,23 @@ def allextras(line):
     unkrule.wait()
     os.unlink(extrasfile.name)
 
-def latline(line):
+latid = re.compile(r'lattice\s+id="\S+"')
+
+def latline(line,lineno):
     lattice.stdin.write(line + '\n')
-    return lattice.stdout.readline().strip()
+    return latid.sub('lattice id="%s"' % lineno, lattice.stdout.readline().strip())
 
 def mainrun():
-
+    lineno = 0
     while True:
         line = sys.stdin.readline()
         if line == '':
             break
+        lineno += 1
+        vline = line.split('\t')
+        if len(vline) > 1:
+            lineno = int(vline[0])
+            line = '\t'.join(vline[1:])
         line = line.strip()
         if line == '':
             continue
@@ -75,8 +82,7 @@ def mainrun():
         for rule in allrules:
             sys.stdout.write(rule + '\n')
         sys.stdout.write(';\n')
-        sys.stdout.write(latline('<foreign-sentence> ' + line + ' </foreign-sentence>') + '\n')
+        sys.stdout.write(latline('<foreign-sentence> ' + line + ' </foreign-sentence>',lineno) + '\n')
         sys.stdout.write('pop-grammar ;\n\n')
-
 
 mainrun()

@@ -229,7 +229,11 @@ class Hadoop:
         if not serial:
             self.hadoop_home = os.getenv('HADOOP_PREFIX',home)
             self.hadoop_bin = os.path.join(self.hadoop_home, 'bin', 'hadoop')
-            self.hadoop_jar = glob.glob(os.path.join(self.hadoop_home, 'contrib','streaming','hadoop-streaming*.jar'))[0]
+            try:
+                self.hadoop_jar = glob.glob(os.path.join(self.hadoop_home, 'contrib','streaming','hadoop-streaming*.jar'))[0]
+            except:
+                serial = True
+                pass
         self.echo = echo
         self.serial = serial
         if serial:

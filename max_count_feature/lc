@@ -30,11 +30,13 @@ f = opts.format
 
 f = re.sub(r'%line\b','%(line)s',f)
 f = re.sub(r'%id\b','%(id)d',f)
-
+f = re.sub(r'%len\b','%(len)d',f)
+f = re.sub(r'\\t','\t',f)
 try :
     for line in sys.stdin:
         rline = line.rstrip('\n')
-        print f % { 'id' : k , 'line' : rline }
+        wc = len(line.split())
+        print f % { 'id' : k , 'line' : rline, 'len': wc }
         k += n
 except IOError, e:
     if e.errno == 32: # broken pipe

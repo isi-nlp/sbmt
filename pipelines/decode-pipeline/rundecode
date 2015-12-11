@@ -6,11 +6,11 @@ import string
 import os, sys, stat
 import itertools
 import yaml
+import decodescript
 
 os.putenv('LANG','C')
 os.putenv('LC_ALL','C')
 os.putenv('MX_RCACHE','0')
-
 
 class default_abspath(argparse.Action):
     def __call__(self,parser, namespace, values, option_string=None):
@@ -18,10 +18,10 @@ class default_abspath(argparse.Action):
         ar = getattr(namespace,'defaults',[])
         values = os.path.abspath(values)
         setattr(namespace,self.dest,values)
-        if self.dest == 'cprep':
-            ar.append((1,os.path.join(values,'corpus-prep.config')))
-        elif self.dest == 'tune':
-            ar.append((0,os.path.join(values,'tune.config')))
+        if self.dest == 'rules':
+            ar.append((0,os.path.join(values,'rules.config')))
+        elif self.dest == 'tune_dir':
+            ar.append((1,os.path.join(values,'tune.config')))
         else:
             raise Exception('bad storage name')
         ar.sort()
@@ -33,18 +33,29 @@ class FileList(argparse.Action):
         setattr(namespace,self.dest,' '.join(os.path.abspath(v) for v in values))
 
 parser = argparse.ArgumentParser()
-parser.add_argument( 'cprep'
+parser.add_argument( 'rules'
                    , nargs='?'
-                   , help='corpus-prep output directory'
+                   , help='output directory of ruleset pipeline'
                    , action=default_abspath
                    , default=argparse.SUPPRESS
                    )
-parser.add_argument( 'tune'
+parser.add_argument('corpus'
+                   , help='plain corpus file, tokenized and cased consistent with training data'
+                   , action=cfg.store_abspath
+                   , nargs='?'
+                   , default=argparse.SUPPRESS
+                   )
+parser.add_argument( '-u', '--tune-dir'
                    , help='tune directory. weights assumed to be weights.final inside'
                    , action=default_abspath
                    , nargs='?'
                    , default=argparse.SUPPRESS
                    )
+parser.add_argument( '-s', '--corpus-config'
+                   , help='describes location of corpus, lc-tok-refs, detok-refs, byline-ne-corpus'
+                   , nargs='?'
+                   , default=argparse.SUPPRESS
+                   , action=cfg.store_corpus )
 parser.add_argument( '-w', '--weights'
                    , help='weights file. override weights fond in tune directory'
                    , nargs='?'
@@ -80,82 +91,58 @@ d = cfg.parse_args( parser
 
 hp = d.hadoop
 
-logdir = os.path.join(d.outdir,'logs')
-cfg.execute(d,'mkdir -p %s' % logdir)
-cfg.execute(d,'ln -fs %s %s' % (os.path.join(d.config['cprep'],'corpus'), d.tmpdir))
-
-decodefile = os.path.join(d.tmpdir,'decoder')
-
 weights=None
-if 'tune' in d.config:
-    weights=os.path.join(d.config['tune'],'weights.final')
+if 'tune' in d.config and not weights in d.config:
+    d.config['weights']=os.path.join(d.config['tune'],'weights.final')
 if 'weights' in d.config:
     weights=d.config['weights']
 
-if not os.path.exists(decodefile):
-    decodescript = open(decodefile,'w')
-    infos = []
-    print >> decodescript, '#!/usr/bin/env bash'
-    print >> decodescript, 'HOST=`hostname`'
-    print >> decodescript, 'LOG=%s/decode-log.$HOST-$$' % logdir
-    print >> decodescript, 'cd %s' % d.tmpdir
-    print >> decodescript, 'set -e'
-    print >> decodescript, 'set -o pipefail'
-    #print >> decodescript, 'ulimit -c unlimited'
-    print >> decodescript, d.config['decoder']['exec'], '\\'
-    print >> decodescript, os.path.join(d.config['rules'],'xsearchdb'), '\\'
-    if weights is not None:
-        print >> decodescript, '  -w %s \\' % os.path.abspath(weights) 
-    print >> decodescript, ' --multi-thread  --output-format nbest \\'
-    for k,v in d.config['decoder']['options'].iteritems():
-        print >> decodescript,'  --%s %s \\' % (k,v)
-    for step in cfg.steps(d):
-        if step.stage == 'decode':
-            print >> decodescript, '  %s \\' % step.options
-            if step.info != '':
-                infos.append(step.info)
-    if len(infos) > 0:
-        print >> decodescript, '  -u %s \\' % ','.join(infos)
-    print >> decodescript, '  2> $LOG'
-    decodescript.close()
-    os.chmod(decodefile, stat.S_IRWXU | os.stat(decodefile)[stat.ST_MODE])
+decodefile = decodescript.write_script(d,'nbest')
 
 best1raw = os.path.join(d.outdir,'1best.raw')
 best1hyp = os.path.join(d.outdir,'1best.hyp')
 bestNraw = os.path.join(d.outdir,'nbest.raw')
 bestNsort = os.path.join(d.outdir,'nbest.sort')
+
 def maketemp(foo):
     return os.path.join(d.tmpdir,os.path.basename(foo))
-    
+
 def stage(foo):
     ret = os.path.join(d.outdir,os.path.basename(foo))
     cfg.execute(d,'mv ' + foo + ' ' + ret)
     return ret 
 
+bindir = d.config['variables']['rhbin']
 feeder = os.path.join(os.path.dirname(__file__),'scripts','feedecoder')
 omitsc = os.path.join(os.path.dirname(__file__),'scripts','omitset')
+
 if not os.path.exists(bestNraw):
     mpisize = 3
     bestNraw = maketemp(bestNraw)
     omitfile = maketemp('omitset')
     cfg.execute(d,'touch %s' % omitfile)
     if os.path.exists(bestNraw):
-       cfg.execute(d,"cat %s | grep -o '^NBEST sent=[0-9]*' | sed -e 's/NBEST sent=//' | uniq > %s" % (bestNraw,omitfile))
-    inputcmd = "grep -v '^#' %(cprep)s/corpus.map | %(omitsc)s %(omitfile)s | sort -nk 4 | cut -f 3 | sed -e 's|^\\(.*\\)$|%(cprep)s/\\1/decode.ins|'" % {'cprep':d.config['cprep'],'omitfile':omitfile,'omitsc':omitsc}
+        try:
+            cfg.execute(d,"cat %s | grep -o '^NBEST sent=[0-9]*' | sed -e 's/NBEST sent=//' | uniq > %s" % (bestNraw,omitfile))
+        except:
+            pass # if no decodes have occurred, then no matches, then fail
+    inputcmd = string.Template(
+                 r"cat $corpus | $bin/lc -f'%id\t%len\t%line' | $omitsc $omitfile | sort -nk 2 | cut -f1,3"
+               ).substitute(corpus=d.config['corpus'],omitfile=omitfile,omitsc=omitsc,bin=bindir)
     pbsfile = os.getenv('PBS_NODEFILE')
     if pbsfile is not None:
         for v,line in enumerate(open(pbsfile)):
             mpisize = v + 3
-        mpiscript = os.path.join(d.config['variables']['rhbin'],'mpiserv')
+        mpiscript = os.path.join(bindir,'mpiserv')
         mpicmd = 'mpirun --mca mpi_warn_on_fork 0 --mca btl self,tcp --oversubscribe --map-by node:PE=$(%s/numcpu) --bind-to none -x PYTHONPATH -x PATH -np %s %s "python -u %s %s"' % (d.config['variables']['rhbin'],mpisize,mpiscript,feeder,decodefile)
         cfg.execute(d,inputcmd + ' | ' + mpicmd + ' >> ' + bestNraw)
     else:
-        cfg.execute(d,inputcmd + ' | python -u %s %s' % (feeder,decodefile) + ' >> ' + bestNraw)
+        cfg.execute(d,inputcmd + ' | python -u %s %s | cut -f2' % (feeder,decodefile) + ' >> ' + bestNraw)
     bestNraw = stage(bestNraw)
 else: 
     print >> sys.stderr, 'decoding skipped. remove $outdir/nbest.raw to re-decode'
 
-sortcmd="sed -e's/^NBEST sent=\\([0-9]*\\) .*$/\\1\t\\0/' < %s | sort -s -n | cut -f2 > %s" % (bestNraw,bestNsort)
+sortcmd="sed -e's/^\\(NBEST sent=\\([0-9]*\\) .*\\)$/\\2\t\\1/' < %s | sort -s -n | cut -f2 > %s" % (bestNraw,bestNsort)
 if not os.path.exists(bestNsort) or not os.path.exists(best1raw):
     cfg.execute(d,sortcmd)
     cfg.execute(d,'grep "^NBEST sent=[0-9]* nbest=0" < %s > %s' % (bestNsort,best1raw))

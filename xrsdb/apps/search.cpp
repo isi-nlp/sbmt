@@ -748,10 +748,10 @@ struct options {
     std::istream* input;
     options() 
     : nondet(false)
-    , tee_weights(false)
     , append_rules(false)
     , keep_align(false)
     , rule_dump(false)
+    , tee_weights(false)
     , num_threads(numproc_online())
     , histogram(1000)
     , nbests(10)
@@ -1259,8 +1259,8 @@ make_edges_det1( cell_in const& ge
     typedef
         gusc::any_generator<equiv_in,gusc::iterator_tag> 
         children_generator;
-    typedef
-        gusc::generator_from_range<xcell> xcell_generator;
+        //typedef
+        //gusc::generator_from_range<xcell> xcell_generator;
         children_generator 
             gen = children_generator(gusc::generate_single_value(
                     equiv_in(
@@ -1304,8 +1304,8 @@ make_edges1( cell_in const& ge
     typedef
         gusc::any_generator<equiv_in,gusc::iterator_tag> 
         children_generator;
-    typedef
-        gusc::generator_from_range<xcell> xcell_generator;
+        //typedef
+        //gusc::generator_from_range<xcell> xcell_generator;
         children_generator 
             gen = children_generator(gusc::generate_single_value(
                     equiv_in(
