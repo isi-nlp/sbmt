@@ -4,6 +4,23 @@ import cfg
 import sys
 import stat
 
+def write_instruction_script(d, logfile=True):
+    instructfile = os.path.join(d.tmpdir,'instructions')
+    instructscript = open(instructfile,'w')
+    print >> instructscript, '#!/usr/bin/env bash'
+    print >> instructscript, 'HOST=`hostname`'
+    if logfile:
+        logdir = os.path.join(d.outdir,'logs')
+        cfg.execute(d,'mkdir -p %s' % logdir)
+        print >> instructscript, 'LOG=%s/instruction-log.$HOST-$$.log' % logdir
+    print >> instructscript, os.path.join(d.scriptdir,'decoder-instructions'), d.config['rules'] , '-c %s \\' % d.config_files
+    if logfile:
+        print >> instructscript, '  2> >(gzip > $LOG.gz) \\'
+    print >> instructscript, '\n'
+    instructscript.close()
+    os.chmod(instructfile, stat.S_IRWXU | os.stat(instructfile)[stat.ST_MODE])
+    return instructfile
+
 def write_script(d, stage, weightstring=None, logfile=True, include_instruction_pipe=False):
     if stage not in set(['nbest','forest']):
         raise Exception
