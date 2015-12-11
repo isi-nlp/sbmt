@@ -44,7 +44,6 @@ parser.add_argument( '-E', '--cased-detok-refs'
 parser.add_argument( '-p', '--progress'
                    , action='store_true'
                    , dest='progress'
-                   
                    )
 parser.add_argument( '-S', '--stop'
                    , action='store_true'

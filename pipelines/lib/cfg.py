@@ -428,7 +428,9 @@ def load_config_raw(filestrs,vars={},default=None,omit_sys_default=False):
         x = os.path.abspath(x)
         conf = merge_configs(yaml.load(open(x)),conf)
         conffiles_list.append(x)
-    
+    for k,v in vars.iteritems():
+        if k in conf:
+            conf[k] = v
     return conf,':'.join(conffiles_list)
 
 def load_config(filestrs,vars={},default=None,write=None):
@@ -556,11 +558,9 @@ def parse_args( parser
             tmpcfg,ignore = load_config_raw(d.config)
             default = PTemplate(default).safe_substitute(tmpcfg) # in case of config-file bootstrap
             default = PTemplate(default).safe_substitute(vars)
-            print >> sys.stderr, "### default=%s ###" % default
     if write is not None:
         write = PTemplate(write).safe_substitute(vars)
         if (not overwrite) and os.path.exists(write):
-            print >> sys.stderr, "### config exists: no overwrite ###"
             d.config =  write
             default = None
             write = None
@@ -623,9 +623,9 @@ def parse_args( parser
             #focfgs = open(os.path.join(d.outdir,write) + ".steps", 'w')
             print >> focfg, ocfg
             #print >> focfgn, yaml.dump(d.config)
-            print >> sys.stderr, "steps:"
-            for stp in stepss: 
-                print >> sys.stderr, yaml.dump(stp.__dict__)
-            print >> sys.stderr, '\n'
+            #print >> sys.stderr, "steps:"
+            #for stp in stepss: 
+            #    print >> sys.stderr, yaml.dump(stp.__dict__)
+            #print >> sys.stderr, '\n'
     return d
         

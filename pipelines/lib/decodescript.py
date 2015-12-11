@@ -4,28 +4,28 @@ import cfg
 import sys
 import stat
 
-def write_script(d, stage, weightstring=None):
-  if not os.path.exists(os.path.join(d.tmpdir,'decoder')):
+def write_script(d, stage, weightstring=None, logfile=True, include_instruction_pipe=False):
     if stage not in set(['nbest','forest']):
         raise Exception
-    logdir = os.path.join(d.outdir,'logs')
+    if logfile:
+        logdir = os.path.join(d.outdir,'logs')
+        cfg.execute(d,'mkdir -p %s' % logdir)
     ruledir = d.config['rules']
-    cfg.execute(d,'mkdir -p %s' % logdir)
     decodefile = os.path.join(d.tmpdir,'decoder')
     decodescript = open(decodefile,'w')
     infos = []
     print >> decodescript, '#!/usr/bin/env bash'
     print >> decodescript, 'HOST=`hostname`'
-    print >> decodescript, 'LOG=%s/decode-log.$HOST-$$.log' % logdir
+    if logfile:
+        print >> decodescript, 'LOG=%s/decode-log.$HOST-$$.log' % logdir
     print >> decodescript, 'cd %s' % d.tmpdir
     print >> decodescript, 'set -e'
     print >> decodescript, 'set -o pipefail'
-    #print >> decodescript, 'ulimit -c unlimited'
-    print >> decodescript, os.path.join(d.scriptdir,'decoder-instructions'), ruledir, ' | \\'
+    if include_instruction_pipe:
+        print >> decodescript, os.path.join(d.scriptdir,'decoder-instructions'), ruledir , '-c %s | \\' % d.config_files
     print >> decodescript, d.config['decoder']['exec'], "%s/xsearchdb" % ruledir , '--multi-thread \\'
     if 'weights' in d.config:
         print >> decodescript, '  -w %s \\' % os.path.abspath(d.config['weights'])
-    
     for k,v in d.config['decoder']['options'].iteritems():
         print >> decodescript,'  --%s %s \\' % (k,v)
     for step in cfg.steps(d):
@@ -40,12 +40,12 @@ def write_script(d, stage, weightstring=None):
         print >> decodescript, '  --output-format nbest \\'
     elif stage == 'forest':
         print >> decodescript, '  --output-format forest \\'
-    if stage == 'nbest':
-        print >> decodescript, '  2> >(gzip > $LOG.gz)'
-    elif stage == 'forest':
-        print >> decodescript, " 2> >(gzip > $LOG.gz) | sed -u -e 's/@UNKNOWN@//g' " 
+    if logfile:
+        print >> decodescript, '  2> >(gzip > $LOG.gz) \\'
+    if stage == 'forest':
+        print >> decodescript, "| sed -u -e 's/@UNKNOWN@//g' " 
+    else:
+        print >> decodescript, "\n"
     decodescript.close()
     os.chmod(decodefile, stat.S_IRWXU | os.stat(decodefile)[stat.ST_MODE])
     return decodefile
-  else:
-    return os.path.join(d.tmpdir,'decoder')

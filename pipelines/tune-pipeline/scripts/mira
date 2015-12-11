@@ -46,6 +46,7 @@ mp['tunescriptdir'] = os.path.join(d.rootdir,'tune-pipeline','scripts')
 mp['nodefile'] = os.path.join(d.tmpdir,'nodefile')
 mp['bindir'] = d.config['variables']['rhbin']
 mp['maxepochs'] = d.config['tuner']['mira']['max-epochs']
+mp['instruction_cmd'] = os.path.join(d.scriptdir,'decoder-instructions') + ' ' + d.config['rules'] + ' -c ' + os.path.join(d.outdir,'tune.config')
 if d.stop:
    cfg.execute(d,'touch %s' % os.path.join(d.outdir,'STOP'))
    sys.exit(0)
@@ -60,7 +61,7 @@ if not d.progress:
 
     decodescript.write_script(d,'forest')
 
-    cmd = '. $tmpdir/settings && python $miradir/trainer.py $miradir/sbmt_decoder_inline.py' + \
+    cmd = '. $tmpdir/settings && python $miradir/trainer.py $miradir/sbmt_decoder_inline.py -g "$instruction_cmd"' + \
           ' -d $tmpdir/decoder -p -S $outdir/STOP -W $outdir/trainer.weights -B $scorer' + \
           ' -R $order' + \
           ' -M $maxepochs' + \

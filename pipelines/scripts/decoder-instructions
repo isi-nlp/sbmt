@@ -46,6 +46,7 @@ def allextras(line):
     unkrule = subprocess.Popen( unkrulecmd
                               , stdin=subprocess.PIPE
                               , stdout=subprocess.PIPE
+                              , stderr=subprocess.PIPE
                               , shell=True )
     unkrule.stdin.write(candunks + '\n')
     unkrule.stdin.close()
@@ -84,5 +85,6 @@ def mainrun():
         sys.stdout.write(';\n')
         sys.stdout.write(latline('<foreign-sentence> ' + line + ' </foreign-sentence>',lineno) + '\n')
         sys.stdout.write('pop-grammar ;\n\n')
+        sys.stdout.flush()
 
 mainrun()

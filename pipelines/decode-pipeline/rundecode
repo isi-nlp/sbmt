@@ -97,8 +97,6 @@ if 'tune' in d.config and not weights in d.config:
 if 'weights' in d.config:
     weights=d.config['weights']
 
-decodefile = decodescript.write_script(d,'nbest')
-
 best1raw = os.path.join(d.outdir,'1best.raw')
 best1hyp = os.path.join(d.outdir,'1best.hyp')
 bestNraw = os.path.join(d.outdir,'nbest.raw')
@@ -115,7 +113,7 @@ def stage(foo):
 bindir = d.config['variables']['rhbin']
 feeder = os.path.join(os.path.dirname(__file__),'scripts','feedecoder')
 omitsc = os.path.join(os.path.dirname(__file__),'scripts','omitset')
-
+cfg.execute(d,"mkdir -p $outdir/logs",outdir=d.outdir)
 if not os.path.exists(bestNraw):
     mpisize = 3
     bestNraw = maketemp(bestNraw)
@@ -126,18 +124,27 @@ if not os.path.exists(bestNraw):
             cfg.execute(d,"cat %s | grep -o '^NBEST sent=[0-9]*' | sed -e 's/NBEST sent=//' | uniq > %s" % (bestNraw,omitfile))
         except:
             pass # if no decodes have occurred, then no matches, then fail
-    inputcmd = string.Template(
-                 r"cat $corpus | $bin/lc -f'%id\t%len\t%line' | $omitsc $omitfile | sort -nk 2 | cut -f1,3"
-               ).substitute(corpus=d.config['corpus'],omitfile=omitfile,omitsc=omitsc,bin=bindir)
     pbsfile = os.getenv('PBS_NODEFILE')
     if pbsfile is not None:
         for v,line in enumerate(open(pbsfile)):
             mpisize = v + 3
         mpiscript = os.path.join(bindir,'mpiserv')
+        decodefile = decodescript.write_script(d,'nbest',include_instruction_pipe=True,logfile=True)
+        inputcmd = string.Template(
+                     r"cat $corpus | $bin/lc -f'%id\t%len\t%line' | $omitsc $omitfile | sort -nk 2 | cut -f1,3"
+                   ).substitute(corpus=d.config['corpus'],omitfile=omitfile,omitsc=omitsc,bin=bindir)
         mpicmd = 'mpirun --mca mpi_warn_on_fork 0 --mca btl self,tcp --oversubscribe --map-by node:PE=$(%s/numcpu) --bind-to none -x PYTHONPATH -x PATH -np %s %s "python -u %s %s"' % (d.config['variables']['rhbin'],mpisize,mpiscript,feeder,decodefile)
         cfg.execute(d,inputcmd + ' | ' + mpicmd + ' >> ' + bestNraw)
     else:
-        cfg.execute(d,inputcmd + ' | python -u %s %s | cut -f2' % (feeder,decodefile) + ' >> ' + bestNraw)
+        decodefile = decodescript.write_script(d,'nbest',include_instruction_pipe=True,logfile=False)
+        cfg.execute(d , r"cat $corpus | $bin/lc -f'%id\t%line' | $omitsc $omitfile | $decoder >> $nbest 2> >(tee -a $outdir/logs/decoder.log | grep -o 'sentence .* processed' 1>&2)"
+                      , corpus=d.config['corpus']
+                      , omitfile=omitfile
+                      , omitsc=omitsc
+                      , bin=bindir
+                      , decoder=decodefile
+                      , nbest=bestNraw
+                      , outdir=d.outdir )
     bestNraw = stage(bestNraw)
 else: 
     print >> sys.stderr, 'decoding skipped. remove $outdir/nbest.raw to re-decode'
