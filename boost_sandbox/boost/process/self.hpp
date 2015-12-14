@@ -94,7 +94,7 @@ public:
 #endif 
         char *environ = ::GetEnvironmentStrings(); 
         if (!environ) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::self::get_environment: GetEnvironmentStrings failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::self::get_environment: GetEnvironmentStrings failed")); 
         try 
         { 
             char *env = environ; 

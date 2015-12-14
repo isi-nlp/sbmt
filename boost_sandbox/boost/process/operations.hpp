@@ -248,7 +248,7 @@ inline child launch(const Executable &exe, const Arguments &args, const Context 
     PROCESS_INFORMATION pi = detail::win32_start(exe, args, ctx.environment, behin, behout, beherr, s); 
 
     if (!::CloseHandle(pi.hThread)) 
-        boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::launch: CloseHandle failed")); 
+        boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::launch: CloseHandle failed")); 
 
     return child(pi.dwProcessId, fhstdin, fhstdout, fhstderr, detail::file_handle(pi.hProcess)); 
 #endif 
@@ -283,7 +283,7 @@ inline child launch_shell(const std::string &command, const Context &ctx)
     char sysdir[MAX_PATH]; 
     UINT size = ::GetSystemDirectoryA(sysdir, sizeof(sysdir)); 
     if (!size) 
-        boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::launch_shell: GetWindowsDirectory failed")); 
+        boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::launch_shell: GetWindowsDirectory failed")); 
     BOOST_ASSERT(size < MAX_PATH); 
 
     exe = std::string(sysdir) + (sysdir[size - 1] != '\\' ? "\\cmd.exe" : "cmd.exe"); 
@@ -469,7 +469,7 @@ inline children launch_pipeline(const Entries &entries)
         PROCESS_INFORMATION pi = detail::win32_start(entries[i].executable, entries[i].arguments, ctx.environment, sii, sio, sie, s); 
 
         if (!::CloseHandle(pi.hThread)) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::launch_pipeline: CloseHandle failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::launch_pipeline: CloseHandle failed")); 
 
         cs.push_back(child(pi.dwProcessId, fhstdin, fhinvalid, fhinvalid, detail::file_handle(pi.hProcess))); 
     } 
@@ -496,7 +496,7 @@ inline children launch_pipeline(const Entries &entries)
         PROCESS_INFORMATION pi = detail::win32_start(entries[i].executable, entries[i].arguments, ctx.environment, sii, sio, sie, s); 
 
         if (!::CloseHandle(pi.hThread)) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::launch_pipeline: CloseHandle failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::launch_pipeline: CloseHandle failed")); 
 
         cs.push_back(child(pi.dwProcessId, fhinvalid, fhinvalid, fhinvalid, detail::file_handle(pi.hProcess))); 
     } 
@@ -526,7 +526,7 @@ inline children launch_pipeline(const Entries &entries)
         PROCESS_INFORMATION pi = detail::win32_start(entries[i].executable, entries[i].arguments, ctx.environment, sii, sio, sie, s); 
 
         if (!::CloseHandle(pi.hThread)) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::launch_pipeline: CloseHandle failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::launch_pipeline: CloseHandle failed")); 
 
         cs.push_back(child(pi.dwProcessId, fhinvalid, fhstdout, fhstderr, detail::file_handle(pi.hProcess))); 
     } 

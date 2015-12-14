@@ -131,7 +131,7 @@ if not os.path.exists(bestNraw):
         mpiscript = os.path.join(bindir,'mpiserv')
         decodefile = decodescript.write_script(d,'nbest',include_instruction_pipe=True,logfile=True)
         inputcmd = string.Template(
-                     r"cat $corpus | $bin/lc -f'%id\t%len\t%line' | $omitsc $omitfile | sort -nk 2 | cut -f1,3"
+                     r"cat $corpus | $bin/lc -f'%id\t%len\t%line' | $omitsc $omitfile | sort -rnk 2 | cut -f1,3"
                    ).substitute(corpus=d.config['corpus'],omitfile=omitfile,omitsc=omitsc,bin=bindir)
         mpicmd = 'mpirun --mca mpi_warn_on_fork 0 --mca btl self,tcp --oversubscribe --map-by node:PE=$(%s/numcpu) --bind-to none -x PYTHONPATH -x PATH -np %s %s "python -u %s %s"' % (d.config['variables']['rhbin'],mpisize,mpiscript,feeder,decodefile)
         cfg.execute(d,inputcmd + ' | ' + mpicmd + ' >> ' + bestNraw)

@@ -209,7 +209,7 @@ inline PROCESS_INFORMATION win32_start(const Executable &exe, const Arguments &a
         { 
             HANDLE h = ::CreateFileA(infoin.file_.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL); 
             if (h == INVALID_HANDLE_VALUE) 
-                boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::detail::win32_start: CreateFile failed")); 
+                boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::detail::win32_start: CreateFile failed")); 
             chin = file_handle(h); 
             break; 
         } 
@@ -249,7 +249,7 @@ inline PROCESS_INFORMATION win32_start(const Executable &exe, const Arguments &a
         { 
             HANDLE h = ::CreateFileA(infoout.file_.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); 
             if (h == INVALID_HANDLE_VALUE) 
-                boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::detail::win32_start: CreateFile failed")); 
+                boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::detail::win32_start: CreateFile failed")); 
             chout = file_handle(h); 
             break; 
         } 
@@ -296,7 +296,7 @@ inline PROCESS_INFORMATION win32_start(const Executable &exe, const Arguments &a
         { 
             HANDLE h = ::CreateFileA(infoerr.file_.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); 
             if (h == INVALID_HANDLE_VALUE) 
-                boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::detail::win32_start: CreateFile failed")); 
+                boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::detail::win32_start: CreateFile failed")); 
             cherr = file_handle(h); 
             break; 
         } 
@@ -343,7 +343,7 @@ inline PROCESS_INFORMATION win32_start(const Executable &exe, const Arguments &a
     boost::shared_array<char> envstrs = environment_to_win32_strings(env); 
 
     if (!::CreateProcessA(executable.get(), cmdline.get(), NULL, NULL, TRUE, 0, envstrs.get(), workdir.get(), si.get(), &pi)) 
-        boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::detail::win32_start: CreateProcess failed")); 
+        boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::detail::win32_start: CreateProcess failed")); 
 
     return pi; 
 } 

@@ -102,18 +102,18 @@ public:
     { 
 #if defined(BOOST_POSIX_API) 
         if (::kill(id_, force ? SIGKILL : SIGTERM) == -1) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::process::terminate: kill(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::process::terminate: kill(2) failed")); 
 #elif defined(BOOST_WINDOWS_API) 
         HANDLE h = ::OpenProcess(PROCESS_TERMINATE, FALSE, id_); 
         if (h == NULL) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::process::terminate: OpenProcess failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::process::terminate: OpenProcess failed")); 
         if (!::TerminateProcess(h, EXIT_FAILURE)) 
         { 
             ::CloseHandle(h); 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::process::terminate: TerminateProcess failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::process::terminate: TerminateProcess failed")); 
         } 
         if (!::CloseHandle(h)) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::process::terminate: CloseHandle failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::process::terminate: CloseHandle failed")); 
 #endif 
     } 
 

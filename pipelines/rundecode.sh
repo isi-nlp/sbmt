@@ -53,7 +53,8 @@ decodedir=decode-${tune}-${corpus}${ext}
 
 mkdir -p $decodedir
 
-$PIPESTEP/run.sh $($PIPELINE/util/findlocalpath corpus-$corpus) \
-                 $($PIPELINE/util/findlocalpath tune-$tune) $cmd $CAUX \
+$PIPESTEP/run.sh $($PIPELINE/util/findlocalpath ruleset) \
+                -s $($PIPELINE/util/findlocalpath $corpus.pipeline.resource) \
+                -u $($PIPELINE/util/findlocalpath tune-$tune) $cmd $CAUX \
                 -c $($PIPELINE/util/gatherconfig) \
                 -v -o $decodedir 2> $decodedir/pipeline.log
