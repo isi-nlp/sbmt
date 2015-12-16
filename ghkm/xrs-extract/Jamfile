@@ -12,24 +12,25 @@ project xrs-extract
       <include>..
   ;
 
-obj TreeNode : c++-src/TreeNode.C ;
-obj Tree : c++-src/Tree.C ;
-obj MyErr : c++-src/MyErr.C ;
+lib xrsextractree :
+    c++-src/TreeNode.C 
+    c++-src/Tree.C 
+    c++-src/MyErr.C
+    ../gzstream
+    ../treelib
+    /boost/regex//boost_regex 
+  ;
 
 exe fix_collins 
   : c++-src/fix_collins.C 
-    TreeNode 
-    Tree 
-    MyErr
+    xrsextractree
     ../gzstream 
     ../treelib
     /boost/regex//boost_regex 
   ;
 
 exe extract
-  : TreeNode
-    Tree
-    MyErr
+  : xrsextractree
     c++-src/State.C
     c++-src/RuleInst.C
     c++-src/RuleNode.C

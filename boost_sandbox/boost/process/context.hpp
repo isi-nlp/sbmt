@@ -67,17 +67,17 @@ public:
         errno = 0; 
         long size = ::pathconf(".", _PC_PATH_MAX); 
         if (size == -1 && errno) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::basic_work_directory_context::basic_work_directory_context: pathconf(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::basic_work_directory_context::basic_work_directory_context: pathconf(2) failed")); 
         else if (size == -1) 
             size = BOOST_PROCESS_POSIX_PATH_MAX; 
         boost::scoped_array<char> cwd(new char[size]); 
         if (!::getcwd(cwd.get(), size)) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::basic_work_directory_context::basic_work_directory_context: getcwd(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::basic_work_directory_context::basic_work_directory_context: getcwd(2) failed")); 
         work_directory = cwd.get(); 
 #elif defined(BOOST_WINDOWS_API) 
         char cwd[MAX_PATH]; 
         if (!::GetCurrentDirectoryA(sizeof(cwd), cwd)) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::basic_work_directory_context::basic_work_directory_context: GetCurrentDirectory failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::basic_work_directory_context::basic_work_directory_context: GetCurrentDirectory failed")); 
         work_directory = cwd; 
 #endif 
         BOOST_ASSERT(!work_directory.empty()); 

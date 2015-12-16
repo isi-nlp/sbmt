@@ -261,12 +261,12 @@ public:
         BOOST_ASSERT(valid()); 
 
         if (::dup2(handle_, h) == -1) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::file_handle::posix_remap: dup2(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::file_handle::posix_remap: dup2(2) failed")); 
 
         if (::close(handle_) == -1) 
         { 
             ::close(h); 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::file_handle::posix_remap: close(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::file_handle::posix_remap: close(2) failed")); 
         } 
 
         handle_ = h; 
@@ -292,7 +292,7 @@ public:
     static file_handle posix_dup(int h1, int h2) 
     { 
         if (::dup2(h1, h2) == -1) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::file_handle::posix_dup: dup2(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::file_handle::posix_dup: dup2(2) failed")); 
 
         return file_handle(h2); 
     } 
@@ -316,7 +316,7 @@ public:
     { 
         HANDLE h2; 
         if (!::DuplicateHandle(::GetCurrentProcess(), h, ::GetCurrentProcess(), &h2, 0, inheritable ? TRUE : FALSE, DUPLICATE_SAME_ACCESS)) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::detail::file_handle::win32_dup: DuplicateHandle failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::detail::file_handle::win32_dup: DuplicateHandle failed")); 
 
         return file_handle(h2); 
     } 
@@ -344,7 +344,7 @@ public:
 
         HANDLE h = ::GetStdHandle(d); 
         if (h == INVALID_HANDLE_VALUE) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::detail::file_handle::win32_std: GetStdHandle failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::detail::file_handle::win32_std: GetStdHandle failed")); 
 
         return win32_dup(h, inheritable); 
     } 
@@ -366,7 +366,7 @@ public:
         BOOST_ASSERT(valid()); 
 
         if (!::SetHandleInformation(handle_, HANDLE_FLAG_INHERIT, i ? HANDLE_FLAG_INHERIT : 0)) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::detail::file_handle::win32_set_inheritable: SetHandleInformation failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::detail::file_handle::win32_set_inheritable: SetHandleInformation failed")); 
     } 
 #endif 
 

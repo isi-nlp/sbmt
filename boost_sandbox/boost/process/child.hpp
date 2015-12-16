@@ -108,13 +108,13 @@ public:
 #if defined(BOOST_POSIX_API) 
         int s; 
         if (::waitpid(get_id(), &s, 0) == -1) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::child::wait: waitpid(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::child::wait: waitpid(2) failed")); 
         return status(s); 
 #elif defined(BOOST_WINDOWS_API) 
         ::WaitForSingleObject(process_handle_.get(), INFINITE); 
         DWORD code; 
         if (!::GetExitCodeProcess(process_handle_.get(), &code)) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::get_system_category()), "boost::process::child::wait: GetExitCodeProcess failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(::GetLastError(), boost::system::system_category()), "boost::process::child::wait: GetExitCodeProcess failed")); 
         return status(code); 
 #endif 
     } 

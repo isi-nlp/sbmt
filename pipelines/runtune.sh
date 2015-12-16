@@ -48,7 +48,8 @@ fi
 
 set -e 
 
-$PIPESTEP/run.sh $($PIPELINE/util/findlocalpath $corpusdir) \
+$PIPESTEP/run.sh $($PIPELINE/util/findlocalpath ruleset) \
+  -s $($PIPELINE/util/findlocalpath $corpus.pipeline.resource) \
   -c $($PIPELINE/util/gatherconfig) \
   -m $($PIPELINE/util/findlocalpath aux) $CAUX \
   -o $tunedir 2> $tunedir/pipeline.log

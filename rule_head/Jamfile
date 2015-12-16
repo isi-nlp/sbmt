@@ -6,7 +6,7 @@ project rule_head
   : requirements <include>. <include>collins <library>../ghkm/treelib
   ;
 
-obj at_replace : at_replace.cpp /boost/regex : : : <library>/boost/regex ;
+lib at_replace : at_replace.cpp /boost/regex ;
 
 exe headvec : collins/apps/headvec.cpp /gusc /sbmt_decoder//sbmt collins ;
 

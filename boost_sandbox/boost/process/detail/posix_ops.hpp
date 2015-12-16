@@ -199,23 +199,23 @@ struct posix_setup
     void operator()() const 
     { 
         if (!chroot.empty() && ::chroot(chroot.c_str()) == -1) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::posix_setup: chroot(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::posix_setup: chroot(2) failed")); 
 
         if (gid != ::getgid() && ::setgid(gid) == -1) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::posix_setup: setgid(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::posix_setup: setgid(2) failed")); 
 
         if (egid != ::getegid() && ::setegid(egid) == -1) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::posix_setup: setegid(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::posix_setup: setegid(2) failed")); 
 
         if (uid != ::getuid() && ::setuid(uid) == -1) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::posix_setup: setuid(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::posix_setup: setuid(2) failed")); 
 
         if (euid != ::geteuid() && ::seteuid(euid) == -1) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::posix_setup: seteuid(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::posix_setup: seteuid(2) failed")); 
 
         BOOST_ASSERT(!work_directory.empty()); 
         if (::chdir(work_directory.c_str()) == -1) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::posix_setup: chdir(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::posix_setup: chdir(2) failed")); 
     } 
 }; 
 
@@ -249,7 +249,7 @@ inline void setup_input(info_map &info, bool *closeflags, int maxdescs)
             { 
                 int fd = ::open(si.file_.c_str(), O_RDONLY); 
                 if (fd == -1) 
-                    boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::setup_input: open(2) of " + si.file_ + " failed")); 
+                    boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::setup_input: open(2) of " + si.file_ + " failed")); 
                 if (fd != d) 
                 { 
                     file_handle h(fd); 
@@ -314,7 +314,7 @@ inline void setup_output(info_map &info, bool *closeflags, int maxdescs)
             { 
                 int fd = ::open(si.file_.c_str(), O_WRONLY); 
                 if (fd == -1) 
-                    boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::setup_output: open(2) of " + si.file_ + " failed")); 
+                    boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::setup_output: open(2) of " + si.file_ + " failed")); 
                 if (fd != d) 
                 { 
                     file_handle h(fd); 
@@ -380,7 +380,7 @@ inline pid_t posix_start(const Executable &exe, const Arguments &args, const env
 { 
     pid_t pid = ::fork(); 
     if (pid == -1) 
-        boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::posix_start: fork(2) failed")); 
+        boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::posix_start: fork(2) failed")); 
     else if (pid == 0) 
     { 
 #if defined(F_MAXFD) 
@@ -420,7 +420,7 @@ inline pid_t posix_start(const Executable &exe, const Arguments &args, const env
         char **envp = environment_to_envp(env); 
 
         ::execve(exe.c_str(), argcv.second, envp); 
-        boost::system::system_error e(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::posix_start: execve(2) failed"); 
+        boost::system::system_error e(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::posix_start: execve(2) failed"); 
 
         for (std::size_t i = 0; i < argcv.first; ++i) 
             delete[] argcv.second[i]; 

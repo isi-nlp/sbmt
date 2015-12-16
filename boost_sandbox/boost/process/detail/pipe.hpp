@@ -83,7 +83,7 @@ public:
 
 #if defined(BOOST_POSIX_API) 
         if (::pipe(hs) == -1) 
-            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::get_system_category()), "boost::process::detail::pipe::pipe: pipe(2) failed")); 
+            boost::throw_exception(boost::system::system_error(boost::system::error_code(errno, boost::system::system_category()), "boost::process::detail::pipe::pipe: pipe(2) failed")); 
 #elif defined(BOOST_WINDOWS_API) 
         SECURITY_ATTRIBUTES sa; 
         ZeroMemory(&sa, sizeof(sa)); 
