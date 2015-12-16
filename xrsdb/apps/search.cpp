@@ -716,6 +716,7 @@ BOOST_ENUM_VALUES(
 );
 
 struct options {
+    bool pop_newline;
     bool nondet;
     bool append_rules;
     bool keep_align;
@@ -747,7 +748,8 @@ struct options {
     bool no_sort_rules;
     std::istream* input;
     options() 
-    : nondet(false)
+    : pop_newline(false)
+    , nondet(false)
     , append_rules(false)
     , keep_align(false)
     , rule_dump(false)
@@ -909,6 +911,9 @@ options& parse_options(int argc, char** argv, options& opts)
         , value(&opts.nbest_pops)->default_value(opts.nbest_pops)
         , "max nbests to pop before giving up"
         )
+        ( "newline-after-pop"
+        , value(&opts.pop_newline)->default_value(opts.pop_newline)
+        , "add newline to stream after popping grammar" )
         ;
     
     desc.add(get_info_options());
@@ -2209,9 +2214,10 @@ void tee_weights(header& h, weight_vector& weights, fat_weight_vector const& fat
     echo_weights(fatweights);
 }
 
-void pop_grammar( word_trie_stack& wts )
+void pop_grammar( word_trie_stack& wts, bool newline)
 {
     wts.pop_back();
+    if (newline) std::cout << std::endl;
 }
 
 void push_inline_grammar( word_trie_stack& wts
@@ -4000,7 +4006,7 @@ int main(int argc, char** argv)
             reader.set_push_grammar_callback(boost::bind(echo_grammar,_1,_2));
             reader.set_pop_grammar_callback(do_nothing);
         } else if (opts.pass == multipass::single or opts.pass == multipass::source) {
-            reader.set_pop_grammar_callback(boost::bind(pop_grammar,boost::ref(wts)));
+            reader.set_pop_grammar_callback(boost::bind(pop_grammar,boost::ref(wts),opts.pop_newline));
             reader.set_decode_callback(boost::bind( decode
                                                   , _1
                                                   , _2

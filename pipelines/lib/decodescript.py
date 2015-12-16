@@ -56,11 +56,11 @@ def write_script(d, stage, weightstring=None, logfile=True, include_instruction_
     if stage == 'nbest':
         print >> decodescript, '  --output-format nbest \\'
     elif stage == 'forest':
-        print >> decodescript, '  --output-format forest \\'
+        print >> decodescript, '  --output-format forest --newline-after-pop true \\'
     if logfile:
         print >> decodescript, '  2> >(gzip > $LOG.gz) \\'
     if stage == 'forest':
-        print >> decodescript, "| sed -u -e 's/@UNKNOWN@//g' " 
+        print >> decodescript, "| %s/join_forests | sed -u -e 's/@UNKNOWN@//g' " % d.scriptdir 
     else:
         print >> decodescript, "\n"
     decodescript.close()
