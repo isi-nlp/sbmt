@@ -68,13 +68,18 @@ xedge_partial::xedge_partial() : rule(0), cost(0) {}
 
 xequiv::xequiv() : heur(0) {}
 
-xequiv::xequiv(sbmt::span_t span, sbmt::indexed_token root, size_t info_size)
-: edges(0)
+xequiv::xequiv(sbmt::span_t span, sbmt::indexed_token root, size_t info_size, rule_application const* rule)
+: edges(rule == 0 ? 0 : 1)
 , infos(info_size)
 , heur(0)
 , span(span)
 , root(root)
-{}
+{
+    if (rule != 0) {
+        edges[0].rule = rule;
+        edges[0].cost = rule->cost;
+    }
+}
 
 
 xedge xequiv::const_iterator::dereference() const

@@ -83,7 +83,7 @@ struct xequiv {
     float heur;
     template <class Range>
     explicit xequiv(Range const& rng);
-    xequiv(sbmt::span_t span, sbmt::indexed_token root, size_t info_size);
+    xequiv(sbmt::span_t span, sbmt::indexed_token root, size_t info_size, rule_application const* rptr = 0);
     xequiv();
     const_iterator begin() const;
     const_iterator end() const;
@@ -135,7 +135,7 @@ xedge::xedge( rule_application const* rule
 , cost(cost)
 , heur(heur) 
 {
-    #ifndef NDEBUG
+    #if 0
     size_t x = 0;
     BOOST_FOREACH(fixed_rule::rule_node const& nd, this->rule->rule.rhs()) {
         //if (nd.indexed()) {

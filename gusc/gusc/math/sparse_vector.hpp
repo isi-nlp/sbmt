@@ -616,7 +616,7 @@ operator<<(std::basic_ostream<S,T>& os, sparse_vector<K,V> const& v)
 // todo: support basic_string<>
 namespace detail {
 template <class K, class V, class OP>
-void read(std::string const& str, sparse_vector<K,V>& v, OP const& op,char const* map_sep=",",char const* pair_sep=":")
+void read(std::string const& str, sparse_vector<K,V>& v, OP const& op,char const* map_sep=",", char const* pair_sep=":")
 {
     v.clear();
     using namespace boost;

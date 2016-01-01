@@ -271,6 +271,8 @@ public:
     fixed_byte_varray headmarker;
     template <class A, class W>
     rule_application(rule_data const& rd, header& h, A& alloc, W const& w);
+    template <class A, class W>
+    rule_application(sbmt::weight_vector const& fv, header& h, A& alloc, W const& w);
     void print(std::ostream& out, header& h) const;
 };
 
@@ -280,7 +282,13 @@ typedef std::map<
         , gusc::less
         > rule_application_map
         ;
-        
+;
+typedef std::map<
+          std::pair<sbmt::span_t,sbmt::indexed_token>
+        , ip::offset_ptr<rule_application>
+        , gusc::less
+        > feature_vector_map
+        ;        
 void create_word_map( rule_application_map& mp
                     , boost::shared_array<char>& array
                     , std::istream& in
@@ -412,6 +420,12 @@ make_sig_entry( external_buffer_type& subtrie_buffer
 boost::tuple<boost::shared_array<char>,size_t>
 create_word_trie(std::istream& in, sbmt::weight_vector const& weights, header& h);
 
+
+typedef std::map<sbmt::indexed_token,ip::offset_ptr<rule_application> > cell_initial_rule_map;
+typedef std::map<sbmt::span_t,cell_initial_rule_map> chart_initial_rule_map;
+boost::tuple<boost::shared_array<char>,size_t>
+create_lattice_rules(gusc::lattice_ast const& lat, sbmt::weight_vector const& weights, header& h, chart_initial_rule_map& cirm);
+    
 struct weak_syntax_iterator 
 : boost::iterator_facade<
     weak_syntax_iterator

@@ -81,9 +81,9 @@ struct use_index {
 } // sbmt::detail
 
 template <class T, class V, class Dict>
-void read(sparse_vector<T,V>& v, std::string const& str, Dict& dict)
+void read(sparse_vector<T,V>& v, std::string const& str, Dict& dict, char const* kvsep=":", char const* pairsep=",")
 {
-    detail::read(str,v,detail::use_index<Dict>(dict));
+  gusc::detail::read(str,v,detail::use_index<Dict>(dict),pairsep,kvsep);
 }
 
 template <class K, class V, class S, class T, class Dict>

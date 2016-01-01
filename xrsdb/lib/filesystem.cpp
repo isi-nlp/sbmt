@@ -259,6 +259,36 @@ void rule_application::swap(rule_application& other)
 }
 
 template <class A, class W>
+rule_application::rule_application(sbmt::weight_vector const& fv, header& h, A& alloc, W const& w)
+: rule(alloc)
+, costs(fv.begin(),fv.end(),gusc::less(),fixed_feature_vector::allocator_type(alloc))
+, cost(dot(costs,w))
+, rhs2var( gusc::less()
+         , rhs2var_map::allocator_type(alloc)
+         )
+, cross(fixed_bool_varray::allocator_type(alloc))
+, rldist(boost::math::normal_distribution<float>(-1.0,1.0))
+, vldist(fixed_rldist_varray::allocator_type(alloc))
+, lmstring("1",h.dict,fixed_lm_string::allocator_type(alloc))
+#ifdef XRSDB_LEAFLM
+, leaflmstring("1",h.dict,fixed_lm_string::allocator_type(alloc))
+#endif
+, froot(h.dict.toplevel_tag())
+, fvars(fixed_token_varray::allocator_type(alloc))
+#ifdef XRSDB_SENTIDS
+, sentids(sentid_varray::allocator_type(alloc))
+#endif
+, tgt_src_aligns(target_source_align_varray::allocator_type(alloc))
+#ifdef XRSDB_HEADRULE
+, hwdm(gusc::less(),head_map::allocator_type(alloc))
+, htgm(gusc::less(),head_map::allocator_type(alloc))
+, vhwdm(variable_head_map::allocator_type(alloc))
+, vhtgm(variable_head_map::allocator_type(alloc))
+#endif
+, headmarker(fixed_byte_varray::allocator_type(alloc))
+{}
+
+template <class A, class W>
 rule_application::rule_application(rule_data const& rd, header& h, A& alloc, W const& w)
 : rule(rd,h.dict,alloc)
 , costs( boost::make_transform_iterator(
@@ -807,58 +837,9 @@ typedef std::multimap<
    >
  , rule_data
  > rule_map_t;
- 
+
 typedef std::map<boost::int64_t, rule_data> rule_data_map;
 typedef std::set<exmp::forest_ptr> forest_occurance_set;
-
-/*
-void create_word_map( rule_application_map& mp
-                    , rule_data_map& rdm
-                    , forest_occurance_set& fos
-                    , rule_application_allocator& alloc
-                    , exmp::hyp_ptr hyp
-                    , sbmt::weight_vector const& weights
-                    , header& h );
-
-void create_word_map( rule_application_map& mp
-                    , rule_data_map& rdm
-                    , forest_occurance_set& fos
-                    , rule_application_allocator& alloc
-                    , exmp::forest_ptr fptr
-                    , sbmt::weight_vector const& weights
-                    , header& h )
-{
-    BOOST_FOREACH(exmp::hyp_ptr hyp, *fptr) {
-        create_word_map(mp,rdm,fos,alloc,hyp,weights,h);
-    }
-}
-
-
-void create_word_map( rule_application_map& mp
-                    , rule_data_map& rdm
-                    , forest_occurance_set& fos
-                    , rule_application_allocator& alloc
-                    , exmp::hyp_ptr hyp
-                    , sbmt::weight_vector const& weights
-                    , header& h )
-{
-    boost::int64_t id = hyp->ruleid();
-    rule_data rd = rdm[id];
-    int fid; double fwt;
-    BOOST_FOREACH(boost::tie(fid,fwt), hyp->weights()) {
-        rd.features.push_back(feature(std::make_pair(h.fdict.get_token(fid),feature_value<std::string>(fwt))));
-    }
-    ip::offset_ptr<rule_application> rptr(alloc.allocate(1));
-    ::new (rptr.get()) rule_application(rd,h,alloc,weights);
-    mp.insert(std::make_pair(hyp,rptr));
-    BOOST_FOREACH(exmp::forest_ptr fptr, *hyp) {
-        if (fos.find(fptr) == fos.end()) {
-            fos.insert(fptr);
-            create_word_map(mp,rdm,fos,alloc,fptr,weights,h);
-        }
-    }
-}
-*/
 
 void create_word_map( rule_application_map& mp
                     , boost::shared_array<char>& array
@@ -938,6 +919,70 @@ create_word_trie( rule_map_t const& rmap
     sdbc.insert(sig.begin(),sig.end(),make_entry(subtrie_buffer,rules,h,weights));
     dbc.insert(keys.begin(),keys.end(),make_sig_entry(subtrie_buffer,wordtrie_buffer,sdbc));
     return save_word_trie_data(wordtrie_buffer,dbc);
+}
+
+typedef std::map<sbmt::indexed_token,sbmt::weight_vector> cell_feature_map;
+typedef std::map<sbmt::span_t,cell_feature_map> chart_feature_map;
+void create_lattice_rules(gusc::lattice_line const& line, chart_feature_map& cfm, header& h) {
+    if (not line.is_block()) {
+        sbmt::span_t spn(line.span().from(),line.span().to());
+        sbmt::indexed_token tok = h.dict.foreign_word(line.label());
+        std::string key,val;
+        cfm[spn][tok];
+        BOOST_FOREACH(gusc::property_container_interface::key_value_pair kvp, line.properties()) {
+            try {
+                sbmt::score_t scr = boost::lexical_cast<sbmt::score_t>(kvp.value());
+                cfm[spn][tok][h.fdict.get_index(kvp.key())] += scr.neglog10();
+            } catch(...) {
+                
+            }
+        }
+    } else {
+        BOOST_FOREACH(gusc::lattice_line const& cline, line.lines()) {
+            create_lattice_rules(cline,cfm,h);
+        }
+    }
+}
+
+boost::tuple<boost::shared_array<char>,size_t>
+create_lattice_rules(gusc::lattice_ast const& lat, sbmt::weight_vector const& weights, header& h, chart_initial_rule_map& cirm)
+{
+    chart_feature_map cfm;
+    BOOST_FOREACH(gusc::lattice_line const& line, lat.lines()) { create_lattice_rules(line,cfm,h); }
+    size_t sz = 10*1024*1024;
+    size_t n = 0;
+    BOOST_FOREACH(chart_feature_map::value_type const& vt, cfm) n +=  vt.second.size();
+    
+    boost::shared_array<char> array(new char[sz]);
+    external_buffer_type buffer(ip::create_only,array.get(),sz);
+    rule_application_allocator alloc(buffer.get_segment_manager());
+    ip::offset_ptr<rule_application> rptr(alloc.allocate(n));
+    buffer.construct<rule_application_array>("root")(rptr,n);
+    std::vector< boost::tuple<sbmt::span_t,sbmt::indexed_token> > place(n);
+    size_t x = 0;
+    BOOST_FOREACH(chart_feature_map::value_type const& vt, cfm) {
+        BOOST_FOREACH(cell_feature_map::value_type const& vvt, vt.second) {
+            ::new (rptr.get()) rule_application(vvt.second,h,alloc,weights);
+            place[x] = boost::make_tuple(vt.first,vvt.first);
+            ++x;
+            ++rptr;
+        }
+    }
+    buffer.get_segment_manager()->shrink_to_fit();
+    sz = buffer.get_size();
+    boost::shared_array<char> newarray(new char[sz]);
+    char const* beg = (char const*)buffer.get_address();
+    char const* end = beg + sz;
+    std::copy(beg,end,newarray.get());
+    external_buffer_type newbuffer(ip::open_only,newarray.get(),sz);
+    rptr = newbuffer.find<rule_application_array>("root").first->get<0>();
+    sbmt::span_t spn;
+    sbmt::indexed_token tok;
+    BOOST_FOREACH(boost::tie(spn,tok),place) {
+        cirm[spn][tok] = rptr;
+        ++rptr;
+    }
+    return boost::make_tuple(newarray,sz);
 }
 
 boost::tuple<boost::shared_array<char>,size_t>

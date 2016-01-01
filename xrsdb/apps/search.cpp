@@ -1703,9 +1703,12 @@ struct xtree {
             hword = root.rule->hwd->get_token();
         }
         //std::cerr << "before cost: " << cost << "\n";
-        BOOST_FOREACH(xequiv xeq, root.children) cost -= ::cost(xeq);
+        BOOST_FOREACH(xequiv xeq, root.children) if (::root(xeq).type() != sbmt::foreign_token) cost -= ::cost(xeq);
         BOOST_FOREACH(xtree_ptr ptr, children) cost += ptr->cost;
         BOOST_FOREACH(fixed_rule::tree_node const& nd, root.rule->rule.lhs()) {
+            //if (nd.indexed() and ::root(children[nd.index()]->root) != nd.get_token()) {
+            //    throw std::logic_error("xtree roots dont match");
+            //}
             if (nd.indexed() and ::root(children[root.rule->rhs2var.find(nd.index())->second]->root) != nd.get_token()) {
                 throw std::logic_error("xtree roots dont match");
             }
@@ -1866,6 +1869,7 @@ hyptree(xtree_ptr const& t,fixed_rule::tree_node const& n, in_memory_dictionary 
     std::stringstream sstr;
     sstr << sbmt::token_label(dict);
     if (n.indexed()) {
+        //xtree_ptr ct = t->children[n.index()];
         xtree_ptr ct = t->children[t->root.rule->rhs2var.find(n.index())->second];
         assert(n.get_token() == ct->root.rule->rule.lhs_root()->get_token());
         sstr << hyptree(ct,*(ct->root.rule->rule.lhs_root()),dict);
@@ -1981,6 +1985,7 @@ feature_vector features(rule_data const& rd, feature_dictionary& fdict);
 void accum(xtree_ptr const& t,weight_vector& f, xedge_components_f func)
 {
     f += func(t->root);
+    BOOST_FOREACH(xequiv const& xeq, t->root.children) if (root(xeq).type() == sbmt::foreign_token) f += sbmt::weight_vector(xeq.begin()->rule->costs);
     BOOST_FOREACH(xtree::children_type::value_type const& c, t->children) {
         accum(c,f,func);
     }
@@ -2221,9 +2226,9 @@ void pop_grammar( word_trie_stack& wts, bool newline)
 }
 
 void push_inline_grammar( word_trie_stack& wts
-			, std::vector<std::string> const& fvec
-			, sbmt::weight_vector const& weights
-			, header& h )
+                        , std::vector<std::string> const& fvec
+                        , sbmt::weight_vector const& weights
+                        , header& h )
 {
     std::stringstream sstr;
     BOOST_FOREACH(std::string const& str, fvec) {
@@ -2271,6 +2276,7 @@ std::string sentence_yield(xtree_ptr tree, header& h)
                 sent << nd.get_token(); 
             }
             else if (nd.indexed()) {
+                //sent << sentence_yield(tree->children[nd.index()],h);
                 sent << sentence_yield(tree->children[tree->root.rule->rhs2var.find(nd.index())->second],h); 
             }
             first = false;
@@ -2284,6 +2290,7 @@ std::ostream& print_features(std::ostream& out, xedge const& xe, xedge_component
     out << '<';
     bool first = true;
     sbmt::weight_vector fv = func(xe);
+    BOOST_FOREACH(xequiv const& xeq, xe.children) if (root(xeq).type() == sbmt::foreign_token) fv += sbmt::weight_vector(xeq.begin()->rule->costs);
     BOOST_FOREACH(sbmt::weight_vector::value_type v, fv) {
         if (not first) {
             out << ',';
@@ -2619,6 +2626,8 @@ struct decode_data {
     bool abort;
     bool deterministic;
     std::multimap<sbmt::indexed_token,edge_t> mbyedges;
+    chart_initial_rule_map cirm;
+    boost::tuple<boost::shared_array<char>,size_t> cirmdata;
     decode_data( gusc::lattice_ast const& lat 
                , size_t id
                , header& h
@@ -2638,8 +2647,8 @@ struct decode_data {
     , sortpool(std::min(int(opts.num_threads),4))
     , abort(false)
     , deterministic(not opts.nondet)
+    , cirmdata(create_lattice_rules(lat,weights,h,cirm))
     {
-        
         BOOST_FOREACH(any_xinfo_factory const& xf, factories) if (not xf.deterministic()) deterministic = false;
         
         SBMT_INFO_STREAM(decoder_domain, "deterministic: " << deterministic);
@@ -2708,7 +2717,7 @@ struct decode_data {
                     SBMT_VERBOSE_STREAM(decoder_domain, "populating " << spn << " with " << fw);
                     assert(s_ == spn);
                     chrt[spn][x] = xcell(1);
-                    chrt[spn][x][0] = xequiv(spn,fw,factories.size());
+                    chrt[spn][x][0] = xequiv(spn,fw,factories.size(),cirm[spn][fw].get());
                     ++x; 
                 }
                 chrthlds.insert(std::make_pair(spn,initial ? 0 : 2));
@@ -2883,8 +2892,8 @@ void print_results( xequiv xeq
                 if (upos == uniqlist.end() or (opts.estring_copies > 0 and upos->second < opts.estring_copies) or opts.estring_copies == 0) {
                     if (upos == uniqlist.end() and opts.estring_copies > 0) uniqlist.insert(make_pair(sent,1));
                     else if (opts.estring_copies > 0) upos->second += 1;
-                    std::cout << "NBEST sent=" << id << " nbest=" << m << " totalcost=" << tree->cost << ' ';
-                    std::cout << "kbest=" << M << ' ';
+                    std::cout << "NBEST sent=" << id << " nbest=" << m << " totalcost=" << std::flush << tree->cost << ' ' << std::flush;
+                    std::cout << "kbest=" << M << ' ' << std::flush;
                     std::cout << "hyp={{{"<< sent << "}}} " << std::flush;
                     std::cout << "tree={{{" << hyptree(tree,h.dict) << "}}} " << std::flush;
                     std::cout << "headword_derivation={{{" << headword_derivation(tree,h) << "}}} " << std::flush;
@@ -2956,203 +2965,6 @@ V& get(std::map<K,V,S>& mp, CK const& k)
     return mp.find(k)->second;
 }
 
-/*
-void print_rules(signature_trie const& sigtrie, signature_trie::state st, header& h)
-{
-    if (sigtrie.value(st) != sigtrie.nonvalue()) {
-        rule_application_array_adapter rules(sigtrie.value(st));
-        BOOST_FOREACH(rule_application const& ra, rules) {
-            std::stringstream sstr;
-            ra.print(sstr,h);
-            sstr << '\n';
-            std::cout << sstr.str();
-            //std::cout << ra.rule;
-            //uint32_t k; float v;
-            //BOOST_FOREACH(boost::tie(k,v), ra.costs) {
-            //    std::cout << ' ' << h.fdict.get_token(k) << '=' << v;
-            //}
-            //std::cout << "\n";
-        }
-    }
-    BOOST_FOREACH(signature_trie::state sst, sigtrie.transitions(st)) {
-        print_rules(sigtrie,sst,h);
-    }
-}
-
-void print_rules(cluster_search_data& cs, vtx_t v, header& h)
-{
-    cluster_search::result_type crs((*cs)(v));
-    make_res mr(cs.wtd);
-    BOOST_FOREACH(cluster_search::single_result_type const& cb, crs) {
-        signature_trie const* sigtrie = mr(cb.get<1>(),null_sorter(),false);
-        if (sigtrie) print_rules(*sigtrie,sigtrie->start(),h);
-    }
-}
-
-
-
-void print_rules( graph_t const& skipg
-                , cluster_search_data& csd
-                , mapsvtx& smap
-                , vtx_t v
-                , header& h )
-{
-    mapsvtx::iterator pos = smap.find(skipg[v]);
-    for (; pos != smap.end(); ++pos) {
-        //std::cerr << "       csd(" << pos->first << ")\n";
-        print_rules(csd,pos->second,h);
-    }
-}
-
-void print_rules( graph_t const& skipg
-                , wordtrie_map& wtm
-                , mapsvtx& smap
-                , header& h
-                , fs::path dbdir
-                , vtx_t v
-                , edge_t e )
-{  
-    //std::cerr << "print_rules " << skipg[v] << " --> [" << skipg[source(e,skipg)] << "] " << skipg[e] << " [" << skipg[target(e,skipg)] << "]\n";
-    if (sbmt::is_lexical(skipg[e])) {
-         
-        wordtrie_map::iterator pos = wtm.find(skipg[e]);
-        if (pos == wtm.end()) {
-            if (cluster_exists(dbdir,h,skipg[e])) {
-                fs::path p; string ignore;
-                boost::tie(p,ignore) = structure_from_token(skipg[e]);
-                fs::path loc = dbdir / p;
-                wtm[skipg[e]] = word_trie_data(loc.native(),h.offset(skipg[e]),null_sorter());
-                pos == wtm.find(skipg[e]);
-            } 
-        }
-        if (pos != wtm.end()) {
-            cluster_search_data csd(h,pos->second,&skipg,v,e);
-            print_rules(skipg,csd,smap,target(e,skipg),h);
-        }
-    }
-    BOOST_FOREACH(edge_t ee, out_edges(target(e,skipg),skipg)) {
-        print_rules(skipg,wtm,smap,h,dbdir,v,ee);
-    }
-}
-*/
-/*
-void load_rules(signature_trie const& sigtrie, signature_trie::state st, header& h)
-{
-    if (sigtrie.value(st) != sigtrie.nonvalue()) {
-        rule_application_array_adapter rules(sigtrie.value(st));
-        BOOST_FOREACH(rule_application const& ra, rules) {
-            std::stringstream sstr;
-            sstr << sbmt::token_label(h.dict);
-            ra.print(sstr,h);
-            sstr << '\n';
-            std::cout << sstr.str();
-            //std::cout << ra.rule;
-            //uint32_t k; float v;
-            //BOOST_FOREACH(boost::tie(k,v), ra.costs) {
-            //    std::cout << ' ' << h.fdict.get_token(k) << '=' << v;
-            //}
-            //std::cout << "\n";
-        }
-    }
-    BOOST_FOREACH(signature_trie::state sst, sigtrie.transitions(st)) {
-        load_rules(sigtrie,sst,h);
-    }
-}
-
-void load_rules(cluster_search_data& cs, vtx_t v, header& h, rule_sort_f sorter)
-{
-    cluster_search::result_type crs((*cs)(v));
-    make_res mr(cs.wtd,true);
-    BOOST_FOREACH(cluster_search::single_result_type const& cb, crs) {
-        signature_trie const* sigtrie = mr(cb.get<1>(),sorter,false);
-        //if (sigtrie) load_rules(*sigtrie,sigtrie->start(),h);
-    }
-}
-
-void load_rules( graph_t const& skipg
-               , cluster_search_data& csd
-               , decode_data::mapsvtx const& smap
-               , vtx_t v
-               , header& h
-               , rule_sort_f sorter )
-{
-    decode_data::mapsvtx::const_iterator pos = smap.find(skipg[v]);
-    for (; pos != smap.end(); ++pos) {
-        //std::cerr << "       csd(" << pos->first << ")\n";
-        load_rules(csd,pos->second,h,sorter);
-    }
-}
-
-void  loadrules( decode_data& dd
-               , sbmt::indexed_token ewd
-               , header& h
-               , fs::path dbdir 
-               , rule_sort_f sorter )
-{
-    edge_t e;
-    sbmt::indexed_token ignore;
-    BOOST_FOREACH(boost::tie(ignore,e), dd.mbyedges.equal_range(ewd)) {
-        vtx_t v;
-        size_t s;
-
-        //std::cerr << "+++E:" << skipg[e] << "["<< skipg[source(e,skipg)] << ","<< skipg[target(e,skipg)] << "]\n";
-        BOOST_FOREACH(boost::tie(s,v),dd.smap) {
-            //std::cerr << "  ===V:" << s << "\n";
-            if (s <= dd.skipg[source(e,dd.skipg)]) {
-                {
-                    boost::mutex::scoped_lock lk(dd.mutex);  
-                    if (dd.skipg[e] != ewd) throw std::logic_error("dd.skipg[e] != ewd");
-                
-                    if (get(dd.wtm,dd.skipg[e]).get() == 0 and cluster_exists(dbdir,h,dd.skipg[e])){
-                        fs::path p; string ignore;
-                        boost::tie(p,ignore) = structure_from_token(dd.skipg[e]);
-                        fs::path loc = dbdir / p;
-                        get(dd.wtm,dd.skipg[e]) = word_trie_data(loc.native(),h.offset(dd.skipg[e]),sorter);
-                    }
-                }
-                if (get(dd.wtm,dd.skipg[e]).get() != 0) {
-                    //std::cerr << "    print " << skipg[v] << " -- " << skipg[e] << ":\n";
-                    cluster_search_data csd(h,get(dd.wtm,dd.skipg[e]),&dd.skipg,v,e);
-                    load_rules(dd.skipg,csd,dd.smap,target(e,dd.skipg),h,sorter);
-                }
-            }
-        }
-    }
-    get(dd.wtm,ewd).drop(false);
-}
-
-void load_rules( graph_t const& skipg
-               , decode_data::mapsvtx const& smap
-               , std::multimap<sbmt::indexed_token,edge_t> const& mbyedges
-               , wordtrie_map& wtm
-               , header& h
-               , fs::path dbdir
-               , sbmt::thread_pool& pool
-               , rule_sort_f sorter
-               )
-{
-    std::set<sbmt::indexed_token> words;
-    BOOST_FOREACH(edge_t e, edges(skipg)) if (sbmt::is_lexical(skipg[e])) {
-        words.insert(skipg[e]);
-    }
-    
-    BOOST_FOREACH(sbmt::indexed_token ewd, words) {
-        pool.add(boost::bind( loadrules
-                            , boost::ref
-                            , boost::cref(skipg)
-                            , boost::cref(smap)
-                            , boost::ref(wtm)
-                            , ewd
-                            , boost::cref(mbyedges)
-                            , boost::ref(h)
-                            , dbdir
-                            , sorter ));
-        //load_rules(skipg,smap,wtm,ewd,mbyedges,h,dbdir);
-    }
-    pool.wait();
-}
-*/
-
 void decode_row( size_t id
                , header& h
                , sbmt::weight_vector& weights
@@ -3163,25 +2975,6 @@ void decode_row( size_t id
                , span_t total )
 {
     try { 
-      /*
-      size_t rtidx = dd.skipg[right->second];
-      BOOST_FOREACH(indexed_token lookup, get(dd.loadlists,rtidx)) {
-            boost::mutex::scoped_lock lk(*get(dd.wtmtxm,lookup));
-            if (get(dd.wtm,lookup).get() == 0 and cluster_exists(opts.dbdir,h,lookup)) {
-                fs::path p; string ignore;
-                boost::tie(p,ignore) = structure_from_token(lookup);
-                fs::path loc = opts.dbdir / p;
-                std::stringstream sstr;
-                SBMT_INFO_STREAM(decoder_domain, sbmt::token_label(h.dict) << "loading cluster data for "<< lookup);
-                //loadrules( dd
-                //         , lookup
-                //         , h
-                //         , opts.dbdir 
-                //         , info_rule_sorter(&dd.gram,dd.factories,&weights,&opts.priormap) 
-                //         );
-                get(dd.wtm,lookup) = word_trie_data(loc.native(),h.offset(lookup),info_rule_sorter(&dd.gram,dd.factories,&weights,&opts.priormap));
-            }
-      }*/
       while (true) {
         
         bool breakit = false;
