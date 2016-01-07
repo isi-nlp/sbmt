@@ -1,0 +1,12 @@
+project guppy ;
+
+import stage ;
+import sbmt-util ;
+
+
+lib-locate = [ sbmt-util.get-libdir ] ;
+stage.install install 
+            : [ glob ../guppy/*.py ]
+            : <location>$(lib-locate)
+              <install-source-root>..
+            ;

@@ -169,6 +169,7 @@ alias install-pipeline
     ./vocabfilter//install
     ./ghkm/xrs-extract//install
     ./mert//install
+    ./guppy//install
   ;
 
 alias test

@@ -1,0 +1,137 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import re 
+import string
+from guppy import lazy
+import collections
+
+def concat_tree(T1, T2):
+    TS1= T1.split()
+    TS2= T2.split()
+    assert TS1[0] == '(TOP' and TS1[-1] == ')'
+    assert TS2[0] == '(TOP' and TS2[-1] == ')'
+    return '(TOP ' + ' '.join(TS1 + TS2) + ' )'
+
+def concat_used_rules(U1,U2):
+    S1 = set(U1.split())
+    S2 = set(U2.split())
+    S = S1.union(S2)
+    S.add('8345000000000')
+    return ' '.join(x for x in S)
+def concat_deriv(D1,D2):
+    return '(8345000000000 ' + ' '.join(D1.split() + D2.split()) + ')'
+
+def concat_align(T1,S1,A1,T2,S2,A2):
+    TL = len(T1.split())
+    SL = len(S1.split())
+    A1T= [tuple(int(ww) for ww in w.split('-')) for w in A1.split()]
+    A2T = [tuple(int(ww) for ww in w.split('-')) for w in A2.split()]
+    for t,s in A2T:
+        A1T.append((t+TL,s+SL))
+    return ' '.join('-'.join(str(ww) for ww in w) for w in A1T)
+
+def concat_text(S1,S2):
+    return ' '.join(S1.split() + S2.split())
+
+def concat_scores(MP1,MP2):
+    MP = collections.defaultdict(float,MP1.iteritems())
+    for k,v in MP2.iteritems():
+        MP[k] += v
+    return MP
+
+nbestre = re.compile(r'([A-Za-z][A-Za-z0-9.:\[\]()_-]*)=({{{(.*?)}}}|([0-9.-]+))')
+
+def procline(line):
+    ln = {}
+    ln['features'] = {}
+    for m in nbestre.finditer(line):
+        if m.group(3):
+            ln[m.group(1)] = m.group(3).strip()
+        elif m.group(1) in set(['kbest','nbest','sent']):
+            ln[m.group(1)] = int(m.group(4).strip())
+        elif m.group(1) == 'totalcost':
+            ln[m.group(1)] = float(m.group(4).strip())
+        else:
+            ln['features'][m.group(1)] = float(m.group(4).strip())
+    return ln
+
+def combine(ln1, ln2):
+    ln = {}
+    ln['combined'] = True
+    #print >> sys.stderr, 'LNS\n', ln1, '\n\n', ln2
+    assert(ln1['sent'] == ln2['sent'])
+    ln['sent'] = ln1['sent']
+    ln['used-rules'] = concat_used_rules(ln1['used-rules'],ln2['used-rules'])
+    ln['features'] = concat_scores(ln1['features'],ln2['features'])
+    ln['totalcost'] = ln1['totalcost'] + ln2['totalcost']
+    ln['hyp'] = concat_text(ln1['hyp'],ln2['hyp'])
+    ln['source'] = concat_text(ln1['source'],ln2['source'])
+    ln['align'] = concat_align(ln1['hyp'],ln1['source'],ln1['align'],ln2['hyp'],ln2['source'],ln2['align'])
+    ln['derivation'] = concat_deriv(ln1['derivation'],ln2['derivation'])
+    ln['tree'] = concat_tree(ln1['tree'],ln2['tree'])
+    return ln
+
+def combine_all(*lines):
+    ln = None
+    for n,lnn in enumerate(lines):
+        if n == 0:
+            ln = lnn
+        else:
+            ln = combine(ln,lnn)
+    return ln
+
+        
+def compare(ln1,ln2):
+    return cmp(ln1['totalcost'],ln2['totalcost'])
+
+def write_line(ln):
+    fmt = 'NBEST sent=$sent nbest=$nbest totalcost=$totalcost kbest=$kbest hyp={{{$hyp}}} ' + \
+          'tree={{{$tree}}} derivation={{{$derivation}}} used-rules={{{$usedrules}}} align={{{$align}}} source={{{$source}}} ' + \
+          '$features'
+    if 'kbest' not in ln:
+        ln['kbest'] = ln['nbest']
+    ln['features'] = ' '.join('%s=%g' % (key,val) for (key,val) in ln['features'].iteritems() )
+    ln['usedrules'] = ln['used-rules']
+    print string.Template(fmt).substitute(ln)
+
+def write_all(lines,delay):
+    combined = False
+    for n,ln in enumerate(lazy.product_heap(*lines,cmp=compare, map=combine_all)):
+        if 'combined' in ln and ln['combined'] == True:
+            combined = True
+        ln['nbest'] = n
+        write_line(ln)
+    if combined and len(delay):
+        delay.append('TOP(x0:TOP x1:TOP) -> x0 x1 ### id=8345000000000')
+    for x in set(delay):
+        print x
+    if len(delay):
+        print
+    sys.stdout.flush()
+
+    
+lines = []
+delay = []
+while True:
+    line = sys.stdin.readline()
+    if line == '':
+        break
+    line = line.strip()
+    #print >> sys.stderr, "LINE: ", line
+    if line == '':
+        if len(lines):
+            write_all(lines,delay)
+            lines = []
+            delay = []
+    elif line[0:5] != "NBEST":
+        delay.append(line)
+    else:
+        ln = procline(line)
+        if ln['nbest'] == 0:
+            lines.append([])
+        lines[-1].append(procline(line))
+if len(lines):
+    write_all(lines,delay)
+        

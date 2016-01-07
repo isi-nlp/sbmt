@@ -1876,10 +1876,16 @@ hyptree(xtree_ptr const& t,fixed_rule::tree_node const& n, in_memory_dictionary 
     } else if (n.lexical()) {
         sstr << n.get_token();
     } else {
+        bool is_pre = false;
+        int nc = 0;
         sstr << '(' << n.get_token();
         BOOST_FOREACH(fixed_rule::tree_node const& c, n.children()) {
+            if (c.lexical() and nc == 0) is_pre = true;
+            else is_pre = false;
             sstr << ' ' << hyptree(t,c,dict);
+            ++nc;
         }
+        if (not is_pre) sstr << ' ';
         sstr << ')';
     }
     return sstr.str();
@@ -2874,7 +2880,7 @@ void print_results( xequiv xeq
         if (xeq.begin() == xeq.end()) {
             std::cout << "NBEST sent=" 
                       << id << ' '
-                      << "nbest=0 totalcost=0 hyp={{{}}} failed-parse=1 tree={{{}}} derivation={{{}}} "
+                      << "nbest=0 totalcost=0 kbest=0 hyp={{{}}} failed-parse=1 tree={{{}}} derivation={{{}}} align={{{}}}"
                       << "used-rules={{{}}} fail-msg={{{ " 
                       << errormsg 
                       << " }}}"
@@ -2948,13 +2954,15 @@ void print_results( xequiv xeq
         size_t id; rule_application const* rule;
         BOOST_FOREACH(boost::tie(id,rule), umap) {
             rule->print(std::cout,h);
-            std::cout << '\n';
+            std::cout << std::endl;
         }
-        std::cout << '\n' << std::flush;
+        if (not opts.pop_newline) std::cout << '\n' << std::flush;
         if (opts.pass == multipass::source or opts.pass == multipass::pipe) {
             std::cout << ";\n\n" << std::flush;
         }
+        std::cout << std::flush;
     }
+    
     SBMT_INFO_STREAM(decoder_domain, "results for sentence " << id << " processed");
 }
 
@@ -3809,13 +3817,13 @@ int main(int argc, char** argv)
                                                   , boost::ref(opts) 
                                                   )
                                       );
-	    reader.set_push_inline_rules_callback(boost::bind( push_inline_grammar
-							     , boost::ref(wts)
-							     , _1
-							     , boost::cref(weights)
-							     , boost::ref(opts.h)
-							     )
-						  );
+            reader.set_push_inline_rules_callback(boost::bind( push_inline_grammar
+                                                             , boost::ref(wts)
+                                                             , _1
+                                                             , boost::cref(weights)
+                                                             , boost::ref(opts.h)
+                                                             )
+                                                 );
             reader.set_push_grammar_callback(boost::bind( push_grammar
                                                         , boost::ref(wts)
                                                         , _1
