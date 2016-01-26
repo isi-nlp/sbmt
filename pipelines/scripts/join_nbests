@@ -7,6 +7,8 @@ import string
 from guppy import lazy
 import collections
 
+nbests = int(sys.argv[1])
+
 def concat_tree(T1, T2):
     TS1= T1.split()
     TS2= T2.split()
@@ -99,6 +101,8 @@ def write_line(ln):
 def write_all(lines,delay):
     combined = False
     for n,ln in enumerate(lazy.product_heap(*lines,cmp=compare, map=combine_all)):
+        if n >= nbests:
+            break
         if 'combined' in ln and ln['combined'] == True:
             combined = True
         ln['nbest'] = n

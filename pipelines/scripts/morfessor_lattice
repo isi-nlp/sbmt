@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+
+import subprocess, os, sys
+
+morfessor = subprocess.Popen(' '.join(sys.argv[1:]),shell=True,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+
+sentence_boundaries = set(['<foreign-sentence>', '</foreign-sentence>'])
+escs = set(['"','\\'])
+
+def cstr(s):
+    news = ''
+    for ss in s:
+        if ss in escs:
+            news += '\\'
+        news += ss
+    return news
+n = 1
+while True:
+    line = sys.stdin.readline()
+    if line == '':
+        break
+    line = line.strip()
+    if line == '':
+        continue
+    vline = line.split()
+    x = 0
+    for v in vline:
+        if v not in sentence_boundaries:
+            morfessor.stdin.write(v + ' ')
+    morfessor.stdin.write('\n')
+    print 'lattice id="%s" {' % n,
+    for v in vline:
+        if v in sentence_boundaries:
+            print '[%s,%s] "%s";' % (x,x+1,cstr(v)),
+            x += 1
+        else:
+            oldx = x
+            vmv = morfessor.stdout.readline().strip().split()
+            if len(vmv) > 1:
+                for vm in vmv:
+                    print '[%s,%s] "%s" morf-token="10^-1" ;' % (x,x+1,cstr(vm)),
+                    x += 1
+                print '[%s,%s] "%s" orig-token="10^-1" ;' % (oldx,x,cstr(v)),
+            else:
+                print '[%s,%s] "%s" orig-token="10^-1" morf-token="10^-1" ;' % (x,x+1,cstr(v)),
+                x += 1
+    print '};'
+    sys.stdout.flush()
+    n += 1
+morfessor.stdin.close()
+            

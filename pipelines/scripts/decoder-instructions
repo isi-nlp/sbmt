@@ -25,10 +25,15 @@ unkwords = subprocess.Popen( '%s/xrsdb_unknown_filter %s/xsearchdb' % (args.conf
                            , stdout=subprocess.PIPE
                            , shell=True )
 
-lattice = subprocess.Popen( '%s/scripts/sent_to_lattice' % args.rootdir
+lattice = subprocess.Popen( args.config['decoder']['lattice-command']
                           , stdin=subprocess.PIPE
                           , stdout=subprocess.PIPE
                           , shell=True )
+
+segmenter = subprocess.Popen( '%s/scripts/last_resort_segment %s' % (args.rootdir,args.config['decoder']['max-sentence-length'])
+                            , stdin=subprocess.PIPE
+                            , stdout=subprocess.PIPE
+                            , shell=True )
 
 def allextras(line):
     extrasfile = tempfile.NamedTemporaryFile(delete=False)
@@ -42,7 +47,10 @@ def allextras(line):
     extrasfile.close()
     unkwords.stdin.write(line + '\n')
     candunks = unkwords.stdout.readline().strip()
-    unkrulecmd = os.path.join(args.config['variables']['rhbin'],'unknown_word_rules') + ' -c 1 --id-origin 600000000000 --unk-tag-file %s/grammar.unk-tags --xrs-rule-format --native-unk \'""UNK_F_HERE""\' -f- -r %s | %s/new_decoder_weight_format' % (args.rules,extrasfile.name,args.config['variables']['rhbin'])
+    if 'unknown-cmd' in args.config['rule-extraction']:
+        unkrulecmd = args.config['rule-extraction']['unknown-cmd'] % extrasfile.name
+    else:
+        unkrulecmd = os.path.join(args.config['variables']['rhbin'],'unknown_word_rules') + ' -c 1 --id-origin 600000000000 --unk-tag-file %s/grammar.unk-tags --xrs-rule-format --native-unk \'""UNK_F_HERE""\' -f- -r %s | %s/new_decoder_weight_format' % (args.rules,extrasfile.name,args.config['variables']['rhbin'])
     unkrule = subprocess.Popen( unkrulecmd
                               , stdin=subprocess.PIPE
                               , stdout=subprocess.PIPE
@@ -60,9 +68,15 @@ def allextras(line):
 
 latid = re.compile(r'lattice\s+id="\S+"')
 
-def latline(line,lineno):
-    lattice.stdin.write(line + '\n')
-    return latid.sub('lattice id="%s"' % lineno, lattice.stdout.readline().strip())
+def latlines(line,lineno):
+    segmenter.stdin.write(line + '\n')
+    seg = ''
+    while True:
+        seg = segmenter.stdout.readline().strip()
+        if seg == '':
+            break
+        lattice.stdin.write('<foreign-sentence> %s </foreign-sentence>\n' % seg)
+        yield latid.sub('lattice id="%s"' % lineno, lattice.stdout.readline().strip())
 
 def mainrun():
     lineno = 0
@@ -83,7 +97,8 @@ def mainrun():
         for rule in allrules:
             sys.stdout.write(rule + '\n')
         sys.stdout.write(';\n')
-        sys.stdout.write(latline('<foreign-sentence> ' + line + ' </foreign-sentence>',lineno) + '\n')
+        for lat in latlines(line,lineno):
+            sys.stdout.write(lat + '\n')
         sys.stdout.write('pop-grammar ;\n\n')
         sys.stdout.flush()
 

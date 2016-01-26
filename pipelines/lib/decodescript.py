@@ -43,6 +43,8 @@ def write_script(d, stage, weightstring=None, logfile=True, include_instruction_
     print >> decodescript, d.config['decoder']['exec'], "%s/xsearchdb" % ruledir , '--multi-thread \\'
     if 'weights' in d.config:
         print >> decodescript, '  -w %s \\' % os.path.abspath(d.config['weights'])
+    if 'nbests' not in d.config['decoder']['options']:
+        d.config['decoder']['options']['nbests'] = 10
     for k,v in d.config['decoder']['options'].iteritems():
         print >> decodescript,'  --%s %s \\' % (k,v)
     for step in cfg.steps(d):
@@ -62,7 +64,7 @@ def write_script(d, stage, weightstring=None, logfile=True, include_instruction_
     if stage == 'forest':
         print >> decodescript, "| %s/join_forests | sed -u -e 's/@UNKNOWN@//g'" % d.scriptdir 
     else:
-        print >> decodescript, "| %s/join_nbests" % d.scriptdir
+        print >> decodescript, "| %s/join_nbests %s" % (d.scriptdir,d.config['decoder']['options']['nbests'])
     decodescript.close()
     os.chmod(decodefile, stat.S_IRWXU | os.stat(decodefile)[stat.ST_MODE])
     return decodefile

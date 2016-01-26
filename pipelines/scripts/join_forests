@@ -24,13 +24,13 @@ def printjoin(lv):
     else:
         offset = 1
         newoffset = 1
-        print '#1(111111111111<>',
+        print '#1(OR (111111111111<last-resort-segment:1>',
         for vv in lv:
             print idmatch.sub(idsub,vv),
-            offset = newoffset + 1
-            newoffset += 1
-        print ')'
-        sys.stdout.flush()
+            offset = newoffset
+            newoffset = 0
+        print ') )'
+    sys.stdout.flush()
 
 while True:
     line = sys.stdin.readline()
