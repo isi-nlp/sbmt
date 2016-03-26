@@ -14,7 +14,7 @@ dir = os.path.dirname(os.path.dirname(__file__))
 scriptdir = os.path.abspath(os.path.join(dir,'scripts'))
 tmpdir = os.path.abspath(args.tmpdir)
 
-euid = str(os.geteuid())
+euid = str(os.getpid())
 hp = args.hadoop
 
 hp.mapreduce( input=args.input 

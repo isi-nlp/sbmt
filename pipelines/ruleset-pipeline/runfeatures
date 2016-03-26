@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 import os
 import cfg
 import sys
+import multiprocessing
 
 dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -12,6 +13,9 @@ d = cfg.parse_args(parser,config='$outdir/rules.config')
 hp = d.hadoop
 
 #print >> sys.stderr, d.config
+def runit(s,h):
+    s.run(hp)
+
 if not os.path.exists(os.path.join(d.tmpdir,'rules.final')):
     
     if not hp.file_exists('rules.extracted'):
@@ -25,11 +29,14 @@ if not os.path.exists(os.path.join(d.tmpdir,'rules.final')):
     for s in steps:
         if s.stage == 'prefeature':
             s.run(hp)
+    pool = multiprocessing.Pool()
     for s in steps:
         if s.stage == 'feature':
             #print >> sys.stderr, s
-            s.run(hp)
+            pool.apply_async(runit,(s,hp))
             joins.extend(s.output_filename())
+    pool.close()
+    pool.join()
     scriptdir = d.config['variables']['rhsdir']
     joiner = os.path.join(scriptdir,'join')
     jm = os.path.join(scriptdir,'paste','mapper')

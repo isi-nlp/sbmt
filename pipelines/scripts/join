@@ -10,6 +10,7 @@ import os.path
 import sys
 import math
 import itertools
+import multiprocessing
 
 def crossproduct(*xs,**kw):
     empty = False
@@ -104,18 +105,23 @@ else:
         hp.remove(d.output)
     n = len(d.input)
     joininput = []
-    for x,inp in enumerate(d.input):
-        x = (x-1) % n
-        dg = int(math.ceil(math.log10(n)))
-        x = "%0*d" % (dg, x)
-        jinp = '%s.join' % inp
-        joininput.append(jinp)
+    def mapred(hp,inp,jinp,exe,x,d):
         hp.mapreduce( input=inp
                     , output=jinp
                     , mapper='%s -M %s -k %s' % (exe,x,d.numkeys) 
                     , reducer='NONE' )
         if d.erase:
             hp.remove(inp)
+    pool = multiprocessing.Pool()
+    for x,inp in enumerate(d.input):
+        x = (x-1) % n
+        dg = int(math.ceil(math.log10(n)))
+        x = "%0*d" % (dg, x)
+        jinp = '%s.join' % inp
+        joininput.append(jinp)
+        pool.apply_async(mapred,(hp,inp,jinp,exe,x,d))
+    pool.close()
+    pool.join()
     rdc = '%s -R %s -k %s' % (exe,n,d.numkeys)
     if d.empty:
         rdc += ' -e'

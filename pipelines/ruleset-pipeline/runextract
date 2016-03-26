@@ -13,6 +13,7 @@ import yaml
 import pickle
 import os
 import errno
+import multiprocessing
 
 def makemapper(steps,d,configstr,output,subcorpora=False):
     config = d.config
@@ -127,6 +128,9 @@ parser.add_argument( '-s','--subcorpora'
                    , default=argparse.SUPPRESS
                    , action=store_training
                    )
+
+def runit(x,y):
+    x.run(y)
 if __name__ == '__main__':
     os.putenv('LANG','C')
     os.putenv('LC_ALL','C')
@@ -224,6 +228,8 @@ if __name__ == '__main__':
                         , options = '-jobconf mapred.map.tasks='+str(maptasks) )
 
         joins = []
+        pool = multiprocessing.Pool()
+        
         for s in steps:
             if s.stage == 'extract':
                 print >> sys.stderr, 'ruleextrun=%s' % str(ruleextrun), '%s exists=%s' % (str(s.output),str(all([os.path.exists(o) for o in s.output])))
@@ -231,9 +237,10 @@ if __name__ == '__main__':
                     print >> sys.stderr, 'creating rules'
                     runruleext()
                     ruleextrun = True
-                s.run(hp)
+                pool.apply_async(runit,(s,hp))
                 joins.extend(s.output_filename())
-        
+        pool.close()
+        pool.join()
         rulejoin = os.path.join(d.config['variables']['rhsdir'],'join')
 
         joinreduce = os.path.join(d.config['variables']['rhbin'],'rule_join_reducer')

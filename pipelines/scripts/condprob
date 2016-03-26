@@ -16,7 +16,7 @@ args = parser.parse_args()
 config = cfg.load_config(args.config)
 hp = cfg.make_hadoop(config)
 
-euid = str(os.geteuid())
+euid = str(os.getpid())
 
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
