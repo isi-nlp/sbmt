@@ -11,7 +11,7 @@ hp = args.hadoop
 
 bindir = args.config['variables']['rhbin']
 
-hp.start()
+#hp.start()
 hp.mapreduce( mapper = ('%s/max_feature_mapper ' % bindir) + args.field
             , reducer = '%s/max_feature_reducer' % bindir
             , combiner = '%s/max_feature_reducer -c' % bindir

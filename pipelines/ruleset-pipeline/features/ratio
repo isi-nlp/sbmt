@@ -10,7 +10,7 @@ args = cfg.parse_args(parser)
 hp = args.hadoop
 
 bindir = args.config['variables']['rhbin']
-hp.start()
+#hp.start()
 hp.mapreduce( mapper = ('%s/ratio_mapper %s nocwt' % (bindir,args.field))
             , reducer = '%s/ratio_reducer' % bindir
             , input = 'rules' 

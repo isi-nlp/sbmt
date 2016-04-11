@@ -64,7 +64,7 @@ for type in types:
 # join condprobs and decomp map -- forms rule partialvec for each composed rule
 probs = ' '.join(map(lambda x: 'pid.%s' % x, types))
 joincmd = joiner+' idmap '+probs+' -c '+args.config_files+' -o id.min.probs'
-hp.start()
+#hp.start()
 hp.syscall(joincmd)
 
 # add e^, count last 3 fields, label with types

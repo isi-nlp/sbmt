@@ -17,6 +17,7 @@ extras = []
 for step in steps:
     if step.stage == 'inline-extras':
         extrascmd = step.execute
+        print >> sys.stderr, 'extras from:', extrascmd
         extra = subprocess.Popen( extrascmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True )
         extras.append(extra)
 

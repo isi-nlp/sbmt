@@ -1,5 +1,5 @@
-if test -e /usr/usc/python/2.6.1/setup.sh; then
-    . /usr/usc/python/2.6.1/setup.sh
+if test -e /usr/usc/python/2.7.8/setup.sh; then
+    . /usr/usc/python/2.7.8/setup.sh
 fi
 SRC=$(cd $(dirname $BASH_SOURCE); pwd)
 export PYTHONPATH=$SRC/lib

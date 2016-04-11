@@ -34,7 +34,7 @@ mp = { 'script':script
      , 'type':type
      , 'condprob':condprob
      , 'config':cfgsarg }
-hp.start()
+#hp.start()
 hp.syscall('%(condprob)s rules attr.%(type)s "%(script)s" %(config)s' % mp)
 
 hp.mapreduce( mapper=name_attr

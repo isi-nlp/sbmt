@@ -10,11 +10,10 @@ hp = d.hadoop
 bindir = d.config['variables']['rhbin']
 tdir=os.path.join(d.scriptdir,'taglex')
 ext = d.ext
-part='part.lexmorph.nrm'
+data = 'data.weightlexmorph.' + ext
 flag=''
 if ext == 'inv':
     flag=' -i'
-    part='part.lexmorph.inv'
 
 auxmap = pickle.load(open(d.tmpdir + "/training.aux.map"))
 
@@ -23,103 +22,97 @@ if not hp.file_exists('training'):
     hp.put(os.path.join(d.tmpdir,'training'),'training')
 
 hp.mapreduce( input='training'
-            , output='data'
+            , output=data
             , mapper=os.path.join(d.config['variables']['rhbin'],'mkdata') + ' ' + str(auxmap['weighted-count'])
             )
-hp.mapreduce( input='data'
-            , output='data.estem'
+hp.mapreduce( input=data
+            , output=data+'.estem'
             , mapper=os.path.join(d.scriptdir,'mkdatastem')
             )
-hp.mapreduce( input='data.estem'
-            , output='data.f2estem'
+hp.mapreduce( input=data+'.estem'
+            , output=data+'.f2estem'
             , mapper=os.path.join(bindir,'fields') + " 0 2 3 4"
             )
-hp.mapreduce( input='data.estem'
-            , output='data.estem2e'
+hp.mapreduce( input=data+'.estem'
+            , output=data+'.estem2e'
             , mapper=os.path.join(bindir,'fields') + " 2 1 4"
             )
-hp.remove('data')
-hp.mapreduce( input='data.f2estem'
+hp.remove(data)
+hp.mapreduce( input=data+'.f2estem'
             , mapper=os.path.join(d.config['variables']['rhbin'],'count_align_weighted') + flag
             , reducer=os.path.join(d.config['variables']['rhbin'],'divide')
-            , output='lex.f2estem.star'
+            , output=ext+'.wmlex.f2estem.star'
             ) 
-hp.mapreduce( input='lex.f2estem.star'
+hp.mapreduce( input=ext+'.wmlex.f2estem.star'
             , mapper=os.path.join(bindir,'fields') + r" -d ' \t' 1 2 3"
-            , output='lex.f2estem'
+            , output=ext+'.wmlex.f2estem'
             )
-hp.mapreduce( input='data.estem2e'
+hp.mapreduce( input=data+'.estem2e'
             , mapper=os.path.join(d.config['variables']['rhbin'],'count_align_trivial_weighted') + flag
             , reducer=os.path.join(d.config['variables']['rhbin'],'divide')
-            , output='lex.estem2e'
+            , output=ext+'.wmlex.estem2e'
             )
-#hp.getmerge('lex.estem2e',os.path.join(d.tmpdir,'lex.estem2e.'+ext))
-#hp.getmerge('lex.f2estem',os.path.join(d.tmpdir,'lex.f2estem.'+ext))
+
 if ext == 'inv':
-    hp.mapreduce( input='lex.estem2e'
-                , output='lex.estem2e.inverted'
+    hp.mapreduce( input=ext+'.wmlex.estem2e'
+                , output=ext+'.wmlex.estem2e.inverted'
                 , mapper=os.path.join(bindir,'fields') + r" -d ' \t' 1 0 2"
                 )
     cfg.execute( d
-               , '$join lex.f2estem lex.estem2e.inverted -c $config -o lex.f2e.unsummed'
+               , '$join $ext.wmlex.f2estem $ext.wmlex.estem2e.inverted -c $config -o $ext.wmlex.f2e.unsummed'
                , join=os.path.join(d.scriptdir,'join')
                , config=d.config_files
+               , ext=d.ext
                )
-    hp.mapreduce( input='lex.f2e.unsummed'
+    hp.mapreduce( input=ext+'.wmlex.f2e.unsummed'
                 , mapper=os.path.join(bindir,'fields') + " 3 1 4 2"
                 , sortkeys=2
                 , reducer=os.path.join(d.scriptdir,'compose_table')
-                , output='lex.final' )
-    hp.remove('lex.f2estem')
-    hp.remove('lex.estem2e')
-    hp.remove('lex.estem2e.inverted')
+                , output=ext+'.wmlex.final' )
+    hp.remove(ext+'.wmlex.f2estem')
+    hp.remove(ext+'.wmlex.estem2e')
+    hp.remove(ext+'.wmlex.estem2e.inverted')
 else:
-    hp.mapreduce( input='lex.f2estem'
-                , output='lex.f2estem.inverted'
+    hp.mapreduce( input=ext+'.wmlex.f2estem'
+                , output=ext+'.wmlex.f2estem.inverted'
                 , mapper=os.path.join(bindir,'fields') + r" -d ' \t' 1 0 2"
                 )
     cfg.execute( d
-               , '$join lex.f2estem.inverted lex.estem2e -c $config -o lex.f2e.unsummed'
+               , '$join $ext.wmlex.f2estem.inverted $ext.wmlex.estem2e -c $config -o $ext.wmlex.f2e.unsummed'
                , join=os.path.join(d.scriptdir,'join')
                , config=d.config_files 
+               , ext=d.ext
                )
-    hp.mapreduce( input='lex.f2e.unsummed'
+    hp.mapreduce( input=ext+'.wmlex.f2e.unsummed'
                 , mapper=os.path.join(bindir,'fields') + " 1 3 2 4"
                 , sortkeys=2
                 , reducer=os.path.join(d.scriptdir,'compose_table')
-                , output='lex.final'
+                , output=ext+'.wmlex.final'
                 )
-    hp.remove('lex.f2estem')
-    hp.remove('lex.f2estem.inverted')
-    hp.remove('lex.estem2e')
-hp.remove('lex.f2e.unsummed')
-#hp.getmerge('lex.f2e.unsummed',os.path.join(d.tmpdir,'lex.unsummed.'+ext))
-if not hp.file_exists('rules.alignments'):
-    hp.mapreduce( input='rules'
-                , output='rules.alignments'
-                , mapper=os.path.join(d.config['variables']['rhbin'],'ifea')
-                )
-hp.mapreduce( input='lex.final' 
-            , output='lex.final.flat' 
+    hp.remove(ext+'.wmlex.f2estem')
+    hp.remove(ext+'.wmlex.f2estem.inverted')
+    hp.remove(ext+'.wmlex.estem2e')
+hp.remove(ext+'.wmlex.f2e.unsummed')
+
+hp.mapreduce( input=ext+'.wmlex.final' 
+            , output=ext+'.wmlex.final.flat' 
             , mapper=os.path.join(tdir,'rotate')
             , reducer=os.path.join(tdir,'flatten')
             , sortkeys=2
             )
-#hp.getmerge('lex.final',os.path.join(d.tmpdir,'lex.final.'+ ext))
-hp.remove('lex.final')
+
+hp.remove(ext+'.wmlex.final')
 hp.mapreduce( input='rules.alignments'
             , mapper=os.path.join(tdir,'wordpairs') + flag
-            , output='lex.wordpairs'
+            , output=ext+'.wmlex.wordpairs'
             )
 
-hp.start(mappers=4)
-cfg.execute(d,'$join lex.wordpairs lex.final.flat -c $config -e -E -k 3 -o lex.join',config=d.config_files,join=os.path.join(d.scriptdir,'join'))
+cfg.execute(d,'$join $ext.wmlex.wordpairs $ext.wmlex.final.flat -c $config -e -E -k 3 -o $ext.wmlex.join',ext=d.ext,config=d.config_files,join=os.path.join(d.scriptdir,'join'))
 
-hp.start(mappers=4,reducers=2)
-hp.mapreduce( input='lex.join'
+hp.mapreduce( input=ext+'.wmlex.join'
             , output='part.weightmorphlex.' + ext
             , mapper=os.path.join(tdir,'idfirst')
             , reducer=os.path.join(tdir,'score')+' -w 4 weightmorphlex.' + ext
             )
-hp.remove('lex.join')
-hp.start()
+hp.remove(ext+'.wmlex.join')
+

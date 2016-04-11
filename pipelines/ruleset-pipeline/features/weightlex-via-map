@@ -10,6 +10,7 @@ hp = d.hadoop
 ext = d.ext
 
 tdir=os.path.join(d.scriptdir,'taglex')
+data='data.weightlex'+ext
 taglex='weightlex.'+ext
 taglexflat=taglex+'.flat'
 taglexwordpairs=taglex+'.wordpairs'
@@ -36,19 +37,16 @@ os.chmod(mapfile, stat.S_IRWXU | os.stat(mapfile)[stat.ST_MODE])
 auxmap = pickle.load(open(d.tmpdir + "/training.aux.map"))
 
 
-if not hp.file_exists('training'):
-    hp.put(os.path.join(d.tmpdir,'training'),'training')
-
 hp.mapreduce( input='training'
-            , output='data'
+            , output=data
             , mapper=os.path.join(d.config['variables']['rhbin'],'mkdata') + ' ' + str(auxmap['weighted-count'])
             )
-hp.mapreduce( input='data'
+hp.mapreduce( input=data
             , mapper=os.path.join(d.config['variables']['rhbin'],'count_align_weighted') + flag
             , reducer=os.path.join(d.config['variables']['rhbin'],'divide') + " -l"
             , output=taglex
             ) 
-hp.remove('data')
+hp.remove(data)
 
 hp.mapreduce( input=taglex
             , output=taglexflat 
@@ -70,9 +68,9 @@ if not hp.file_exists('rules.alignments'):
                 , mapper=os.path.join(d.config['variables']['rhbin'],'ifea')
                 )
 
-hp.start(mappers=6)
+#hp.start(mappers=6)
 hp.mapreduce( input='rules.alignments'
             , output=parttaglex
             , mapper=mapfile
             )
-hp.start()
+#hp.start()

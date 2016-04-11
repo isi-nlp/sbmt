@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+
+import cfg, argparse, os, sys, pickle
+parser=argparse.ArgumentParser()
+
+d = cfg.parse_args(parser)
+hp = d.hadoop
+
+if not hp.file_exists('training'):
+    hp.put(os.path.join(d.tmpdir,'training'),'training')
+
+if not hp.file_exists('rules.alignments'):
+    hp.mapreduce( input='rules'
+                , output='rules.alignments'
+                , mapper=os.path.join(d.config['variables']['rhbin'],'ifea')
+                )
+
+
