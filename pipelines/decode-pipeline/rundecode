@@ -121,7 +121,7 @@ if not os.path.exists(bestNraw):
     cfg.execute(d,'touch %s' % omitfile)
     if os.path.exists(bestNraw):
         try:
-            cfg.execute(d,"cat %s | grep -o '^NBEST sent=[0-9]*' | sed -e 's/NBEST sent=//' | uniq > %s" % (bestNraw,omitfile))
+            cfg.execute(d,"cat %s | grep -o '^NBEST sent=[0-9]* nbest=0 .* text-length=' | sed -e 's/NBEST sent=// ; s/ .*$//' | uniq > %s" % (bestNraw,omitfile))
         except:
             pass # if no decodes have occurred, then no matches, then fail
     pbsfile = os.getenv('PBS_NODEFILE')

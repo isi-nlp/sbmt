@@ -51,10 +51,10 @@ elif type == 'lfe':
 
 hp = args.hadoop
 
-hp.start(mappers=4)
+#hp.start(mappers=4)
 hp.mapreduce( mapper=mapper
             , reducer=reducer
             , input='rules'
             , output='part.%s' % type + suffix
             )
-hp.start()
+#hp.start()

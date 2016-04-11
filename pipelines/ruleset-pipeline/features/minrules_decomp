@@ -41,7 +41,7 @@ mp={ 'join':os.path.join(scriptdir,'join')
    , 'config':args.config_files }
 joincall=cfg.PTemplate('$join $minid $decomp -c $config  -r \'cut -f2-\' -o $idmap').substitute(mp)
 
-hp.start()
+#hp.start()
 
 hp.syscall(joincall)
 

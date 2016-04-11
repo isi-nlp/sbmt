@@ -225,11 +225,11 @@ if __name__ == '__main__':
                         , reducer = 'cat'
                         , input = 'training'
                         , output = 'rules'
-                        , options = '-jobconf mapred.map.tasks='+str(maptasks) )
+                        , options = '-jobconf mapred.map.tasks='+str(maptasks) + ' -jobconf mapred.reduce.tasks='+str(int(maptasks/10) + 1) )
 
         joins = []
         pool = multiprocessing.Pool()
-        
+        hp.mkdir('/tmp')
         for s in steps:
             if s.stage == 'extract':
                 print >> sys.stderr, 'ruleextrun=%s' % str(ruleextrun), '%s exists=%s' % (str(s.output),str(all([os.path.exists(o) for o in s.output])))

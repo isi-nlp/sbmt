@@ -24,12 +24,14 @@ if not os.path.exists(os.path.join(d.tmpdir,'rules.final')):
         hp.move('rules.extracted','rules')
     steps = cfg.steps(d)
     joins = [ 'part.rules' ]
+
     # prefeature steps do not create data directly for features and must run
     # before features
     for s in steps:
         if s.stage == 'prefeature':
             s.run(hp)
     pool = multiprocessing.Pool()
+    hp.mkdir('/tmp')
     for s in steps:
         if s.stage == 'feature':
             #print >> sys.stderr, s
