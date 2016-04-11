@@ -85,7 +85,7 @@ sbmt-util.install install-lvl
     ./apps/xrs_vocab//xrs_vocab
     ./apps/lattice_words//lattice_words
     numcpu
-    echo_rules
+    # echo_rules
   :
   :
   : $(scripts)

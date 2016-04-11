@@ -108,6 +108,10 @@ exe nbcat
   : nbcat.cpp
     /boost/thread//boost_thread
   ;
+exe lower
+  : lower.cpp
+    /boost/locale//boost_locale
+  ;
 
 exe rule_training_length_mapper
   : rule_training_length_mapper.cpp
@@ -138,7 +142,8 @@ exe substrsearch
 
 sbmt-util.install install
     :
-    : remove_internals
+    : lower
+      remove_internals
       rootcount
       root_hw_count
       rootprob

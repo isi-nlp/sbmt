@@ -656,6 +656,7 @@ struct fat_ngram_lm
     void replace_digits(std::string & s) const
     {
         if (opt.lm_at_numclass) replace_digits_with(s,'@');
+	
     }
 
 

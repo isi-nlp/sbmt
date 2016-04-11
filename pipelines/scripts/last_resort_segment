@@ -1,60 +1,81 @@
 #!/usr/bin/env python
 
-import sys, os
+import sys, os, argparse
 
-sentmarks = set(['.','?','!'])
-subsentmarks = set(['.','?','!',',',';',':'])
+sentmarks = ['.','?','!']
+subsentmarks = [',',';',':']
 
-maxlen = int(sys.argv[1])
+ap = argparse.ArgumentParser()
+ap.add_argument('--comparison-module','-c',dest='comparison')
+ap.add_argument('args',nargs='*')
+ap.add_argument('--sentence-markers','-s',dest='sentmarks', nargs='*',default=sentmarks)
+ap.add_argument('--sub-sentence-markers','-b',dest='subsentmarks',nargs='*',default=subsentmarks)
+
+args = ap.parse_args()
+
+sentmarks = set(args.sentmarks)
+subsentmarks = set(args.sentmarks + args.subsentmarks)
+#print >> sys.stderr, sentmarks
+#print >> sys.stderr, subsentmarks
+#print >> sys.stderr, args.comparison
+
+class Len:
+    def __init__(self,*args):
+        self.maxlen = int(args[0])
+    def __call__(self,s):
+        return len(s.split()) < self.maxlen
+
+
+if args.comparison is not None:
+    comparison = __import__(args.comparison)
+    comparator = comparison.Comparator(*args.args)
+else:
+    comparator = Len(*args.args)
 
 def setsplit(line,aset):
    vvout = []
    for vv in line.split():
       vvout.append(vv)
       if vv[0] in aset or vv[-1] in aset:
-         yield vvout
+         yield ' '.join(vvout)
          vvout = []
    if len(vvout):
-      yield vvout
+      yield ' '.join(vvout)
 
-def linesplit(line,mlen):
-   vvout = []
-   for vv in line.split():
-      if len(vvout) >= mlen/2 - 1:
-         yield vvout
-         vvout = []
-      vvout.append(vv)
-   if len(vvout):
-      yield vvout
-          
+def linesplit(line,comp):
+    v = line.split()
+    if len(v) == 1:
+        yield v[0]
+    else:
+        k = len(v)/2
+        w = [' '.join(v[0:k]),' '.join(v[k:])]
+        for ww in w:
+            if comp(ww):
+                yield ww
+            else:
+                for vv in linesplit(ww,comp):
+                    yield vv
+
 while True:
-   line = sys.stdin.readline()
-   if line == '':
-      break
-   vline = line.split()
-   if len(vline) < maxlen:
-      print ' '.join(vline)
-   else:
-      vvline = list(setsplit(line,sentmarks))
-      k = True
-      for vv in vvline:
-         if len(vv) >= maxlen:
-            k = False
-      if k:
-         for vv in vvline:
-            print ' '.join(vv)
-      else:
-         vvline = list(setsplit(line,subsentmarks))
-         k = True
-         for vv in vvline:
-            if len(vv) >= maxlen:
-               k = False 
-         if k:	 
-            for vv in vvline:
-               print ' '.join(vv)
-         else:
-            vvline = list(linesplit(line,maxlen))
-            for vv in vvline:
-               print ' '.join(vv)
-   print
-   sys.stdout.flush()
+    line = sys.stdin.readline().strip()
+    if line == '':
+        break
+    if comparator(line):
+        print line
+    else:
+        vvline = list(setsplit(line,sentmarks))
+        for vv in vvline:
+            if comparator(vv):
+                print vv
+            else:
+                wwline = list(setsplit(vv,subsentmarks))
+                for ww in wwline:
+                    if comparator(ww):
+                        print ww
+                    else:
+                        uuline = list(linesplit(ww,comparator))
+                        for uu in uuline:
+                            print uu
+
+    print
+    sys.stdout.flush()

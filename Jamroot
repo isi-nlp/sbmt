@@ -109,6 +109,7 @@ project sbmt_root
       <threading>multi
       <include>$(boost_root)
       <include>./boost_sandbox
+      <library>/boost/locale//boost_locale
       $(mpirequire)
       # <define>BOOST_FILESYSTEM_VERSION=2
       <define>EIGEN_NO_DEBUG
@@ -119,7 +120,6 @@ project sbmt_root
       <toolset>darwin:<linkflags>-Wl,-u,_munmap
       <toolset>darwin:<dll-path>/System/Library/Frameworks/Python.framework/Versions/2.7/lib
       <toolset>darwin:<dll-path>/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config
-      # <library>/boost/locale//boost_locale
     : build-dir build
     ;
 
