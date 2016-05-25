@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-#PBS -l nodes=40
+#PBS -l nodes=40:ppn=8
 #PBS -l walltime=96:00:00
-#PBS -T allcores
+#PBS -n
 #PBS -N rules
 #PBS -q isi
 #
@@ -33,4 +33,5 @@ $PIPESTEP/run.sh -s $($PIPELINE/util/findlocalpath training.pipeline.resource) \
                  -m $($PIPELINE/util/findlocalpath aux) \
                  -c $($PIPELINE/util/gatherconfig) \
                  -o $RULESET \
-                -nk 2> $RULESET/pipeline.log || sleep 24h
+                -nk 2> $RULESET/pipeline.log 
+

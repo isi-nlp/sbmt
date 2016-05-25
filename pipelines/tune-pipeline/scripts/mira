@@ -51,6 +51,10 @@ if d.stop:
    cfg.execute(d,'touch %s' % os.path.join(d.outdir,'STOP'))
    sys.exit(0)
 if not d.progress:
+    if os.path.isfile(os.path.join(d.outdir,'weights.final')):
+        sys.stderr.write('weights.final exists. skipping tuning. remove weights.final to re-run tuning\n')
+        sys.exit(0)
+
     cfg.execute(d,'rm -f %s %s' % (os.path.join(d.outdir,'epoch.scores'),os.path.join(d.outdir,'.epoch.scores.new')))
     cfg.execute(d,'rm -f %s' % os.path.join(d.outdir,'mira.out'))
     cfg.execute(d,'rm -f %s' % os.path.join(d.outdir,'trainer.weights'))

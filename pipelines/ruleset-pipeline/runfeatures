@@ -15,7 +15,10 @@ hp = d.hadoop
 #print >> sys.stderr, d.config
 def runit(s,h):
     s.run(hp)
+    return 0
 
+if os.path.exists(os.path.join(d.outdir,'rules.final')):
+    hp.syscall('mv ' + os.path.join(d.outdir,'rules.final') + ' ' + d.tmpdir)
 if not os.path.exists(os.path.join(d.tmpdir,'rules.final')):
     
     if not hp.file_exists('rules.extracted'):
@@ -32,11 +35,14 @@ if not os.path.exists(os.path.join(d.tmpdir,'rules.final')):
             s.run(hp)
     pool = multiprocessing.Pool()
     hp.mkdir('/tmp')
+    results = []
     for s in steps:
         if s.stage == 'feature':
             #print >> sys.stderr, s
-            pool.apply_async(runit,(s,hp))
+            results.append(pool.apply_async(runit,(s,hp)))
             joins.extend(s.output_filename())
+    for r in results:
+        r.get() # raise any exceptions from worker threads
     pool.close()
     pool.join()
     scriptdir = d.config['variables']['rhsdir']

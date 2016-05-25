@@ -5,7 +5,7 @@ import os
 import cfg
 import string
 import postprocscript
-
+import sys
 
 parser = argparse.ArgumentParser()
 
@@ -26,6 +26,10 @@ hp = d.hadoop
 hp.start()
 scriptdir = d.config['variables']['rhsdir']
 rhdir = os.path.abspath(d.config['variables']['rhbin'])
+
+if os.path.exists(os.path.join(d.outdir,'xsearchdb')):
+    sys.stderr.write('xsearchdb found. to re-run, remove xsearchdb\n')
+    sys.exit(0)
 
 if not hp.file_exists('rules.filtered'):
     hp.put(os.path.join(tmpdir,'rules.filtered'),'rules')

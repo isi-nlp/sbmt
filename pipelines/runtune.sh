@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 #PBS -l walltime=300:00:00
-#PBS -l nodes=20
-#PBS -l pmem=23g
-#PBS -T allcores
+#PBS -l nodes=20:ppn=12
 #PBS -N tune
 #PBS -q isi
+#PBS -n
 #
 # convenience wrapper for the tune-pipeline
 # useful for running a directory-based set of experiments, where contrastive 

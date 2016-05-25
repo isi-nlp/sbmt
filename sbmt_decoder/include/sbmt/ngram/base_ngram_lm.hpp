@@ -29,7 +29,7 @@
 #include <sbmt/feature/feature_vector.hpp>
 #include <sbmt/edge/component_scores.hpp>
 #include <gusc/string/escape_string.hpp>
-
+#include <boost/locale.hpp>
 #define STAT_LM
 
 #ifdef DEBUG_LM
@@ -655,6 +655,9 @@ struct fat_ngram_lm
 
     void replace_digits(std::string & s) const
     {
+        boost::locale::generator gen;
+        std::locale loc = gen("en_US.utf-8");
+        s = boost::locale::to_lower(s,loc);
         if (opt.lm_at_numclass) replace_digits_with(s,'@');
 	
     }
