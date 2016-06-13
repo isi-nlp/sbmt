@@ -1,13 +1,14 @@
 cmake_minimum_required(VERSION 2.8)
 project(sbmt)
-string(REPLACE ":" ";" INC_LIST ${CMAKE_INCLUDE_PATH})
+string(REPLACE ":" ";" INC_LIST "${CMAKE_INCLUDE_PATH}")
 include_directories(${INC_LIST})
-string(REPLACE ":" ";" LIB_LIST ${CMAKE_LIBRARY_PATH})
+string(REPLACE ":" ";" LIB_LIST "${CMAKE_LIBRARY_PATH}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
-
+# add_definitions(-std=c++11)
 find_package(Boost REQUIRED)
 find_package(TBB REQUIRED)
+find_package(EIGEN 3.1.0 REQUIRED)
 
 foreach(lv ${Boost_LIBRARY_DIRS})
   list(APPEND LIB_LIST ${lv})
@@ -18,19 +19,11 @@ foreach(lv ${TBB_LIBRARIES})
  list(APPEND LIB_LIST ${tlv})
 endforeach(lv)
 
-#find_package(BerkeleyDB REQUIRED)
-#
-#foreach(lv ${BerkeleyDB_LIBRARIES})
-#  get_filename_component(tlv ${lv} DIRECTORY)
-#  list(APPEND LIB_LIST ${tlv})
-#endforeach(lv)
-
 list(REMOVE_DUPLICATES LIB_LIST)
 link_directories(${LIB_LIST})
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-#ExternalProject_Add(nplm GIT_REPOSITORY )
 add_definitions( -D__GCC3__=1
                  -DLM_NO_COMMON_LIB=1
                  -DLM_NO_QT=1
@@ -40,6 +33,7 @@ add_definitions( -D__GCC3__=1
                  -DNO_QT=1
                  -DNOTRACE=1
                )
+add_subdirectory(NEURAL_LANGUAGE_MODEL)
 add_subdirectory(tbb_alloc)
 add_subdirectory(gusc)
 add_subdirectory(graehl)

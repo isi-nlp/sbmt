@@ -4,7 +4,7 @@ project(utilities)
 find_package(Boost REQUIRED COMPONENTS thread program_options system filesystem regex)
 include_directories(${Boost_INCLUDE_DIRS})
 
-add_library(sbmt_util lattice_tree_construct.cpp 
+add_library(sbmt_util STATIC lattice_tree_construct.cpp 
                       decode_sequence_reader.cpp 
                       grammar_args.cpp 
                       decoder_filters/decoder_filters.cpp

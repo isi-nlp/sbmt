@@ -1,155 +1,76 @@
-#---------------------------------------------------------------------------------------------------
-#
-#  Copyright (C) 2009  Artem Rodygin
-#
-#  This program is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#---------------------------------------------------------------------------------------------------
-#
-#  This module finds if C API of Berkeley DB is installed and determines where required
-#  include files and libraries are. The module sets the following variables:
-#
-#    BerkeleyDB_FOUND         - system has Berkeley DB
-#    BerkeleyDB_INCLUDE_DIR   - the Berkeley DB include directory
-#    BerkeleyDB_LIBRARIES     - the libraries needed to use Berkeley DB
-#    BerkeleyDB_VERSION       - Berkeley DB full version information string
-#    BerkeleyDB_VERSION_MAJOR - the major version of the Berkeley DB release
-#    BerkeleyDB_VERSION_MINOR - the minor version of the Berkeley DB release
-#    BerkeleyDB_VERSION_PATCH - the patch version of the Berkeley DB release
-#
-#  You can help the module to find Berkeley DB by specifying its root path
-#  in environment variable named "DBROOTDIR". If this variable is not set
-#  then module will search for files in default path as following:
-#
-#    CMAKE_HOST_WIN32 - "C:\Program Files\Oracle\Berkeley DB.X.Y"
-#    CMAKE_HOST_UNIX  - "/usr/local/BerkeleyDB.X.Y", "/usr/local", "/usr"
-#
-#---------------------------------------------------------------------------------------------------
-
-set(BerkeleyDB_FOUND TRUE)
-
-# set the search path
-
-if (WIN32)
-    file(GLOB BerkeleyDB_SEARCH_PATH "C:/Program Files/Oracle/Berkeley DB*")
-    if (NOT BerkeleyDB_SEARCH_PATH)
-    file(GLOB BerkeleyDB_SEARCH_PATH "C:/Program Files (x86)/Oracle/Berkeley DB*")
-    endif (NOT BerkeleyDB_SEARCH_PATH)
-else (WIN32)
-    file(GLOB BerkeleyDB_SEARCH_PATH "/usr/local/BerkeleyDB*")
-endif (WIN32)
-
-file(TO_CMAKE_PATH "$ENV{DBROOTDIR}" DBROOTDIR)
-
-# search for header
-
-find_path(BerkeleyDB_INCLUDE_DIR
-          NAMES "db.h"
-          PATHS "${BerkeleyDB_SEARCH_PATH}"
-                "/usr/local"
-                "/usr"
-          ENV DBROOTDIR
-          PATH_SUFFIXES "include")
-
-# header is found
-
-if (BerkeleyDB_INCLUDE_DIR)
-
-    # retrieve version information from the header
-    file(READ "${BerkeleyDB_INCLUDE_DIR}/db.h" DB_H_FILE)
-
-    string(REGEX REPLACE ".*#define[ \t]+DB_VERSION_STRING[ \t]+\"([^\"]+)\".*" "\\1" BerkeleyDB_VERSION       "${DB_H_FILE}")
-    string(REGEX REPLACE ".*#define[ \t]+DB_VERSION_MAJOR[ \t]+([0-9]+).*"      "\\1" BerkeleyDB_VERSION_MAJOR "${DB_H_FILE}")
-    string(REGEX REPLACE ".*#define[ \t]+DB_VERSION_MINOR[ \t]+([0-9]+).*"      "\\1" BerkeleyDB_VERSION_MINOR "${DB_H_FILE}")
-    string(REGEX REPLACE ".*#define[ \t]+DB_VERSION_PATCH[ \t]+([0-9]+).*"      "\\1" BerkeleyDB_VERSION_PATCH "${DB_H_FILE}")
-
-    # search for library
-    if (WIN32)
-
-        file(GLOB BerkeleyDB_LIBRARIES
-             "${DBROOTDIR}/lib/libdb${BerkeleyDB_VERSION_MAJOR}${BerkeleyDB_VERSION_MINOR}.lib"
-             "${BerkeleyDB_SEARCH_PATH}/lib/libdb${BerkeleyDB_VERSION_MAJOR}${BerkeleyDB_VERSION_MINOR}.lib")
-
-    else (WIN32)
-
-        find_library(BerkeleyDB_LIBRARIES
-                     NAMES "libdb-${BerkeleyDB_VERSION_MAJOR}.${BerkeleyDB_VERSION_MINOR}.so"
-                     PATHS "${BerkeleyDB_SEARCH_PATH}"
-                     ENV DBROOTDIR
-                     PATH_SUFFIXES "lib")
-
-    endif (WIN32)
-
-endif (BerkeleyDB_INCLUDE_DIR)
-
-# header is not found
-
-if (NOT BerkeleyDB_INCLUDE_DIR)
-    set(BerkeleyDB_FOUND FALSE)
-endif (NOT BerkeleyDB_INCLUDE_DIR)
-
-# library is not found
-
-if (NOT BerkeleyDB_LIBRARIES)
-    set(BerkeleyDB_FOUND FALSE)
-endif (NOT BerkeleyDB_LIBRARIES)
-
-# set default error message
-
-if (BerkeleyDB_FIND_VERSION)
-    set(BerkeleyDB_ERROR_MESSAGE "Unable to find Berkeley DB library v${BerkeleyDB_FIND_VERSION}")
-else (BerkeleyDB_FIND_VERSION)
-    set(BerkeleyDB_ERROR_MESSAGE "Unable to find Berkeley DB library")
-endif (BerkeleyDB_FIND_VERSION)
-
-# check found version
-
-if (BerkeleyDB_FIND_VERSION AND BerkeleyDB_FOUND)
-
-    set(BerkeleyDB_FOUND_VERSION "${BerkeleyDB_VERSION_MAJOR}.${BerkeleyDB_VERSION_MINOR}.${BerkeleyDB_VERSION_PATCH}")
-
-    if (BerkeleyDB_FIND_VERSION_EXACT)
-        if (NOT ${BerkeleyDB_FOUND_VERSION} VERSION_EQUAL ${BerkeleyDB_FIND_VERSION})
-            set(BerkeleyDB_FOUND FALSE)
-        endif (NOT ${BerkeleyDB_FOUND_VERSION} VERSION_EQUAL ${BerkeleyDB_FIND_VERSION})
-    else (BerkeleyDB_FIND_VERSION_EXACT)
-        if (${BerkeleyDB_FOUND_VERSION} VERSION_LESS ${BerkeleyDB_FIND_VERSION})
-            set(BerkeleyDB_FOUND FALSE)
-        endif (${BerkeleyDB_FOUND_VERSION} VERSION_LESS ${BerkeleyDB_FIND_VERSION})
-    endif (BerkeleyDB_FIND_VERSION_EXACT)
-
-    if (NOT BerkeleyDB_FOUND)
-        set(BerkeleyDB_ERROR_MESSAGE "Unable to find Berkeley DB library v${BerkeleyDB_FIND_VERSION} (${BerkeleyDB_FOUND_VERSION} was found)")
-    endif (NOT BerkeleyDB_FOUND)
-
-endif (BerkeleyDB_FIND_VERSION AND BerkeleyDB_FOUND)
-
-# final status messages
-
-if (BerkeleyDB_FOUND)
-
-    if (NOT BerkeleyDB_FIND_QUIETLY)
-        message(STATUS ${BerkeleyDB_VERSION})
-    endif (NOT BerkeleyDB_FIND_QUIETLY)
-
-    mark_as_advanced(BerkeleyDB_INCLUDE_DIR
-                     BerkeleyDB_LIBRARIES)
-
-else (BerkeleyDB_FOUND)
-
-    if (BerkeleyDB_FIND_REQUIRED)
-        message(SEND_ERROR "${BerkeleyDB_ERROR_MESSAGE}")
-    endif (BerkeleyDB_FIND_REQUIRED)
-
-endif (BerkeleyDB_FOUND)
+# -*- cmake -*-
+ 
+# - Find BerkeleyDB
+# Find the BerkeleyDB includes and library
+# This module defines
+# BDB_INCLUDE_DIR, where to find db.h, etc.
+# BDB_LIBRARIES, the libraries needed to use BerkeleyDB.
+# BDB_FOUND, If false, do not try to use BerkeleyDB.
+# also defined, but not for general use are
+# BDB_LIBRARY, where to find the BerkeleyDB library.
+ 
+find_path(BDB_INCLUDE_DIR db_cxx.h NO_DEFAULT_PATH PATHS
+    /usr/local/BerkeleyDB.4.7/include
+    /opt/local/include/db47
+    /opt/local/include/db46 # introduced key_exists
+    /usr/local/include/db4
+    /usr/local/include
+    /usr/include/db4
+    /usr/include
+    $ENV{HOME}/include
+    )
+ 
+set(BDB_NAMES ${BDB_NAMES} db_cxx)
+find_library(BDB_LIBRARY NAMES ${BDB_NAMES} NO_DEFAULT_PATH PATHS
+    /usr/local/BerkeleyDB.4.7/lib
+    /opt/local/lib/db47
+    /opt/local/lib/db46 # ditto
+    /usr/local/lib/db4
+    /usr/local/lib
+    /usr/lib
+    $ENV{HOME}/lib
+    )
+ 
+if (BDB_LIBRARY AND BDB_INCLUDE_DIR)
+  set(BDB_LIBRARIES ${BDB_LIBRARY})
+  set(BDB_FOUND "YES")
+else (BDB_LIBRARY AND BDB_INCLUDE_DIR)
+  set(BDB_FOUND "NO")
+endif (BDB_LIBRARY AND BDB_INCLUDE_DIR)
+ 
+if (BDB_FOUND)
+  if (NOT BDB_FIND_QUIETLY)
+    message(STATUS "Found BerkeleyDB: ${BDB_LIBRARIES}")
+  endif (NOT BDB_FIND_QUIETLY)
+else (BDB_FOUND)
+  if (BDB_FIND_REQUIRED)
+    message(FATAL_ERROR "Could not find BerkeleyDB library")
+  endif (BDB_FIND_REQUIRED)
+endif (BDB_FOUND)
+ 
+#try_run(BDB_CHECK SHOULD_COMPILE
+#        ${CMAKE_CURRENT_BINARY_DIR}/CMakeTmp
+#        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CheckBdb.cpp
+#        CMAKE_FLAGS -DINCLUDE_DIRECTORIES=${BDB_INCLUDE_DIR}
+#                    -DLINK_LIBRARIES=${BDB_LIBRARIES}
+#        OUTPUT_VARIABLE BDB_TRY_OUT)
+#string(REGEX REPLACE ".*\n([0-9.]+).*" "\\1" BDB_VERSION ${BDB_TRY_OUT})
+#string(REGEX REPLACE ".*\n(BerkeleyDB .*)" "\\1" BDB_VERSION ${BDB_VERSION})
+#message(STATUS "Berkeley DB version: ${BDB_VERSION}")
+ 
+#if (NOT BDB_CHECK STREQUAL "0")
+#  message(FATAL_ERROR "Please fix the Berkeley DB installation, "
+#          "remove CMakeCache.txt and try again.")
+#endif (NOT BDB_CHECK STREQUAL "0")
+# 
+#if (NOT BDB_VERSION MATCHES "^([4-9]|[1-9][0-9]+)\\.([6-9]|[1-9][0-9]+)")
+#  message(FATAL_ERROR "At least 4.6.x of BerkeleyDB is required. "
+#          "Please fix the installation, remove CMakeCache.txt and try again.")
+#endif (NOT BDB_VERSION MATCHES "^([4-9]|[1-9][0-9]+)\\.([6-9]|[1-9][0-9]+)")
+ 
+ 
+mark_as_advanced(
+  BDB_LIBRARY
+  BDB_INCLUDE_DIR
+  )
+ 

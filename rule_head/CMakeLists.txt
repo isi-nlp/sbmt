@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 2.8)
 project(rule_head)
-
+find_package(TBB REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options regex)
 include_directories(${Boost_INCLUDE_DIRS} . collins)
 
 ### libraries
 
 add_library(rule_head_info rule_head_info2.cpp)
-target_include_directories(rule_head_info INTERFACE . collins)
-target_link_libraries(rule_head_info treelib sbmt)
+target_include_directories(rule_head_info INTERFACE . collins ${TBB_INCLUDE_DIRS})
+target_link_libraries(rule_head_info treelib sbmt ${TBB_LIBRARIES})
 
 add_library(collins collins/lib/collins.cpp)
 target_include_directories(collins INTERFACE . collins)
