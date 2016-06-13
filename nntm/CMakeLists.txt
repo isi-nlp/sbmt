@@ -3,7 +3,7 @@ project(nntm)
 
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
-add_library(nntm nntm_info.cpp nndm_info.cpp nnfm_info.cpp)
+add_library(nntm nntm_dummy.cpp)
 target_link_libraries(nntm sbmt nplm)
 target_include_directories(nntm PUBLIC ..)
 install(TARGETS nntm DESTINATION lib)

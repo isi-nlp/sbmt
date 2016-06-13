@@ -136,9 +136,9 @@ double nplm_model::lookup_ngram_divisor_uncached(const boost::uint32_t *ngram_a,
         }
         nplm::propagator& prop = *nlms;
         prop.fProp(ngram.col(0));
-        Eigen::Matrix<float,Eigen::Dynamic,1> scores(m->output_vocab_size);
+        Eigen::Matrix<double,Eigen::Dynamic,1> scores(m->output_vocab_size);
         prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
-        double logz = nplm::logsum(scores.col(0));
+        float logz = nplm::logsum(scores.col(0));
         return logz;
     }
 }

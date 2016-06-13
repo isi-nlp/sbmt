@@ -60,5 +60,5 @@ install(TARGETS readforest
                 xrsdb_search
                 xrsdb_mergetables
         DESTINATION bin)
-
+install(PROGRAMS stree2sig stree2lat DESTINATION bin)
 install(TARGETS xrsdb_search_util DESTINATION lib)

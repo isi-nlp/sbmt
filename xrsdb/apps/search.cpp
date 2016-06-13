@@ -2880,8 +2880,8 @@ void print_results( xequiv xeq
         if (xeq.begin() == xeq.end()) {
             std::cout << "NBEST sent=" 
                       << id << ' '
-                      << "nbest=0 totalcost=0 kbest=0 hyp={{{}}} failed-parse=1 tree={{{}}} derivation={{{}}} align={{{}}}"
-                      << "used-rules={{{}}} fail-msg={{{ " 
+                      << "nbest=0 totalcost=0 kbest=0 hyp={{{NOPARSE}}} failed-parse=1 tree={{{(TOP (X NOPARSE) )}}} derivation={{{0}}} align={{{0-0}}} source={{{NOPARSE}}}"
+                      << "used-rules={{{0}}} fail-msg={{{ " 
                       << errormsg 
                       << " }}}"
                       << std::endl;
