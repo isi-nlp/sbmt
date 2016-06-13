@@ -1,0 +1,3 @@
+[submodule "NEURAL_LANGUAGE_MODEL"]
+	path = NEURAL_LANGUAGE_MODEL
+	url = https://github.com/isi-nlp/NEURAL_LANGUAGE_MODEL.git
