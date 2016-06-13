@@ -131,6 +131,7 @@ parser.add_argument( '-s','--subcorpora'
 
 def runit(x,y):
     x.run(y)
+    return 0
 if __name__ == '__main__':
     os.putenv('LANG','C')
     os.putenv('LC_ALL','C')
@@ -229,6 +230,7 @@ if __name__ == '__main__':
 
         joins = []
         pool = multiprocessing.Pool()
+        results = []
         hp.mkdir('/tmp')
         for s in steps:
             if s.stage == 'extract':
@@ -237,8 +239,10 @@ if __name__ == '__main__':
                     print >> sys.stderr, 'creating rules'
                     runruleext()
                     ruleextrun = True
-                pool.apply_async(runit,(s,hp))
+                results.append(pool.apply_async(runit,(s,hp)))
                 joins.extend(s.output_filename())
+        for r in results:
+            r.get() # raise any exceptions from worker threads
         pool.close()
         pool.join()
         rulejoin = os.path.join(d.config['variables']['rhsdir'],'join')

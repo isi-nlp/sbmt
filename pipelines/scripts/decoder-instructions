@@ -31,6 +31,8 @@ lattice = subprocess.Popen( args.config['decoder']['lattice-command']
                           , stdout=subprocess.PIPE
                           , shell=True )
 
+tokenizer = subprocess.Popen(args.config['tokenizer'],shell=True,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+
 segmenter = subprocess.Popen( '%s/scripts/last_resort_segment %s' % (args.rootdir,args.config['decoder']['max-sentence-length'])
                             , stdin=subprocess.PIPE
                             , stdout=subprocess.PIPE
@@ -93,6 +95,8 @@ def mainrun():
         line = line.strip()
         if line == '':
             continue
+        tokenizer.stdin.write(line + '\n')
+        line = tokenizer.stdout.readline().strip()
         allrules = allextras(line)
         sys.stdout.write('push-inline-rules\n')
         for rule in allrules:

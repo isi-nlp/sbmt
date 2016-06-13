@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #PBS -l walltime=12:00:00                                                                                                                 
-#PBS -l nodes=20                                                                                                                           
-#PBS -l pmem=23g                                                                                                                           
-#PBS -T allcores 
+#PBS -l nodes=20:ppn=12
+#PBS -n
 #PBS -N decode
 #PBS -q isi
 #
@@ -57,4 +56,4 @@ $PIPESTEP/run.sh $($PIPELINE/util/findlocalpath ruleset) \
                 -s $($PIPELINE/util/findlocalpath $corpus.pipeline.resource) \
                 -u $($PIPELINE/util/findlocalpath tune-$tune) $cmd $CAUX \
                 -c $($PIPELINE/util/gatherconfig) \
-                -v -o $decodedir 2> $decodedir/pipeline.log
+                -o $decodedir 2> $decodedir/pipeline.log

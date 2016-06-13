@@ -12,8 +12,8 @@ nbests = int(sys.argv[1])
 def concat_tree(T1, T2):
     TS1= T1.split()
     TS2= T2.split()
-    assert TS1[0] == '(TOP' and TS1[-1] == ')'
-    assert TS2[0] == '(TOP' and TS2[-1] == ')'
+    #assert TS1[0] == '(TOP' and TS1[-1] == ')'
+    #assert TS2[0] == '(TOP' and TS2[-1] == ')'
     return '(TOP ' + ' '.join(TS1 + TS2) + ' )'
 
 def concat_used_rules(U1,U2):
@@ -48,16 +48,26 @@ nbestre = re.compile(r'([A-Za-z][A-Za-z0-9.:\[\]()_-]*)=({{{(.*?)}}}|([0-9.-]+))
 def procline(line):
     ln = {}
     ln['features'] = {}
-    for m in nbestre.finditer(line):
+    try:
+      for m in nbestre.finditer(line):
         if m.group(3):
             ln[m.group(1)] = m.group(3).strip()
         elif m.group(1) in set(['kbest','nbest','sent']):
             ln[m.group(1)] = int(m.group(4).strip())
         elif m.group(1) == 'totalcost':
             ln[m.group(1)] = float(m.group(4).strip())
+        elif m.group(4) is None:
+            ln[m.group(1)] = ''
         else:
+          try: 
             ln['features'][m.group(1)] = float(m.group(4).strip())
-    return ln
+          except:
+            sys.stderr.write('failed to process ' + m.group(0) + '\n')
+            raise
+      return ln
+    except:
+        sys.stderr.write('failed to process ' + line + '\n')
+        raise
 
 def combine(ln1, ln2):
     ln = {}
@@ -138,4 +148,4 @@ while True:
         lines[-1].append(procline(line))
 if len(lines):
     write_all(lines,delay)
-        
+

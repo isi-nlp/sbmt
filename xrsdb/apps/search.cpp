@@ -2880,10 +2880,9 @@ void print_results( xequiv xeq
         if (xeq.begin() == xeq.end()) {
             std::cout << "NBEST sent=" 
                       << id << ' '
-                      << "nbest=0 totalcost=0 kbest=0 hyp={{{NOPARSE}}} failed-parse=1 tree={{{(TOP (X NOPARSE) )}}} derivation={{{0}}} align={{{0-0}}} source={{{NOPARSE}}}"
-                      << "used-rules={{{0}}} fail-msg={{{ " 
-                      << errormsg 
-                      << " }}}"
+                      << "nbest=0 totalcost=0 kbest=0 hyp={{{NOPARSE}}} failed-parse=1 tree={{{(TOP NOPARSE)}}} "
+                      << "derivation={{{0}}} align={{{0-0}}} source={{{NOPARSE}}} "
+                      << "used-rules={{{0}}} fail-msg={{{ "<<errormsg<<" }}}"
                       << std::endl;
         } else {
             xtree_generator treegen = xtrees_from_xequiv(xeq);
@@ -2949,12 +2948,12 @@ void print_results( xequiv xeq
     }
     if (opts.append_rules) {
         if (xeq.begin() == xeq.end()) {
-            std::cout << "TOP(\"NOPARSE\") -> <foreign-sentence> ### id=0 noparse=1\n";
+	  std::cout << "TOP(\"NOPARSE\") -> \"NOPARSE\" ### id=0 noparse=1 sent="<<id<<"\n";
         }
         size_t id; rule_application const* rule;
         BOOST_FOREACH(boost::tie(id,rule), umap) {
             rule->print(std::cout,h);
-            std::cout << std::endl;
+            std::cout << " sent="<<id<<std::endl;
         }
         if (not opts.pop_newline) std::cout << '\n' << std::flush;
         if (opts.pass == multipass::source or opts.pass == multipass::pipe) {
