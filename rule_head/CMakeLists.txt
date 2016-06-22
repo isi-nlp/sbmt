@@ -68,6 +68,7 @@ install(PROGRAMS
               rule_head_add_command
               headtables2dict
               collins/apps/mkamrlm.sh
+              collins/apps/mkcollinslm.sh
         DESTINATION bin 
        )
 

@@ -81,4 +81,5 @@ sbmt-util.install install
       rule_head_add_command
       headtables2dict
       collins/apps/mkamrlm.sh
+      collins/apps/mkcollinslm.sh
     ;

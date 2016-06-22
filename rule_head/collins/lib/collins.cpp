@@ -1384,6 +1384,11 @@ void make_section(std::istream& in, std::string filename, output_type type)
     if (type == output_type::dictionary) {
         ip::managed_mapped_file mfile(ip::create_only,filename.c_str(),5UL*1024UL*1024UL*1024UL);
         make_dictionary(in,mfile);
+    } else if (type == output_type::collinslm or type == output_type::amrlm) {
+        ip::managed_mapped_file mfile(ip::open_only,filename.c_str());
+        std::string typestr = boost::lexical_cast<std::string>(type);
+        char_allocator calloc(mfile.get_segment_manager());
+        mfile.construct<ip::string>("lmtype")(typestr.c_str());
     } else if (type == output_type::complete) {
         ip::managed_mapped_file::shrink_to_fit(filename.c_str());
     } else {
@@ -1394,16 +1399,19 @@ void make_section(std::istream& in, std::string filename, output_type type)
         reverse_dictionary* revdict = mfile.find<reverse_dictionary>("reverse-dictionary").first;
         uint32_t TOP = dict->find(dictkey("TOP"))->second;
         uint32_t STOP = dict->find(dictkey("STOP"))->second;
-        #ifdef NO_ABSTRACTION
-        if (type == output_type::rulemodel) ruleinfo_to_model(gen_label_given_concept(*revdict,TOP,STOP),in,counts,*dict,*revdict);
-        else if (type == output_type::deptagmodel) {}
-        else if (type == output_type::depwordmodel) ruleinfo_to_model(gen_depconcept_given_label_concept(*revdict,TOP,STOP),in,counts,*dict,*revdict);
-        #else
-        
-        if (type == output_type::rulemodel) ruleinfo_to_model(gen_label_given_abstraction_concept(*revdict,TOP,STOP),in,counts,*dict,*revdict);
-        else if (type == output_type::deptagmodel) ruleinfo_to_model(gen_depabstraction_given_label_abstraction_concept(*revdict,TOP,STOP),in,counts,*dict,*revdict);
-        else if (type == output_type::depwordmodel) ruleinfo_to_model(gen_depconcept_given_depabstraction_labelabstraction_concept(*revdict,TOP,STOP),in,counts,*dict,*revdict);
-        else if (type == output_type::print_rulemodel) {
+        if (type == output_type::amrrulemodel) {
+            ruleinfo_to_model(gen_label_given_abstraction_concept(*revdict,TOP,STOP),in,counts,*dict,*revdict);
+        } else if (type == output_type::rulemodel) {
+            ruleinfo_to_model(gen_rule_given_root_headtag_headword(),in,counts,*dict,*revdict);
+        } else if (type == output_type::amrtagmodel) {
+            ruleinfo_to_model(gen_depabstraction_given_label_abstraction_concept(*revdict,TOP,STOP),in,counts,*dict,*revdict);
+        } else if (type == output_type::deptagmodel) {
+            ruleinfo_to_model(gen_deptag_given_var_rule_headtag_headword(),in,counts,*dict,*revdict);
+        } else if (type == output_type::amrwordmodel) {
+            ruleinfo_to_model(gen_depconcept_given_depabstraction_labelabstraction_concept(*revdict,TOP,STOP),in,counts,*dict,*revdict);
+        } else if (type == output_type::depwordmodel) {
+            ruleinfo_to_model(gen_depword_given_deptag_var_ruleheadtag_headword(),in,counts,*dict,*revdict);
+        } else if (type == output_type::print_rulemodel) {
             print_model(gen_label_given_abstraction_concept(*revdict,TOP,STOP),in,counts,*dict,*revdict,false);
             add = false;
         }
@@ -1415,7 +1423,6 @@ void make_section(std::istream& in, std::string filename, output_type type)
             print_model(gen_depconcept_given_depabstraction_labelabstraction_concept(*revdict,TOP,STOP),in,counts,*dict,*revdict,true);
             add = false;
         }
-        #endif
         else throw std::runtime_error("unsupported model");
         if (add) add_to_file(counts,mfile,type);
     }
@@ -1430,9 +1437,10 @@ private:
 public:
     lm_file(std::string filename, double wb_rule_rate, double wb_tag_rate, double wb_word_rate, double wb_cfg_rate)
     : mfile(ip::open_only,filename.c_str())
-    , rule_model(section(mfile,output_type::rulemodel))
-    , deptag_model(section(mfile,output_type::deptagmodel))
-    , depword_model(section(mfile,output_type::depwordmodel))
+    , amr(*mfile.find<ip::string>("lmtype").first == "amrlm")
+    , rule_model(section(mfile,amr ? output_type::amrrulemodel : output_type::rulemodel))
+    , deptag_model(section(mfile,amr ? output_type::amrtagmodel : output_type::deptagmodel))
+    , depword_model(section(mfile,amr ? output_type::amrwordmodel : output_type::depwordmodel))
     , dict(mfile.find<dictionary>("dictionary").first)
     , revdict(mfile.find<reverse_dictionary>("reverse-dictionary").first)
     , top(dict->find(dictkey("TOP"))->second)
@@ -1444,6 +1452,7 @@ public:
     , wb_cfg_rate(wb_cfg_rate)
     {}
     ip::managed_mapped_file mfile;
+    bool amr;
     fixed_lm_trie const* rule_model;
     fixed_lm_trie const* deptag_model;
     fixed_lm_trie const* depword_model;
@@ -1475,73 +1484,71 @@ double model::logprob_cfg(idxrule const& r) const
     return 0;
 }
 
-#ifdef NO_ABSTRACTION
-
 double model::logprob_rule(idxrule const& r) const
 {
     COLLINS_DEBUG_PRINT_SCORE(std::cerr << "logprob_rule:\n");
-    return -std::log10( score_ruleinfo(
-                          gen_label_given_concept(*file->revdict,file->top,file->stop)
-                        , r
-                        , *file->rule_model
-                        , file->wb_rule_rate
-                        , file->sep
-                        , *file->revdict ) );
-}
-
-double model::logprob_tag(idxrule const& r) const
-{
-    return 0;
-}
-
-double model::logprob_word(idxrule const& r) const
-{
-    COLLINS_DEBUG_PRINT_SCORE(std::cerr << "logprob_word:\n");
-    return -std::log10( score_ruleinfo(
-                          gen_depconcept_given_label_concept(*file->revdict,file->top,file->stop)
-                        , r
-                        , *file->depword_model
-                        , file->wb_word_rate
-                        , file->sep
-                        , *file->revdict ) );
-}
-#else
-double model::logprob_rule(idxrule const& r) const
-{
-    COLLINS_DEBUG_PRINT_SCORE(std::cerr << "logprob_rule:\n");
-    return -std::log10( score_ruleinfo(
-                          gen_label_given_abstraction_concept(*file->revdict,file->top,file->stop)
-                        , r
-                        , *file->rule_model
-                        , file->wb_rule_rate
-                        , file->sep
-                        , *file->revdict ) );
+    if (file->amr) {
+        return -std::log10( score_ruleinfo(
+                              gen_label_given_abstraction_concept(*file->revdict,file->top,file->stop)
+                            , r
+                            , *file->rule_model
+                            , file->wb_rule_rate
+                            , file->sep
+                            , *file->revdict ) );
+    } else {
+        return -std::log10( score_ruleinfo(
+                              gen_rule_given_root_headtag_headword()
+                            , r
+                            , *file->rule_model
+                            , file->wb_rule_rate
+                            , file->sep
+                            , *file->revdict ) );
+    }
 }
 
 double model::logprob_tag(idxrule const& r) const
 {
     COLLINS_DEBUG_PRINT_SCORE(std::cerr << "logprob_tag:\n");
-    return -std::log10( score_ruleinfo(
-                          gen_depabstraction_given_label_abstraction_concept(*file->revdict,file->top,file->stop)
-                        , r
-                        , *file->deptag_model
-                        , file->wb_tag_rate
-                        , file->sep
-                        , *file->revdict ) );
+    if (file->amr) {
+        return -std::log10( score_ruleinfo(
+                              gen_depabstraction_given_label_abstraction_concept(*file->revdict,file->top,file->stop)
+                            , r
+                            , *file->deptag_model
+                            , file->wb_tag_rate
+                            , file->sep
+                            , *file->revdict ) );
+    } else {
+        return -std::log10( score_ruleinfo(
+                              gen_deptag_given_var_rule_headtag_headword()
+                            , r
+                            , *file->deptag_model
+                            , file->wb_tag_rate
+                            , file->sep
+                            , *file->revdict ) );
+    }   
 }
 
 double model::logprob_word(idxrule const& r) const
 {
     COLLINS_DEBUG_PRINT_SCORE(std::cerr << "logprob_word:\n");
-    return -std::log10( score_ruleinfo(
-                          gen_depconcept_given_depabstraction_labelabstraction_concept(*file->revdict,file->top,file->stop)
-                        , r
-                        , *file->depword_model
-                        , file->wb_word_rate
-                        , file->sep
-                        , *file->revdict ) );
+    if (file->amr) {
+        return -std::log10( score_ruleinfo(
+                              gen_depconcept_given_depabstraction_labelabstraction_concept(*file->revdict,file->top,file->stop)
+                            , r
+                            , *file->depword_model
+                            , file->wb_word_rate
+                            , file->sep
+                            , *file->revdict ) );
+    } else {
+        return -std::log10( score_ruleinfo(
+                              gen_depword_given_deptag_var_ruleheadtag_headword()
+                            , r
+                            , *file->depword_model
+                            , file->wb_word_rate
+                            , file->sep
+                            , *file->revdict ) );
+    }
 }
-#endif
 
 model::model(std::string const& filename, double wb_rate)
 : file(new lm_file(filename,wb_rate,wb_rate,wb_rate,wb_rate)) {}
