@@ -6,12 +6,17 @@ import sys
 #find unaligned concepts with the :name attribute, and give the concept the alignments from 
 # /name :op1 "name2" ... :opN "nameN"
 
-def lift(amr):
+def lift(amr, covered = set()):
+  if amr.is_literal() or amr.root_label() not in covered:
+    if not amr.is_literal():
+        covered.add(amr.root_label())
     if not amr.alignment():
-        hasnmae = False
+        hasname = False
+        newalignments = set()
         #print >> sys.stderr, "prehereiam"
         for clbl,camr in amr.children():
             #print >> sys.stderr, "\t%s" % camr.root_label()
+            
             if camr.concept() == "name":
                 hasname = True
                 #print >> sys.stderr, "hereiam\n"
@@ -21,15 +26,17 @@ def lift(amr):
                     if gclbl[0:2] == "op":
                         for a in gcamr.alignment():
                             newalignments.add(a)
-                #print >> sys.stderr, newalignments
-                for a in newalignments:
-                    amr.alignment().append(a)
-                    #print >> sys.stderr, amr.root_alignment()
-                break
+                    else:
+                      hasname = False
+            else:
+              hasname = False
+        if hasname:
+          for a in newalignments:
+            amr.alignment().append(a)
     for clbl,camr in amr.children():
-        lift(camr)
+        lift(camr,covered)
 for amr in amrparse.read(sys.stdin):
-    lift(amr)
+    lift(amr,set())
     #for a in amr.concepts():
     #    lift(a)
     print amrparse.amr2str(amr,metadata=True,indent=6)

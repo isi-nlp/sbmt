@@ -2298,12 +2298,14 @@ std::ostream& print_features(std::ostream& out, xedge const& xe, xedge_component
     sbmt::weight_vector fv = func(xe);
     BOOST_FOREACH(xequiv const& xeq, xe.children) if (root(xeq).type() == sbmt::foreign_token) fv += sbmt::weight_vector(xeq.begin()->rule->costs);
     BOOST_FOREACH(sbmt::weight_vector::value_type v, fv) {
+      if (h.fdict[v.first] != "rawcount") {
         if (not first) {
             out << ',';
         } else {
             first = false;
         }
         out << h.fdict.get_token(v.first) << ':' << v.second;
+      }
     }
     out << '>';
     return out;
@@ -2927,7 +2929,9 @@ void print_results( xequiv xeq
                                             );
                     
                     BOOST_FOREACH(weight_vector::const_reference v, wv) {
+		      if (h.fdict[v.first] != "rawcount") {
                         std::cout << ' ' << h.fdict.get_token(v.first) << '=' << v.second;
+		      }
                     }
                     std::cout << std::endl;
                     ++m;

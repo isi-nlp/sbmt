@@ -423,7 +423,7 @@ def manipulation_example():
     print >> sys.stderr, 'new AMR:\n', amr
 
 if __name__ == '__main__':
-    manipulation_example()
+    #manipulation_example()
     for amr in read(sys.stdin):
         try:
             #print amr
