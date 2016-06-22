@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(libsbmt)
 add_subdirectory(3rdparty/lw)
 
-find_package(Boost REQUIRED COMPONENTS system filesystem thread regex serialization signals iostreams program_options)
+find_package(Boost REQUIRED COMPONENTS system filesystem thread regex serialization signals iostreams program_options locale)
 find_package(TBB REQUIRED)
 
 file(GLOB SRCFILES src/*.cpp)

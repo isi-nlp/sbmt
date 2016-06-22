@@ -10,7 +10,6 @@
 #include <iostream>
 #include <iomanip>
 
-#include <boost/signals.hpp>
 #include <boost/ref.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/serialization/split_member.hpp>
@@ -257,27 +256,6 @@ public:
 
     BOOST_SERIALIZATION_SPLIT_MEMBER()
     */
-    ////////////////////////////////////////////////////////////////////////////
-    ///
-    /// purpose of attach_reset_action is to be notified whenever someone
-    /// resets the storage, as that will cause all tokens to be invalid.
-    /// any code making use of caches of token_t may need to use this.
-    ///
-    /// note: if you ever need to remove the action you have attached, tie the
-    /// action to a scoped_connection:
-    /// boost::signals::scoped_connection sc = factory.attach_reset_action(f);
-    /// now, when sc goes out of scope, your action goes away too.  this
-    /// can help deletion order issues.  see boost::signals for more info.
-    ///
-    /// the type of your action func is expected to be callable as func(),
-    /// with no return value.
-    ///
-    ////////////////////////////////////////////////////////////////////////////
-    template <class F>
-    boost::signals::connection attach_reset_action(F func)
-    {
-        return reset_signal.connect(func);
-    }
 
     dictionary();
 
@@ -287,9 +265,6 @@ public:
         native_storage.swap(o.native_storage);
         tag_storage.swap(o.tag_storage);
         virtual_tag_storage.swap(o.virtual_tag_storage);
-
-        //FIXME: signals can't be copied/swapped
-        //michael -- not a bug:  swap should actually trigger the signal.
     }
 
     StorageP& tag_token_factory() { return native_storage; }
@@ -313,7 +288,6 @@ private:
     StorageP native_storage;
     StorageP tag_storage;
     StorageP virtual_tag_storage;
-    boost::signal<void ()> reset_signal;
 };
 
 typedef dictionary<in_memory_token_storage> indexed_token_factory;

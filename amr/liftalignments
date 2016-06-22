@@ -6,7 +6,10 @@ import sys
 #find unaligned concepts with the :name attribute, and give the concept the alignments from 
 # /name :op1 "name2" ... :opN "nameN"
 
-def lift(amr):
+def lift(amr, covered = set()):
+  if amr.is_literal() or amr.root_label() not in covered:
+    if not amr.is_literal():
+        covered.add(amr.root_label())
     if not amr.alignment():
         hasnmae = False
         #print >> sys.stderr, "prehereiam"
@@ -27,9 +30,9 @@ def lift(amr):
                     #print >> sys.stderr, amr.root_alignment()
                 break
     for clbl,camr in amr.children():
-        lift(camr)
+        lift(camr,covered)
 for amr in amrparse.read(sys.stdin):
-    lift(amr)
+    lift(amr,set())
     #for a in amr.concepts():
     #    lift(a)
     print amrparse.amr2str(amr,metadata=True,indent=6)

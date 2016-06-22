@@ -9,6 +9,7 @@
 # include <vector>
 # include <map>
 # include <sbmt/token.hpp>
+# include <boost/function.hpp>
 
 namespace sbmt {
     
