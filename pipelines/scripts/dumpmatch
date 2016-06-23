@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+import re, sys, collections
+mtchre = re.compile(r' -> "([^ ]*)" ')
+
+mp = collections.defaultdict(list)
+
+
+for line in open(sys.argv[1]):
+    m = mtchre.search(line)
+    mp[m.group(1)].append(line.strip())
+
+#print >> sys.stderr, mp
+while True:
+    line = sys.stdin.readline()
+    if line == '':
+        break
+    for word in line.strip().split():
+        if word in mp:
+            for rule in mp[word]:
+                print rule
+    print
+    sys.stdout.flush()

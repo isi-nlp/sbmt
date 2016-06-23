@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+
+import scoop
+import subprocess
+import sys
+
+cmd = subprocess.Popen(sys.argv[1:],stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+
+def apply(data):
+    global cmd
+    cmd.stdin.write(data)
+    out = ''
+    while True:
+        line = cmd.stdout.readline()
+        if line.strip() == '':
+            break
+        out += line
+    return out
+
+def unbuffered_read(fh):
+    while True:
+        line = fh.readline()
+        if line == '':
+            break
+        yield line
+if __name__ == '__main__':
+    for line in scoop.futures.map(apply,unbuffered_read(sys.stdin)):
+        sys.stdout.write(line)
+        sys.stdout.flush()
