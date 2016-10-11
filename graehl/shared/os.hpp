@@ -16,6 +16,7 @@
 # define OS_WINDOWS
 #else
 # include <unistd.h>
+# pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
 #if !defined( MEMMAP_IO_WINDOWS ) && !defined( MEMMAP_IO_POSIX )

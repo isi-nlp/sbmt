@@ -546,7 +546,7 @@ void set_info_option(std::string info, std::string key, std::string val)
 void tee_info_option(std::string info, std::string key, std::string val)
 {
     set_info_option(info,key,val);
-    std::cout << "set-info-option " << info << '  '<< '"' << key << '"' << ' ' << '"' << val << "\" ;\n" << std::endl;
+    std::cout << "set-info-option " << info << ' '<< '"' << key << '"' << ' ' << '"' << val << "\" ;\n" << std::endl;
 }
 
 typedef any_type_info_factory<grammar_facade> any_xinfo_factory;

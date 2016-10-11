@@ -490,11 +490,12 @@ int main(int argc, char *argv[]) {
 
  DB* dbp=NULL;
  if(dbfile) {
-   *myerr << "%%% opening DB: " << dbfile << std::endl;
-   db_init(dbp);
-   set_db_cache_size(dbp,DB_CACHE_SIZE);
-   db_open(dbp,dbfile,true); // read-only
-   *myerr << "%%% done." << std::endl;
+   *myerr << "commented out 2016-05-02\n";
+   //*myerr << "%%% opening DB: " << dbfile << std::endl;
+   //db_init(dbp);
+   //set_db_cache_size(dbp,DB_CACHE_SIZE);
+   //db_open(dbp,dbfile,true); // read-only
+   //*myerr << "%%% done." << std::endl;
  }
 
  ////////////////////////////////////////////////////////////////////////
@@ -713,8 +714,8 @@ int main(int argc, char *argv[]) {
 
 
 
-	if(dbp != NULL)
-	  der->set_global_indexing();
+	//if(dbp != NULL)
+	//  der->set_global_indexing();
 
 	// Different behaviors depending on mode: 
 	if(ATSfile)
@@ -805,8 +806,9 @@ int main(int argc, char *argv[]) {
  ////////////////////////////////////////////////////////////////////////
  
  if(dbfile) {
-   *myerr << "%%% closing DB: " << dbfile << std::endl;
-   db_close(dbp);
+   *myerr << "commented out 2016-05-02\n";
+   //*myerr << "%%% closing DB: " << dbfile << std::endl;
+   //db_close(dbp);
  }
 
  ////////////////////////////////////////////////////////////////////////

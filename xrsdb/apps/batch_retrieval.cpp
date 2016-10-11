@@ -1,6 +1,6 @@
 # include <iostream>
 # include <iterator>
-
+# define _GLIBCXX_PERMIT_BACKWARD_HASH
 # include <sbmt/hash/hash_set.hpp>
 # include <sbmt/token.hpp>
 # include <sbmt/sentence.hpp>

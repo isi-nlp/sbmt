@@ -247,7 +247,6 @@ void dictionary<ST>::reset_storage()
     tag_storage.reset();
     virtual_tag_storage.reset();
     init_special_tokens();
-    reset_signal();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -262,7 +261,6 @@ void dictionary<ST>::shrink( indexed_token const& f
     native_storage.shrink(n.index());
     tag_storage.shrink(t.index());
     virtual_tag_storage.shrink(v.index());
-    reset_signal();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

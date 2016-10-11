@@ -5,5 +5,6 @@ include_directories(. .. ../.. impl)
 
 file(GLOB IMPLFILES impl/*.cpp)
 add_library(LWLangModel ${IMPLFILES})
+target_link_libraries(LWLangModel LWCommon)
 target_include_directories(LWLangModel INTERFACE ..)
 install(TARGETS LWLangModel DESTINATION lib)

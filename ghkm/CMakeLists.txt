@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(ghkm)
 
 find_package(Boost REQUIRED COMPONENTS regex)
-
+#find_package(BerkeleyDB REQUIRED)
 include_directories(. .. nstring ${Boost_INCLUDE_DIRS})
 
 add_library(gzstream gzstream/gzstream.C)
@@ -43,8 +43,11 @@ add_executable( extract
                 xrs-extract/c++-src/GenDer.C
                 xrs-extract/c++-src/WeightF.C
                 xrs-extract/c++-src/TreeProjector.C
-                xrs-extract/c++-src/db_access.C
+#                xrs-extract/c++-src/db_access.C
                 xrs-extract/c++-src/extract.C )
-target_link_libraries(extract db db_cxx gzstream treelib ${Boost_REGEX_LIBRARY})
+target_link_libraries(extract 
+#                      db 
+#                      db_cxx 
+                      gzstream treelib ${Boost_REGEX_LIBRARY})
 
 install(TARGETS fix_collins extract DESTINATION bin)

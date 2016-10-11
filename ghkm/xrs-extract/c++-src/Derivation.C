@@ -1312,9 +1312,9 @@ Derivation::extract_ATRules(Leaves *lv, ATS *at) {
             rd->set_str_attribute("tphrase","{{{"+tp->get_str()+"}}}");
             std::string rule = curRule->get_str();
             std::string desc = curRule->get_desc_str(false);
-            if(_dbp != NULL)
-              db_insert(_dbp,const_cast<char*>(rule.c_str()),"-1");
-            else
+            //if(_dbp != NULL)
+            //  db_insert(_dbp,const_cast<char*>(rule.c_str()),"-1");
+            //else
               std::cout << rule << " ### " << desc << std::endl;
             delete curRule;
 
@@ -1348,6 +1348,8 @@ Derivation::add_derivation_counts() const {
   }
 }
 
+  void Derivation::retrieve_global_rule_indices() {std::cerr << "commented out 2016-05-02\n"; }
+  /*
 
 void
 Derivation::retrieve_global_rule_indices() {
@@ -1374,6 +1376,7 @@ Derivation::retrieve_global_rule_indices() {
     _derivationRuleIDs[i] = ind;
   }
 }
+  */
 
 //! Print rules after each derivation (for local indexing only).
 void
@@ -1886,6 +1889,8 @@ Derivation::has_rule(const std::string& r, bool lhs_only) const {
   return false;
 }
 
+  void Derivation::add_rules_to_db() const {std::cerr << "commented out 2016-05-02\n"; }
+  /*
 //! Save rules in database:
 void
 Derivation::add_rules_to_db() const {
@@ -1898,6 +1903,7 @@ Derivation::add_rules_to_db() const {
     }
   }
 }
+  */
 
 void
 Derivation::print_derivation_forest(std::ostream& out,

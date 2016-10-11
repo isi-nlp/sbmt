@@ -150,6 +150,8 @@ WeightF::print_weights(std::ostream& out) const {
 }
 
 // Print merged counts (ordering: as found in DB)
+  void WeightF::print_weights_DB_order(std::ostream& out, const char* dbfile) const { *myerr << "commented out 2016-05-02\n"; }
+  /*
 void
 WeightF::print_weights_DB_order(std::ostream& out, const char* db_file) const {
 
@@ -198,6 +200,7 @@ WeightF::print_weights_DB_order(std::ostream& out, const char* db_file) const {
   if(db_file)
 	 db_close(dbp);
 }
+  */
 
 int 
 WeightF::add_field(const std::string& field_name) {

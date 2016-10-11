@@ -1,17 +1,22 @@
 # include <search/grammar.hpp>
 
+SBMT_REGISTER_CHILD_LOGGING_DOMAIN_NAME(weight_domain,"weights",sbmt::root_domain);
+
 namespace xrsdb { namespace search {
-;
+
+
 
 void read_weights(sbmt::weight_vector& wv, std::istream& in, sbmt::feature_dictionary& fdict)
 {
+  sbmt::feature_dictionary::index_type rc = fdict["rawcount"];
     std::string line;
     while (getline(in,line)) {
         sbmt::weight_vector _wv;
         read(_wv,line,fdict);
         wv += _wv;
     }
-    //SBMT_VERBOSE_STREAM(decoder_domain, "weights: " <<  print(wv,fdict));
+    wv[rc] = 0.0;
+    SBMT_VERBOSE_STREAM(weight_domain, "weights: " <<  print(wv,fdict));
 }
 
 fixed_rule const& grammar_facade::get_syntax(rule_type r) const

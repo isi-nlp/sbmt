@@ -20,7 +20,7 @@ namespace stlextp = ::std;
 
 
 #else
-
+#define _GLIBCXX_PERMIT_BACKWARD_HASH
 #	include <ext/hash_map>
 
 #	ifndef stlext_ns_alias_defined
