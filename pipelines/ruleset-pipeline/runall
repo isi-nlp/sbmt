@@ -7,15 +7,16 @@ parser = extract.parser
 nkparser = argparse.ArgumentParser()
 
 for p in [parser,nkparser]:
-    p.add_argument( '-k', '--keeprules' \
-                  , help='keep pre-filtered rules in hdfs format' \
+    p.add_argument( '-k', '--keeprules'
+                  , help='keep pre-filtered rules in hdfs format'
                   , action='store_true'
                   )
-    p.add_argument( '-n', '--nocleanup' \
+    p.add_argument( '-n', '--nocleanup'
                   , help='do not toss the temporary $tmpdir'
                   , action='store_false'
                   , dest='cleanup'
                   )
+
 d = cfg.parse_args(parser,modeldir=True)
 vals,remain = nkparser.parse_known_args()
 nk=''

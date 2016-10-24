@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-SDIR=$(dirname $(readlink -f $0))
+SDIR=$(cd $(dirname $0); pwd)
 
 IN=$1
 OUT=$2
-T=$(mktemp -d)
+P=${TMPDIR-/tmp}
+T=$(mktemp -d $P/XXXXXX)
+echo "logs in $T"
 cat $IN | $SDIR/collinsmapper -p ruleinfo > $T/ruleinfo
 cat $T/ruleinfo | $SDIR/collinsmapper -p dictionary | cut -f1 | sort -u | $SDIR/mkcollinslm -f $OUT -p dictionary
 echo dictionary loaded
@@ -15,4 +17,4 @@ echo deptag model loaded
 cat $T/ruleinfo | $SDIR/mkcollinslm -f $OUT -p depwordmodel 2> $T/events.depwordmodel
 echo depword model loaded
 $SDIR/mkcollinslm -f $OUT -p complete
-echo "logs in $T"
+
