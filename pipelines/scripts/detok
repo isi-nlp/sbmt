@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+TGT=$1
+SRC=$2
+BASE=$(dirname $BASH_SOURCE)
+paste <(cat $TGT | $BASE/tcidrepair | /home/nlg-03/mt-apps/tokenizers/lw_detokenize.pl) $SRC | $BASE/srcdetok
