@@ -40,11 +40,15 @@ def write_script(d, stage, weightstring=None, logfile=True, include_instruction_
     print >> decodescript, 'TMPDIR=%s' % os.getenv('TMPDIR','/tmp')
     if logfile:
         print >> decodescript, 'LOG=%s/decode-log.$HOST-$$.log' % logdir
+        print >> decodescript, 'INSLOG=%s/instruction-log.$HOST-$$.log' % logdir
     print >> decodescript, 'cd %s' % d.tmpdir
     print >> decodescript, 'set -e'
     print >> decodescript, 'set -o pipefail'
     if include_instruction_pipe:
-        print >> decodescript, os.path.join(d.scriptdir,'decoder-instructions'), ruledir , '-c %s | \\' % d.config_files
+        print >> decodescript, os.path.join(d.scriptdir,'decoder-instructions'), ruledir , '-c %s \\' % d.config_files 
+        if logfile:
+            print >> decodescript, ' 2> $INSLOG \\'
+        print >> decodescript, ' | \\' 
     print >> decodescript, d.config['decoder']['exec'], "%s/xsearchdb" % ruledir , '--multi-thread \\'
     if 'weights' in d.config:
         print >> decodescript, '  -w %s \\' % os.path.abspath(d.config['weights'])
@@ -73,7 +77,9 @@ def write_script(d, stage, weightstring=None, logfile=True, include_instruction_
         print >> decodescript, "| %s/join_nbests %s" % (d.scriptdir,d.config['decoder']['options']['nbests'])
     print >> decodescript, '\n\n'
     if logfile:
-        print >> decodescript, 'gzip $LOG \n\n'
+        print >> decodescript, 'gzip  $LOG\n\n'
+        if include_instruction_pipe:
+            print >> decodescript, 'gzip $INSLOG\n\n'
     decodescript.close()
     os.chmod(decodefile, stat.S_IRWXU | os.stat(decodefile)[stat.ST_MODE])
     return decodefile
