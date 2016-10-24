@@ -36,6 +36,7 @@ add_definitions( -D__GCC3__=1
 add_subdirectory(NEURAL_LANGUAGE_MODEL)
 add_subdirectory(tbb_alloc)
 add_subdirectory(gusc)
+add_subdirectory(guppy)
 add_subdirectory(graehl)
 add_subdirectory(xrsparse)
 add_subdirectory(ghkm)

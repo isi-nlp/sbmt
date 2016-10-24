@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
 project(ghkm)
 
-find_package(Boost REQUIRED COMPONENTS regex)
+add_subdirectory(basic)
+
+find_package(Boost REQUIRED COMPONENTS regex program_options)
 #find_package(BerkeleyDB REQUIRED)
-include_directories(. .. nstring ${Boost_INCLUDE_DIRS})
+include_directories(. .. nstring xrs-extract/c++-src ${Boost_INCLUDE_DIRS})
 
 add_library(gzstream gzstream/gzstream.C)
 target_include_directories(gzstream PUBLIC gzstream)
@@ -21,6 +23,19 @@ add_executable( fix_collins
                 xrs-extract/c++-src/Tree.C 
                 xrs-extract/c++-src/MyErr.C )
 target_link_libraries(fix_collins gzstream treelib ${Boost_REGEX_LIBRARY})
+
+add_executable( restruct
+                restruct/restruct.cpp
+                restruct/Restructurer.cpp
+                restruct/SyntaxTree.cpp
+                restruct/LabelSpan.cpp
+                xrs-extract/c++-src/TreeNode.C
+                xrs-extract/c++-src/Tree.C
+                xrs-extract/c++-src/Alignment.C
+                xrs-extract/c++-src/MyErr.C 
+              )
+target_link_libraries(restruct gzstream treelib basic ${Boost_REGEX_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY})
+
 
 add_executable( extract
                 xrs-extract/c++-src/TreeNode.C 
@@ -51,3 +66,4 @@ target_link_libraries(extract
                       gzstream treelib ${Boost_REGEX_LIBRARY})
 
 install(TARGETS fix_collins extract DESTINATION bin)
+install(PROGRAMS restruct/deint_deriv.pl restruct/deint_deriv_aux.pl DESTINATION bin)

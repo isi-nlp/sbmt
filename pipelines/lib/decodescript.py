@@ -24,7 +24,7 @@ def write_instruction_script(d, logfile=True):
     os.chmod(instructfile, stat.S_IRWXU | os.stat(instructfile)[stat.ST_MODE])
     return instructfile
 
-def write_script(d, stage, weightstring=None, logfile=True, include_instruction_pipe=False):
+def write_script(d, stage, weightstring=None, logfile=True, include_instruction_pipe=False, decodefile=None):
     
     if stage not in set(['nbest','forest']):
         raise Exception
@@ -32,7 +32,8 @@ def write_script(d, stage, weightstring=None, logfile=True, include_instruction_
         logdir = os.path.join(d.outdir,'logs')
         cfg.execute(d,'mkdir -p %s' % logdir)
     ruledir = d.config['rules']
-    decodefile = os.path.join(d.tmpdir,'decoder')
+    if decodefile is None:
+        decodefile = os.path.join(d.tmpdir,'decoder')
     decodescript = open(decodefile,'w')
     infos = []
     print >> decodescript, '#!/usr/bin/env bash'
@@ -51,7 +52,9 @@ def write_script(d, stage, weightstring=None, logfile=True, include_instruction_
         print >> decodescript, ' | \\' 
     print >> decodescript, d.config['decoder']['exec'], "%s/xsearchdb" % ruledir , '--multi-thread \\'
     if 'weights' in d.config:
-        print >> decodescript, '  -w %s \\' % os.path.abspath(d.config['weights'])
+        weightstring = d.config['weights'] 
+    if weightstring:
+        print >> decodescript, '  -w %s \\' % os.path.abspath(weightstring)
     if 'nbests' not in d.config['decoder']['options']:
         d.config['decoder']['options']['nbests'] = 10
     for k,v in d.config['decoder']['options'].iteritems():
@@ -72,7 +75,7 @@ def write_script(d, stage, weightstring=None, logfile=True, include_instruction_
         print >> decodescript, ' 2> $LOG \\'
         #print >> decodescript, '  2> >(gzip > $LOG.gz) \\'
     if stage == 'forest':
-        print >> decodescript, "| %s/join_forests | sed -u -e 's/@UNKNOWN@//g'" % d.scriptdir 
+        print >> decodescript, "| %s/join_forests" % d.scriptdir 
     else:
         print >> decodescript, "| %s/join_nbests %s" % (d.scriptdir,d.config['decoder']['options']['nbests'])
     print >> decodescript, '\n\n'
@@ -83,3 +86,18 @@ def write_script(d, stage, weightstring=None, logfile=True, include_instruction_
     decodescript.close()
     os.chmod(decodefile, stat.S_IRWXU | os.stat(decodefile)[stat.ST_MODE])
     return decodefile
+
+if __name__ == '__main__':
+    import argparse
+    arp = argparse.ArgumentParser()
+    arp.add_argument( 'decodepipe')
+    arp.add_argument( 'tunedir'
+                    , nargs='?'
+                    , help='output directory of ruleset pipeline'
+                    , action=cfg.store_abspath
+                    , default=argparse.SUPPRESS
+                    )
+    d = cfg.parse_args(arp,default='$tunedir/tune.config', modeldir=True)
+
+    write_script(d,'nbest', weightstring=os.path.join(d.config['tunedir'],'weights.final'),logfile=False,include_instruction_pipe=True,decodefile=d.config['decodepipe'])
+    pass
