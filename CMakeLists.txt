@@ -33,6 +33,7 @@ add_definitions( -D__GCC3__=1
                  -DNO_QT=1
                  -DNOTRACE=1
                )
+
 add_subdirectory(NEURAL_LANGUAGE_MODEL)
 add_subdirectory(tbb_alloc)
 add_subdirectory(gusc)
@@ -53,6 +54,7 @@ add_subdirectory(neural_collins)
 add_subdirectory(rule_head)
 add_subdirectory(max_count_feature)
 add_subdirectory(utilities)
+add_subdirectory(vocabfilter)
 add_subdirectory(rule_decompose)
 add_subdirectory(source_syntax)
 add_subdirectory(srl)
