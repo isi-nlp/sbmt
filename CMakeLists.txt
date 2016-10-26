@@ -15,13 +15,14 @@ foreach(lv ${Boost_LIBRARY_DIRS})
 endforeach(lv)
 
 foreach(lv ${TBB_LIBRARIES})
- get_filename_component(tlv ${lv} DIRECTORY)
+ get_filename_component(tlv ${lv} PATH)
  list(APPEND LIB_LIST ${tlv})
 endforeach(lv)
 
 list(REMOVE_DUPLICATES LIB_LIST)
 link_directories(${LIB_LIST})
 
+set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib/")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 add_definitions( -D__GCC3__=1

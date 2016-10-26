@@ -2954,8 +2954,8 @@ void print_results( xequiv xeq
         if (xeq.begin() == xeq.end()) {
 	  std::cout << "TOP(\"NOPARSE\") -> \"NOPARSE\" ### id=0 noparse=1 sent="<<id<<"\n";
         }
-        size_t id; rule_application const* rule;
-        BOOST_FOREACH(boost::tie(id,rule), umap) {
+        size_t ruid; rule_application const* rule;
+        BOOST_FOREACH(boost::tie(ruid,rule), umap) {
             rule->print(std::cout,h);
             std::cout << " sent="<<id<<std::endl;
         }

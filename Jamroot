@@ -170,6 +170,8 @@ alias install-pipeline
     ./ghkm/xrs-extract//install
     ./mert//install
     ./guppy//install
+    ./biglm/tools//install
+    ./biglm/pagh//dist
   ;
 
 alias test

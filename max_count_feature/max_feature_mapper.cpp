@@ -33,22 +33,28 @@ int main(int argc, char** argv)
     string lbl = argv[1];
     
     ios::sync_with_stdio(false);
-    
+    //cerr << "max_feature_mapper " << argv[1] << endl;
     cout << print_rule_data_features(false);
     string line;
+
     while (getline(cin,line)) {
+      //cerr << "begin" << argv[1] <<endl;
         rule_data rd;
         feature val;
         try {
             rd = parse_xrs(line);
             val = find_feature(rd,lbl);
         } catch(...) { continue; }
-
+        try {
         cout << rd << '\t' << val << '\t';
         size_t rpos = get_feature(rd,"cwt");
-        if (rpos != rd.features.size()) cout << rd.features[rpos].str_value;
+        if (rpos != rd.features.size() and rd.features[rpos].str_value.size() > 0) cout << rd.features[rpos].str_value;
         else cout << 1;
         cout << '\n';
+        } catch(...) {
+	  cerr << "could not process in max_feature_mapper" << line << '\n';
+	  throw;
+	}
     }
     return 0;
 }

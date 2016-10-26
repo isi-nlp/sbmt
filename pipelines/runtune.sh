@@ -33,10 +33,11 @@
 PIPELINE=$(dirname $(readlink -f $0))
 PIPESTEP=$PIPELINE/tune-pipeline
 corpus=$1
-corpusdir=corpus-$corpus
 tunedir=${2:-tune-$corpus}
 
 cd $PBS_O_WORKDIR
+cd $(dirname $tunedir)
+tunedir=$(basename $tunedir)
 mkdir -p $tunedir
 
 CAUX=""

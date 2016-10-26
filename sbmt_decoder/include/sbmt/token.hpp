@@ -1,6 +1,6 @@
 #ifndef   SBMT_TOKEN_HPP
 #define   SBMT_TOKEN_HPP
-
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #include <sbmt/token/token.hpp>
 #include <sbmt/token/indexed_token.hpp>
 #include <sbmt/token/fat_token.hpp>

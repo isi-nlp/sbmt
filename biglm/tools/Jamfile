@@ -1,3 +1,5 @@
+import sbmt-util ;
+
 SRILM_ROOT = "/home/nlg-01/chiangd/pkg64/srilm" ;
 SRILM_LIBDIR = "$(SRILM_ROOT)/lib/i686-m64_c" ;
 
@@ -20,3 +22,15 @@ exe tunelm : tunelm.cpp FilterNgram.cpp use_srilm ;
 exe rescore_lines : rescore_lines.cpp FilterNgram.cpp use_srilm ;
 
 exe rescore_interpolated : rescore_interpolated.cpp FilterNgram.cpp use_srilm ;
+
+sbmt-util.install install 
+  : 
+  : rescore_interpolated rescore_lines tunelm 
+  : # no libs
+  : # no headers
+  : quantize.py
+    manku.py
+    quantize-uniform.py
+    repair-nz.pl
+  ;
+

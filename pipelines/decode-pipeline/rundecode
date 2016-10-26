@@ -136,19 +136,21 @@ if not os.path.exists(bestNraw):
     cfg.execute(d,'touch %s' % omitfile)
     if os.path.exists(bestNraw):
         try:
-            cfg.execute(d,"cat %s | grep -o '^NBEST sent=[0-9]* nbest=0 .* text-length=' | sed -e 's/NBEST sent=// ; s/ .*$//' | uniq > %s" % (bestNraw,omitfile))
+            cfg.execute(d,"cat %s | grep -o '^NBEST sent=[0-9]* nbest=0 ' | sed -e 's/NBEST sent=// ; s/ .*$//' | uniq > %s" % (bestNraw,omitfile))
         except:
             pass # if no decodes have occurred, then no matches, then fail
     pbsfile = os.path.join(d.tmpdir,'nodefile')
+    nodestr = ''
     if pbsfile is not None:
         for v,line in enumerate(open(pbsfile)):
+            nodestr = nodestr + ' ' + line.strip()
             mpisize = v + 1
         mpiscript = os.path.join(bindir,'mpiserv')
         decodefile = decodescript.write_script(d,'nbest',include_instruction_pipe=True,logfile=True)
         inputcmd = string.Template("cat $corpus | $bin/lc | $omitsc $omitfile")
         inputcmd = inputcmd.substitute(corpus=d.config['corpus'],omitfile=omitfile,omitsc=omitsc,bin=bindir)
         scoopcmd = string.Template('python -m scoop -v -n$size --hostfile $nodefile /home/nlg-02/pust/scoopool $decoder')
-        scoopcmd = scoopcmd.substitute(size=mpisize,decoder=decodefile,nodefile=os.path.join(d.tmpdir,'nodefile'))
+        scoopcmd = scoopcmd.substitute(size=max(1,mpisize),decoder=decodefile,nodefile=os.path.join(d.tmpdir,'nodefile'))
         cfg.execute(d,inputcmd + ' | ' + scoopcmd + ' >> ' + bestNraw)
     else:
         decodefile = decodescript.write_script(d,'nbest',include_instruction_pipe=True,logfile=False)
@@ -165,6 +167,7 @@ else:
     print >> sys.stderr, 'decoding skipped. remove $outdir/nbest.raw to re-decode'
 
 sortcmd="grep '^NBEST' < %s > %s" % (bestNraw,bestNsort)
+
 if not os.path.exists(bestNsort) or not os.path.exists(best1raw):
     cfg.execute(d,sortcmd)
     cfg.execute(d,'grep "^NBEST sent=[0-9]* nbest=0" < %s > %s' % (bestNsort,best1raw))
@@ -172,15 +175,13 @@ if not os.path.exists(bestNsort) or not os.path.exists(best1raw):
 bestNxmltmp = os.path.join(d.tmpdir,'nbesttmp.xml')
 bestNxml = os.path.join(d.outdir,'nbest.xml')
 
-if 'tstmaster' in d.config and d.config['tstmaster']:
-    if not os.path.exists(bestNxml):
-        sgmlize = os.path.join(d.scriptdir,'sgmlize')
-        bestNxmltmp = os.path.join(d.tmpdir,'nbesttmp.xml')
-        bestNxml = os.path.join(d.outdir,'nbest.xml')
-        cfg.execute(d,'perl -I %s %s --no-components --weight-file %s --hyp %s --tstmaster %s > %s' % (d.scriptdir,sgmlize,weights,bestNsort,d.config['tstmaster'],bestNxmltmp))
-        cfg.execute(d,'mv $xmltmp $xml',xml=bestNxml, xmltmp=bestNxmltmp)
-    else:
-        print >> sys.stderr, 'xml output skipped. remove $outdir/nbest.xml to re-create'
+scoreargmap = { 'decodehyp': best1hyp
+              , 'decoderaw': best1raw
+              , 'nbestraw':bestNraw
+              , 'corpus':d.config['corpus'] 
+              }
+if 'origcorpus' in d.config and d.config['origcorpus']:
+    scoreargmap['origcorpus'] = d.config['origcorpus']
 
 extract = os.path.join(d.scriptdir,'extract-hypothesis.pl')
 if not os.path.exists(best1hyp):
@@ -188,7 +189,14 @@ if not os.path.exists(best1hyp):
     cfg.execute(d,extract + ' ' + best1raw + ' > ' + best1hyptmp)
     cfg.execute(d,'mv %s %s' % (best1hyptmp,best1hyp))
 
-scoreargmap = {'decodehyp': best1hyp}
+if 'tstmaster' in d.config and d.config['tstmaster']:
+    scoreargmap['origcorpus'] = d.config['origcorpus']
+    bestNxml = os.path.join(d.outdir,os.path.basename(d.config['tstmaster']))
+    if not os.path.exists(bestNxml):
+        cfg.execute(d,string.Template(d.config['decoder']['package']).substitute(scoreargmap) + ' > ' + bestNxmltmp)
+        cfg.execute(d,'mv %s  %s' % (bestNxmltmp,bestNxml))
+    else:
+        print >> sys.stderr, 'xml output skipped. remove $outdir/nbest.xml to re-create'
 
 for file,cmd in d.config['decoder']['score'].iteritems():
     try:

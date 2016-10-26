@@ -27,11 +27,16 @@ PIPESTEP=$PIPELINE/ruleset-pipeline
 RULESET=${1:-ruleset}
 
 cd $PBS_O_WORKDIR
+cd $(dirname $RULESET)
+RULESET=$(basename $RULESET)
 mkdir -p $RULESET
 
+if ! test -d $RULESET/xsearchdb; then 
 $PIPESTEP/run.sh -s $($PIPELINE/util/findlocalpath training.pipeline.resource) \
                  -m $($PIPELINE/util/findlocalpath aux) \
                  -c $($PIPELINE/util/gatherconfig) \
                  -o $RULESET \
                 -nk 2> $RULESET/pipeline.log 
-
+else 
+  echo "xsearchdb already present. to re-run, delete xsearchdb"
+fi

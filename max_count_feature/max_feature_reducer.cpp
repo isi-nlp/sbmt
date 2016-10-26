@@ -20,6 +20,8 @@ using std::vector;
 using std::make_pair;
 using std::cin;
 using std::cout;
+using std::cerr;
+using std::endl;
 using std::stringstream;
 /*
 # requires mapreduce be specified to use two keys for sorting, 1 for partitioning
@@ -43,8 +45,14 @@ bool get_keyval(istream& in, tuple<string&,string&,long double&> tpl)
         stringstream sstr(sv.back());
         string dd("errg");
         sstr >> dd;
+        try {
         tpl.get<2>() = lexical_cast<long double>(dd);
         tpl.get<1>() = join(make_pair(sv.begin() + 1, sv.end() -1), "\t");
+        } catch(...) {
+	  cerr << "line: " << line << endl;
+          cerr << "dd: " << dd << endl;
+	  throw;
+	}
         return true;
     } else {
         return false;
