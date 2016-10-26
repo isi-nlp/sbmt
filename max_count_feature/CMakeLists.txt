@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(max_count_feature)
 
-find_package(Boost REQUIRED COMPONENTS program_options regex thread system)
+find_package(Boost REQUIRED COMPONENTS program_options regex thread system locale)
 include_directories(${Boost_INCLUDE_DIRS} .)
 
 add_executable(rootcount rootcount.cpp)
@@ -90,6 +90,8 @@ target_link_libraries(ruleviz xrsparse sbmt)
 add_executable(substrsearch substrsearch.cpp)
 target_link_libraries(substrsearch gusc ${Boost_REGEX_LIBRARY})
 
+add_executable(lower lower.cpp)
+target_link_libraries(lower ${Boost_LOCALE_LIBRARY})
 install(TARGETS remove_internals
                 rootcount
                 root_hw_count
@@ -120,6 +122,7 @@ install(TARGETS remove_internals
                 ruleviz
                 substrsearch
                 taglex
+                lower
         DESTINATION bin
        )
 install(PROGRAMS 
