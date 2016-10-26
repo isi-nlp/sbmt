@@ -109,6 +109,7 @@ install(TARGETS cn_to_lattice
                 unknown_word_rules
                 unknown_words
                 view_runtime_infos
+                mark_head_xrs
         DESTINATION bin)
 
 file(GLOB SCRIPTFILES *.pl *.sh *.py *.pm *.jar)

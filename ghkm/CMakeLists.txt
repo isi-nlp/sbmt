@@ -65,5 +65,5 @@ target_link_libraries(extract
 #                      db_cxx 
                       gzstream treelib ${Boost_REGEX_LIBRARY})
 
-install(TARGETS fix_collins extract DESTINATION bin)
+install(TARGETS fix_collins extract restruct DESTINATION bin)
 install(PROGRAMS restruct/deint_deriv.pl restruct/deint_deriv_aux.pl DESTINATION bin)

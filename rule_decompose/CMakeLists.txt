@@ -6,6 +6,7 @@ include_directories(${Boost_INCLUDE_DIRS} .)
 link_libraries(xrsparse sbmt graehl ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 add_library(binalgo binalgo.cpp)
+target_include_directories(binalgo INTERFACE .)
 
 add_executable(leaflm leaflm.cpp)
 target_link_libraries(leaflm binalgo)
