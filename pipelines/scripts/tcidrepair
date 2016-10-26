@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+
+import sys
+
+for line in sys.stdin:
+    v = line.rstrip('\n').split('\t')
+    tgt = v[0]
+    rcmp = {}
+    if len(v) > 1:
+      tcsrc = v[1]
+      for s in tcsrc.split():
+        sl = s.decode('utf-8').lower().encode('utf-8')
+        if sl != s:
+            rcmp[sl] = s
+    rctgt = []
+    
+    capnext = True
+    sntmrk = set(['.','!','?'])
+    for t in tgt.split():
+        if t in rcmp:
+            rctgt.append(rcmp[t])
+        else:
+            rctgt.append(t)
+        if capnext:
+            r = rctgt[-1].decode('utf-8')
+            r = r[0].upper() + r[1:]
+            rctgt[-1] = r.encode('utf-8')
+            capnext = False
+        #if t in sntmrk:
+        #    capnext = True
+    print ' '.join(rctgt)

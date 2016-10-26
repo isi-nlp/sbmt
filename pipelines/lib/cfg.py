@@ -503,6 +503,7 @@ class store_corpus(argparse.Action):
         values = resolve(values)
         scfg = load_config(values)
         self.place(namespace,'corpus','corpus',values,scfg)
+        self.place(namespace,'orig-corpus','origcorpus',values,scfg)
         self.place(namespace,'byline-ne-corpus','necorpus',values,scfg)
         self.place(namespace,'tstmaster','tstmaster',values,scfg)
         self.placev(namespace,'lc-tok-refs','lctokrefs',values,scfg)

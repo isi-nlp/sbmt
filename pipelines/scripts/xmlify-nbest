@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+
+import os, sys, xml
+import xml.etree.ElementTree as ET
+import xml.dom.minidom as minidom
+import itertools
+import argparse
+
+ap = argparse.ArgumentParser(description='inject tab-separated NBEST results from STDIN, into an elisa corpus XML file')
+ap.add_argument('xmlfile',help='the orginal XML file, containing the sources that were translated')
+ap.add_argument('--tag','-t',default='SEGMENT',help='the tag of the section in the orginal XML file that should be populated with NBEST results')
+ap.add_argument('--minimal','-m',action='store_true',default=False,help='eliminate extraneous sections from original XML file')
+
+opts = ap.parse_args(sys.argv[1:])
+
+
+tree = ET.parse(opts.xmlfile)
+tag = opts.tag
+minimal = opts.minimal
+
+# this gets rid of extraneous whitespace, so we can use a pretty-printer for the output
+for x in tree.iter():    
+    if x.text is not None:
+        x.text = x.text.strip()
+    if x.tail is not None:
+        x.tail = x.tail.strip()
+
+def nvec():
+    for x in sys.stdin:
+        yield x.strip().split('\t')
+
+if minimal:
+    def remove_extraneous(elem,tg):
+        for x in elem.getchildren():
+            delete = True
+            for y in x.iter(tg):
+                delete = False
+                break
+            if delete:
+                elem.remove(x)
+            else:
+                for x in elem.getchildren():
+                    remove_extraneous(x,tg)
+    remove_extraneous(tree.getroot(),tag)
+
+# this injects the nbest results into each segment section of the original XML file
+for x,(id,nbestlist) in itertools.izip(tree.iter(tag),itertools.groupby(nvec(),lambda x : x[0])):
+    nbest = ET.Element('NBEST')
+    for nb in nbestlist:
+        hyp = ET.SubElement(nbest,'HYP')
+        if len(nb) > 2:
+            hyp.set('cost',str(nb[2]))
+        text = ET.SubElement(hyp,'TEXT')
+        try:
+            text.text = ' '.join(nb[1].decode('utf-8').split()) + '\n'
+        except:
+            print >> sys.stderr, 'ERROR on', nb
+            raise
+        if len(nb) > 3:
+            feats = ET.SubElement(hyp,'FEATURES')
+            for k,v in (p.split('=') for p in nb[3].split()):
+                feat = ET.SubElement(feats,'FEATURE')
+                feat.set('name',k)
+                feat.set('value',str(v))
+    if minimal:
+        id = x.attrib['id']
+        x.clear()
+        x.set('id',id)
+    x.append(nbest)
+    
+#print ET.tostring(tree.getroot(), 'utf-8')
+# this pretty prints the new XML file
+rough_string = ET.tostring(tree.getroot(), 'UTF-8')
+reparsed = minidom.parseString(rough_string)
+print reparsed.toprettyxml(indent=" ",encoding='utf-8')
+
+

@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+
+import re, sys, collections, subprocess
+mtchre = re.compile(r' -> (.*) ### ')
+
+mp = collections.defaultdict(list)
+
+morf = subprocess.Popen(' '.join(sys.argv[2:]),shell=True,stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+
+for line in open(sys.argv[1]):
+    m = mtchre.search(line)
+    v = [mm[1:-1] for mm in m.group(1).strip().split()]
+    mp[' '.join(v)].append(line.strip())
+
+#print >> sys.stderr, mp
+
+def ruleset(mp,line):
+    v = line.strip().split()
+    for x in xrange(len(v)):
+        for y in xrange(x,len(v)):
+            substr = ' '.join(v[x:y+1])
+            if substr in mp:
+                for rule in mp[substr]:
+                    yield rule
+
+while True:
+    line = sys.stdin.readline()
+    if line == '':
+        break
+    output = set()
+    for rule in ruleset(mp,line):
+        output.add(rule)
+    morf.stdin.write(line)
+    morfline = morf.stdout.readline()
+    for rule in ruleset(mp,morfline):
+        output.add(rule)
+    for rule in output:
+        print rule
+    print
+    sys.stdout.flush()
