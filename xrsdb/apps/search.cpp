@@ -1,3 +1,4 @@
+//
 //# ifndef NDEBUG
 //# define BOOST_ENABLE_ASSERT_HANDLER 1
 //# endif
