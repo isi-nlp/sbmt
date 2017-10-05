@@ -2941,6 +2941,7 @@ void print_results( xequiv xeq
             }
         }
     } else {
+        SBMT_INFO_STREAM(decoder_domain, "writing forest for sentence " << id << " beginning");
         print_forest( std::cout
                     , xeq
                     , h
@@ -2948,6 +2949,7 @@ void print_results( xequiv xeq
                     , dd.weight_maker(spn,opts,info_pool)
                     , opts
                     );
+        SBMT_INFO_STREAM(decoder_domain, "writing forest for sentence " << id << " complete");
         std::cout << std::endl;
     }
     if (opts.append_rules) {
@@ -3545,16 +3547,6 @@ void decode( gusc::lattice_ast const& lat
     span_t topspn(dd.smap.begin()->first,(--dd.smap.end())->first);
     xequiv rootequiv(topspn,h.dict.toplevel_tag(),dd.factories.size());
     try {
-        /*
-        load_rules( dd.skipg
-                  , dd.smap
-                  , dd.wtm
-                  , h
-                  , opts.dbdir
-                  , dd.sortpool
-                  , info_rule_sorter(&dd.gram,dd.factories,&weights,&opts.priormap)
-                  );
-        */
         decode_data::mapsvtx::iterator right;
         decode_data::mapsvtx::reverse_iterator left;
         //std::cerr << "weights: " << print(weights,h.fdict) << '\n';
@@ -3569,11 +3561,14 @@ void decode( gusc::lattice_ast const& lat
         //std::cerr << std::endl;
         if (not dd.chrt[topspn].empty()) rootequiv = dd.chrt[topspn][0][0];
         dd.chrt.clear();
+        SBMT_INFO_STREAM(decoder_domain, "printing results for sentence " << id);
         print_results(rootequiv,id,dd,opts,h);
     } catch(std::exception const& exptn) {
+        SBMT_INFO_STREAM(decoder_domain, "printing results for sentence " << id << " after exception: " << exptn.what());
         print_results(rootequiv,id,dd,opts,h,exptn.what());
         throw;
     } catch(...) {
+        SBMT_INFO_STREAM(decoder_domain, "printing results for sentence " << id << " after unknown exception");
         print_results(rootequiv,id,dd,opts,h,"unknown error");
         throw;
     }
