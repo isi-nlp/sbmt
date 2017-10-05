@@ -5,7 +5,7 @@ import os
 import cfg
 import sys
 import multiprocessing
-
+import time
 dir = os.path.abspath(os.path.dirname(__file__))
 
 parser = ArgumentParser()
@@ -13,9 +13,23 @@ d = cfg.parse_args(parser,config='$outdir/rules.config')
 hp = d.hadoop
 
 #print >> sys.stderr, d.config
-def runit(s,h):
-    s.run(hp)
-    return 0
+
+def runit(x,y):
+  n = 0
+  while True:
+    try:
+        if n > 0:
+            print >> sys.stderr, "rerunning runit"
+        x.run(y)
+        return 0
+    except:
+        if n <= 3:
+            n += 1
+            print >> sys.stderr, "WARNING. runit failed. retrying in 1 minute"
+            time.sleep(60)
+        else:
+            raise
+
 
 if os.path.exists(os.path.join(d.outdir,'rules.final')):
     hp.syscall('mv ' + os.path.join(d.outdir,'rules.final') + ' ' + d.tmpdir)

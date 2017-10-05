@@ -1,6 +1,7 @@
 /** LWNgramLM.cpp -- implementation of the LWNgramLM.
  * $(Id).
  */
+#pragma GCC diagnostic ignore "-Wunused-local-typedefs"
 #include <memory>
 #include <fstream>
 #include <sbmt/logmath.hpp>

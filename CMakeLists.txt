@@ -15,13 +15,14 @@ foreach(lv ${Boost_LIBRARY_DIRS})
 endforeach(lv)
 
 foreach(lv ${TBB_LIBRARIES})
- get_filename_component(tlv ${lv} DIRECTORY)
+ get_filename_component(tlv ${lv} PATH)
  list(APPEND LIB_LIST ${tlv})
 endforeach(lv)
 
 list(REMOVE_DUPLICATES LIB_LIST)
 link_directories(${LIB_LIST})
 
+set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib/")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 add_definitions( -D__GCC3__=1
@@ -33,9 +34,11 @@ add_definitions( -D__GCC3__=1
                  -DNO_QT=1
                  -DNOTRACE=1
                )
+
 add_subdirectory(NEURAL_LANGUAGE_MODEL)
 add_subdirectory(tbb_alloc)
 add_subdirectory(gusc)
+add_subdirectory(guppy)
 add_subdirectory(graehl)
 add_subdirectory(xrsparse)
 add_subdirectory(ghkm)
@@ -52,6 +55,7 @@ add_subdirectory(neural_collins)
 add_subdirectory(rule_head)
 add_subdirectory(max_count_feature)
 add_subdirectory(utilities)
+add_subdirectory(vocabfilter)
 add_subdirectory(rule_decompose)
 add_subdirectory(source_syntax)
 add_subdirectory(srl)

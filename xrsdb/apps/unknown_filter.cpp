@@ -6,7 +6,7 @@
 # include <boost/program_options.hpp>
 # include <boost/filesystem/convenience.hpp>
 # include <boost/filesystem/operations.hpp>
-
+# include <boost/foreach.hpp>
 # include <iostream>
 # include <vector>
 
@@ -21,6 +21,7 @@ namespace fs = boost::filesystem;
 
 struct options {
     fs::path dbdir;
+    bool dumpknown;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -36,6 +37,10 @@ options parse_options(int argc, char** argv)
         , po::value(&opts.dbdir)
         , "xrsdb root directory"
         )
+        ( "knownset,k"
+	, po::bool_switch(&opts.dumpknown)
+	, "dump the known set (words guaranteed to be translated)" 
+	)
         ( "help,h"
         , "generate this message"
         );
@@ -98,6 +103,10 @@ int main(int argc, char** argv)
     options opts = parse_options(argc, argv);
     header h;
     load_header(h,opts.dbdir);
+    if (opts.dumpknown) {
+      BOOST_FOREACH(sbmt::indexed_token word, h.knownset) std::cout << h.dict.label(word) << '\n';
+        return 0;
+    }
     map<string,bool> seen;
     string somewords;
     while (getline(cin,somewords)) {

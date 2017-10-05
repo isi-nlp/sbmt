@@ -52,7 +52,7 @@ exe extract
     c++-src/extract.C
     /boost/regex
     /site-config//db
-    /site-config//db_cxx
+    #/site-config//db_cxx
     ../gzstream
     ../treelib
   ;

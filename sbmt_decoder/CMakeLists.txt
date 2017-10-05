@@ -10,3 +10,5 @@ add_library(sbmt ${SRCFILES})
 include_directories(${Boost_INCLUDE_DIRS})
 target_include_directories(sbmt PUBLIC include ../boost_sandbox ${TBB_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 target_link_libraries(sbmt graehl RuleReader gusc biglm LWCommon LWLangModel xrsparse nplm ${Boost_LIBRARIES})
+
+install(TARGETS sbmt DESTINATION lib)

@@ -14,6 +14,7 @@ import pickle
 import os
 import errno
 import multiprocessing
+import time
 
 def makemapper(steps,d,configstr,output,subcorpora=False):
     config = d.config
@@ -130,8 +131,19 @@ parser.add_argument( '-s','--subcorpora'
                    )
 
 def runit(x,y):
-    x.run(y)
-    return 0
+  n = 0
+  while True:
+    try:
+        x.run(y)
+        return 0
+    except:
+        if n <= 3:
+            n += 1
+            print >> sys.stderr, "WARNING. runit failed. retrying in 1 minute"
+            time.sleep(60)
+        else:
+            raise
+
 if __name__ == '__main__':
     os.putenv('LANG','C')
     os.putenv('LC_ALL','C')

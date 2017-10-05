@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+
+import re, sys, collections
+mtchre = re.compile(r' -> (.*) ### ')
+
+mp = collections.defaultdict(list)
+
+
+for line in open(sys.argv[1]):
+    m = mtchre.search(line)
+    v = [mm[1:-1] for mm in m.group(1).strip().split()]
+    mp[' '.join(v)].append(line.strip())
+
+#print >> sys.stderr, mp
+while True:
+    line = sys.stdin.readline()
+    if line == '':
+        break
+    output = set()
+    v = line.strip().split()
+    for x in xrange(len(v)):
+        for y in xrange(x,len(v)):
+            substr = ' '.join(v[x:y+1])
+            if substr in mp:
+                for rule in mp[substr]:
+                    output.add(rule)
+    for rule in output:
+        print rule
+    print
+    sys.stdout.flush()

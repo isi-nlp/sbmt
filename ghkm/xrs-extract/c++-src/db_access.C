@@ -87,7 +87,7 @@ db_open(DB*& dbp, const char *db_name, bool read_only) {
      ( DB_RDONLY | DB_DIRTY_READ ) : DB_CREATE; 	
 	
 	if ((ret = dbp->open(dbp,
-#if	DB_VERSION_MAJOR	==  4 && DB_VERSION_MINOR > 1
+#if	DB_VERSION_MAJOR	==  4 && DB_VERSION_MINOR > 1 || DB_VERSION_MAJOR > 4
 		NULL,
 #endif
 		db_name, NULL, DB_ACCESS, mode, 0664)) != 0) {

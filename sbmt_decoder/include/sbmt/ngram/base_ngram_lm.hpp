@@ -655,9 +655,9 @@ struct fat_ngram_lm
 
     void replace_digits(std::string & s) const
     {
-        boost::locale::generator gen;
-        std::locale loc = gen("en_US.utf-8");
-        s = boost::locale::to_lower(s,loc);
+      //boost::locale::generator gen;
+      //std::locale loc = gen("en_US.utf-8");
+      //s = boost::locale::to_lower(s,loc);
         if (opt.lm_at_numclass) replace_digits_with(s,'@');
 	
     }

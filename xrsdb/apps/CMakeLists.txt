@@ -41,11 +41,21 @@ add_executable(xrsdb_populate populate.cpp)
 add_executable(xrsdb_populate2 populate2.cpp)
 target_link_libraries(xrsdb_populate2 xrsdb_search_util)
 
+add_executable(xrsdb_assignkeys assignkeys.cpp)
+
+add_executable(xrsdb_binarize binarize.cpp)
+target_link_libraries(xrsdb_binarize binalgo)
+
+add_executable(xrsdb_retrieval retrieval.cpp)
+
+add_executable(nth nth.cpp)
+
 add_executable(xrsdb_search search.cpp)
 target_include_directories(xrsdb_search PRIVATE .)
 target_link_libraries(xrsdb_search xrsdb_search_util sbmt_util ${TBB_LIBRARIES} tbb_alloc)
 
-install(TARGETS readforest
+install(TARGETS nth
+                readforest
                 xrsdb_dump_index
                 xrsdb_dump
                 xrsdb_batch_retrieval
@@ -57,8 +67,17 @@ install(TARGETS readforest
                 xrsdb_index
                 xrsdb_populate
                 xrsdb_populate2
+                xrsdb_assignkeys
+                xrsdb_binarize
                 xrsdb_search
                 xrsdb_mergetables
+                xrsdb_retrieval
         DESTINATION bin)
-install(PROGRAMS stree2sig stree2lat DESTINATION bin)
+install(PROGRAMS stree2sig 
+                 stree2lat 
+                 rawsigfreq 
+                 freqmerge 
+                 sent_to_lattice.pl 
+                 xrsdb_write_config 
+        DESTINATION bin)
 install(TARGETS xrsdb_search_util DESTINATION lib)

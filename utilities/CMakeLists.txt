@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(utilities)
 
-find_package(Boost REQUIRED COMPONENTS thread program_options system filesystem regex)
+find_package(Boost REQUIRED COMPONENTS iostreams thread program_options system filesystem regex)
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_library(sbmt_util STATIC lattice_tree_construct.cpp 
@@ -28,6 +28,9 @@ target_link_libraries(prepend_start_words ${Boost_PROGRAM_OPTIONS_LIBRARY} gusc)
 
 add_executable(validate_lattice apps/validate_lattice/validate_lattice.cpp)
 target_link_libraries(validate_lattice gusc sbmt_util)
+
+add_executable(view_runtime_infos apps/view_runtime_infos/view_runtime_infos.cpp)
+target_link_libraries(view_runtime_infos sbmt ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 add_executable(xrs_vocab apps/xrs_vocab/xrs_vocab.cpp)
 target_link_libraries(xrs_vocab RuleReader graehl sbmt 
@@ -75,6 +78,21 @@ target_link_libraries(numcpu sbmt_util)
 add_executable(target_word_features target_word_features/target_word_features.cpp)
 target_link_libraries(target_word_features sbmt)
 
+add_executable(unknown_word_rules unknowns/unknown_word_rules.cpp)
+target_link_libraries(unknown_word_rules 
+                      sbmt graehl xrsparse
+                      ${Boost_PROGRAM_OPTIONS_LIBRARY} 
+                      ${Boost_SYSTEM_LIBRARY} 
+                      ${Boost_FILESYSTEM_LIBRARY})
+
+add_executable(unknown_words unknowns/unknown_words.cpp)
+target_link_libraries(unknown_words 
+                      sbmt gusc
+                      ${Boost_PROGRAM_OPTIONS_LIBRARY} 
+                      ${Boost_SYSTEM_LIBRARY} 
+                      ${Boost_FILESYSTEM_LIBRARY}
+                      ${Boost_IOSTREAMS_LIBRARY})
+
 install(TARGETS cn_to_lattice
                 filter_bad_rules
                 prepend_start_words
@@ -88,8 +106,13 @@ install(TARGETS cn_to_lattice
                 glue_rules
                 maroon_rules
                 target_word_features
+                unknown_word_rules
+                unknown_words
+                view_runtime_infos
+                mark_head_xrs
         DESTINATION bin)
 
 file(GLOB SCRIPTFILES *.pl *.sh *.py *.pm *.jar)
-install(PROGRAMS ${SCRIPTFILES} DESTINATION bin)
-                     
+install(PROGRAMS ${SCRIPTFILES} gluetopmaroon/toprules DESTINATION bin)
+
+                  

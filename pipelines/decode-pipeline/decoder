@@ -1,0 +1,87 @@
+#!/usr/bin/env python
+import cfg
+import hadoop
+import argparse
+import string
+import os, sys, stat
+import itertools
+import yaml
+import decodescript
+import socket
+import subprocess
+os.putenv('LANG','C')
+os.putenv('LC_ALL','C')
+
+
+class default_abspath(argparse.Action):
+    def __call__(self,parser, namespace, values, option_string=None):
+
+        ar = getattr(namespace,'defaults',[])
+        values = os.path.abspath(values)
+        setattr(namespace,self.dest,values)
+        if self.dest == 'rules':
+            ar.append((0,os.path.join(values,'rules.config')))
+        elif self.dest == 'tune_dir':
+            ar.append((1,os.path.join(values,'tune.config')))
+        else:
+            raise Exception('bad storage name')
+        ar.sort()
+        setattr(namespace,'default',':'.join(a[1] for a in ar))
+        setattr(namespace,'defaults',ar)
+
+class FileList(argparse.Action):
+    def __call__(self,parser,namespace,values,option_string=None):
+        setattr(namespace,self.dest,' '.join(os.path.abspath(v) for v in values))
+
+parser = argparse.ArgumentParser()
+parser.add_argument( 'rules'
+                   , nargs='?'
+                   , help='output directory of ruleset pipeline'
+                   , action=default_abspath
+                   , default=argparse.SUPPRESS
+                   )
+parser.add_argument( '-u', '--tune-dir'
+                   , help='tune directory. weights assumed to be weights.final inside'
+                   , action=default_abspath
+                   , nargs='?'
+                   , default=argparse.SUPPRESS
+                   )
+parser.add_argument( '-w', '--weights'
+                   , help='weights file. override weights fond in tune directory'
+                   , nargs='?'
+                   , default=argparse.SUPPRESS
+                   , action=cfg.store_abspath
+                   )
+
+d = cfg.parse_args( parser
+                   , default='$default'
+                   , modeldir=True
+                   , outdirs=False )
+
+
+weights=None
+if 'tune' in d.config and not weights in d.config:
+    d.config['weights']=os.path.join(d.config['tune'],'weights.final')
+if 'weights' in d.config:
+    weights=d.config['weights']
+
+def maketemp(foo):
+    return os.path.join(d.tmpdir,os.path.basename(foo))
+
+def stage(foo):
+    ret = os.path.join(d.outdir,os.path.basename(foo))
+    cfg.execute(d,'mv ' + foo + ' ' + ret)
+    return ret 
+
+bindir = d.config['variables']['rhbin']
+cfg.execute(d,"mkdir -p $outdir/logs",outdir=d.outdir)
+
+decodefile = decodescript.write_script(d,'nbest',include_instruction_pipe=True,logfile=False)
+cmd = string.Template("$bin/lc -f'%id\t%line'| $decoder").safe_substitute(bin=bindir,decoder=decodefile)
+sp = subprocess.Popen(cmd,shell=True,stdin=subprocess.PIPE)
+while True:
+    line = sys.stdin.readline()
+    if line == '':
+        break
+    sp.stdin.write(line)
+

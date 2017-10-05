@@ -39,10 +39,11 @@ int main(int argc, char** argv)
     double wb_dr_rate = 1.0;
     double wb_hr_rate = 1.0;
     double wb_cf_rate = 1.0;
-    wb_rh_rate = boost::lexical_cast<double>(argv[2]);
-    wb_dr_rate = boost::lexical_cast<double>(argv[3]);
-    wb_hr_rate = boost::lexical_cast<double>(argv[4]);
-    wb_cf_rate = boost::lexical_cast<double>(argv[5]);
+    
+    if (argc > 2) wb_rh_rate = boost::lexical_cast<double>(argv[2]);
+    if (argc > 3) wb_dr_rate = boost::lexical_cast<double>(argv[3]);
+    if (argc > 4) wb_hr_rate = boost::lexical_cast<double>(argv[4]);
+    if (argc > 5) wb_cf_rate = boost::lexical_cast<double>(argv[5]);
     std::ios::sync_with_stdio(false);
     collins::model lm(argv[1],wb_rh_rate,wb_dr_rate,wb_hr_rate,wb_cf_rate);
     std::string line;

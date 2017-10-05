@@ -1,3 +1,5 @@
+import sbmt-util ;
+
 project pagh
   : requirements <use>/boost// <include>.
   : usage-requirements <include>.
@@ -43,13 +45,10 @@ exe verify_biglm
   ;
 
 explicit install ;
-install dist
-	: make_biglm use_biglm verify_biglm
-	: <location>./dist
-	  <install-dependencies>on
-          <install-type>LIB
-          <install-type>EXE
-;
+sbmt-util.install dist
+	: 
+        : make_biglm use_biglm verify_biglm
+        ;
 
 install dist2
 	: make_biglm use_biglm verify_biglm

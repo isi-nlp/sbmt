@@ -10,6 +10,7 @@ import string
 import subprocess, shlex
 import argparse
 import errno
+import tempfile
 
 class PTemplate(string.Template):
     pattern = r"""
@@ -502,6 +503,7 @@ class store_corpus(argparse.Action):
         values = resolve(values)
         scfg = load_config(values)
         self.place(namespace,'corpus','corpus',values,scfg)
+        self.place(namespace,'orig-corpus','origcorpus',values,scfg)
         self.place(namespace,'byline-ne-corpus','necorpus',values,scfg)
         self.place(namespace,'tstmaster','tstmaster',values,scfg)
         self.placev(namespace,'lc-tok-refs','lctokrefs',values,scfg)
@@ -513,7 +515,8 @@ def parse_args( parser
               , default = None
               , modeldir = False 
               , write = None
-              , overwrite = True ):
+              , overwrite = True
+              , outdirs = True ):
               
     rootdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     scriptdir = os.path.join(rootdir,'scripts')
@@ -534,20 +537,31 @@ def parse_args( parser
                            , help='colon or space separated list of config-files. ' + 
                                   'later files are merged into earlier ones, overriding conflicts.  ' +
                                   'config-files are in YAML format. %s/default.sbmt.cfg is loaded first.' % os.path.dirname(__file__) )
-    parser.add_argument( '-o', '--output'
-                       , dest='outdir'
-                       , default='.'
-                       , help='output directory. should be the same for run* jobs.  ' +
-                              'defaults to "."' )
-    parser.add_argument( '-t', '--tmpdir' 
-                       , dest='tmpdir' 
-                       , default='$outdir/tmp' 
-                       , help='temporary files stored here.  should be the same for all run* jobs.  ' + 
-                              'defaults to $outdir/tmp' )
+    if outdirs:
+        parser.add_argument( '-o', '--output'
+                           , dest='outdir'
+                           , default='.'
+                           , help='output directory. should be the same for run* jobs.  ' +
+                                  'defaults to "."' )
+        parser.add_argument( '-t', '--tmpdir' 
+                           , dest='tmpdir' 
+                           , default='$outdir/tmp' 
+                           , help='temporary files stored here.  should be the same for all run* jobs.  ' + 
+                                  'defaults to $outdir/tmp' )
+        parser.add_argument('-l', '--logfile'
+                           , dest='logfile'
+                           , help='master logfile. defaults to stderr' )
     d = parser.parse_args(cmdline)
-    d.tmpdir = PTemplate(d.tmpdir).safe_substitute({'outdir':d.outdir})
-    d.tmpdir = os.path.abspath(d.tmpdir)
-    d.outdir = os.path.abspath(d.outdir)
+    if outdirs:
+        d.tmpdir = PTemplate(d.tmpdir).safe_substitute({'outdir':d.outdir})
+        d.tmpdir = os.path.abspath(d.tmpdir)
+        d.outdir = os.path.abspath(d.outdir)
+        if 'logfile' in d and d.logfile is not None:
+            d.logfile = PTemplate(d.logfile).safe_substitute({'outdir':d.outdir,'tmpdir':d.tmpdir})
+            d.logfile = os.path.abspath(d.logfile)
+    else:
+        d.tmpdir = tempfile.mkdtemp()
+        d.outdir = d.tmpdir
     vars = dict(d.__dict__)
     vars['curr'] = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
     if config is not None:
@@ -627,5 +641,10 @@ def parse_args( parser
             #for stp in stepss: 
             #    print >> sys.stderr, yaml.dump(stp.__dict__)
             #print >> sys.stderr, '\n'
+    if 'logfile' in d and d.logfile is not None:
+        execute(d,'mkdir -p '+d.outdir)
+        execute(d,'mkdir -p '+d.tmpdir)
+        d.log = open(d.logfile,'a')
+        os.dup2(d.log.fileno(),sys.stderr.fileno())
     return d
         

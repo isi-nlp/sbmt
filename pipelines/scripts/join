@@ -11,6 +11,7 @@ import sys
 import math
 import itertools
 import multiprocessing
+import time
 
 def crossproduct(*xs,**kw):
     empty = False
@@ -106,12 +107,24 @@ else:
     n = len(d.input)
     joininput = []
     def mapred(hp,inp,jinp,exe,x,d):
-        hp.mapreduce( input=inp
-                    , output=jinp
-                    , mapper='%s -M %s -k %s' % (exe,x,d.numkeys) 
-                    , reducer='NONE' )
-        if d.erase:
-            hp.remove(inp)
+        n = 0
+        while True:
+            try:
+                hp.mapreduce( input=inp
+                            , output=jinp
+                            , mapper='%s -M %s -k %s' % (exe,x,d.numkeys) 
+                            , reducer='NONE' )
+                if d.erase:
+                    hp.remove(inp)
+                return 0
+            except:
+                if n <= 3:
+                    n += 1
+                    print >> sys.stderr, "WARNING mapred failed. retrying in 30 seconds"
+                    time.sleep(30)
+                else:
+                    raise
+
     pool = multiprocessing.Pool()
     for x,inp in enumerate(d.input):
         x = (x-1) % n
