@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #PBS -l walltime=12:00:00                                                                                                                 
-#PBS -l nodes=20:ppn=12
+#PBS -l nodes=10:ppn=12:hexcore
 #PBS -n
 #PBS -N decode
 #PBS -q isi
@@ -41,15 +41,15 @@ if [ "x$weightno" != "x" ]; then
 fi
 
 CAUX=""
-if $PIPELINE/util/findlocalpath aux.$1 ; then
-    CAUX="-m $($PIPELINE/util/findlocalpath aux.$1)"
-fi
+#if $PIPELINE/util/findlocalpath aux.$1 ; then
+#    CAUX="-m $($PIPELINE/util/findlocalpath aux.$1)"
+#fi
 
 set -e
 
-corpusdir=corpus-$corpus
-decodedir=decode-${tune}-${corpus}${ext}
-
+decodedir=${4:-decode-${tune}-${corpus}${ext}}
+cd $(dirname $decodedir)
+decodedir=$(basename $decodedir)
 mkdir -p $decodedir
 
 $PIPESTEP/run.sh $($PIPELINE/util/findlocalpath ruleset) \

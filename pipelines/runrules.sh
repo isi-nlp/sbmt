@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#PBS -l nodes=40:ppn=8
+#PBS -l nodes=20:ppn=8:quadcore
 #PBS -l walltime=96:00:00
 #PBS -n
 #PBS -N rules

@@ -1,4 +1,4 @@
-//# ifndef NDEBUG
+//# Ifndef NDEBUG
 //# define BOOST_ENABLE_ASSERT_HANDLER 1
 //# endif
 # include <tr1/unordered_map>
@@ -2778,6 +2778,19 @@ struct decode_data {
                              , opts
                              );
     }
+
+    std::string hash_string(xedge const& xe) const
+    {
+        std::string ret;
+	bool yes = false;
+	for (int x = 0; x != factories.size(); ++x) {
+	  if (yes) ret += ",";
+	  yes = true;
+	  ret += factories[x].hash_string(gram,xe.infos[x]);
+	}
+	return ret;
+    }
+
     void send_abort()
     {
         {
@@ -2871,6 +2884,7 @@ void print_results( xequiv xeq
                   , decode_data& dd
                   , options const& opts
                   , header& h
+		  , sbmt::weight_vector const& weights
                   , std::string errormsg = "didn't build any toplevel items")
 {
     used_rules_map umap;
@@ -2932,9 +2946,20 @@ void print_results( xequiv xeq
 		      if (h.fdict[v.first] != "rawcount") {
                         std::cout << ' ' << h.fdict.get_token(v.first) << '=' << v.second;
 		      }
+		      //else {
+		      //std::cerr << " rawcount=" << v.second; 
+		      //}
                     }
                     std::cout << std::endl;
                     ++m;
+		    double cc = 0.0;
+		    BOOST_FOREACH(weight_vector::const_reference v,wv) {
+		      cc += weights[v.first] * v.second;
+		    }
+		    //std::cerr << "cost compare: " << tree->cost << " vs " << dot(weights,wv) << " vs " << cc << "\n";
+		    //BOOST_FOREACH(weight_vector::const_reference v,weights) {
+		    //  std::cerr << h.fdict.get_token(v.first) << ':' << v.second << '\n';
+		    //}
                 }
                 ++M;
                 ++treegen;
@@ -3029,6 +3054,9 @@ void decode_row( size_t id
                      ((equivs < opts.histogram) and (pops < opts.softlimit_multiplier*opts.histogram)))
                      and bool(gxe) ) {
                 xedge xe = gxe();
+		//std::cerr << root(xe) << '\t' << cost(xe) << '\t' << dd.hash_string(xe) << '\t';
+		//xe.rule->print(std::cerr,h);
+		//std::cerr << '\n';
                 xequiv_construct& xec = scons[root(xe)][xe];
                 if (xec.empty()) {
                     ++equivs;
@@ -3076,7 +3104,7 @@ void decode_row( size_t id
                 ++y;
             }
             std::sort(xs.begin(),xs.end(),lower_cost());
-            slog << "[" << xs.size() <<  " cells]["<< pops << " pops][cost "<<cost(xs)<<"]";
+            slog << "[" << xs.size() <<  " cells]["<< pops << " pops][cost "<<cost(xs)<<"][cost+heur "<<cost(xs)+heur(xs)<<"]";
             get(dd.chrt,spn) = xs;
             if (spn.left() == 0) {
                 BOOST_FOREACH(indexed_token wd, get(dd.freelists,spn.right())) {
@@ -3518,12 +3546,12 @@ void decode_forest_main( gusc::lattice_ast const& lat
                               , h.dict.toplevel_tag() );
         
         if (ff.size() > 0) rt = ff[0];
-        print_results(rt,id,dd,opts,h);
+        print_results(rt,id,dd,opts,h,weights);
     } catch(std::exception const& exptn) {
-        print_results(rt,id,dd,opts,h,exptn.what());
+        print_results(rt,id,dd,opts,h,weights,exptn.what());
         throw;
     } catch(...) {
-        print_results(rt,id,dd,opts,h,"unknown error");
+        print_results(rt,id,dd,opts,h,weights,"unknown error");
         throw;
     }
 }
@@ -3569,12 +3597,12 @@ void decode( gusc::lattice_ast const& lat
         //std::cerr << std::endl;
         if (not dd.chrt[topspn].empty()) rootequiv = dd.chrt[topspn][0][0];
         dd.chrt.clear();
-        print_results(rootequiv,id,dd,opts,h);
+        print_results(rootequiv,id,dd,opts,h,weights);
     } catch(std::exception const& exptn) {
-        print_results(rootequiv,id,dd,opts,h,exptn.what());
+      print_results(rootequiv,id,dd,opts,h,weights,exptn.what());
         throw;
     } catch(...) {
-        print_results(rootequiv,id,dd,opts,h,"unknown error");
+        print_results(rootequiv,id,dd,opts,h,weights,"unknown error");
         throw;
     }
 }

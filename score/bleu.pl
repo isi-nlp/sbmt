@@ -4,10 +4,13 @@
 use strict;
 use Getopt::Long "GetOptions";
 use File::Temp qw/ :mktemp  /;
+use Cwd 'abs_path';
+use File::Basename;
 
-my $DelNonLatin = "/home/nlg-02/data07/bin/delete-nonlatin.sh";
-my $DeTok = "/home/nlg-02/data07/bin/lw_detokenize.pl";
-my $BleuTool ="/home/nlg-02/data07/bin/scoreTranslation";
+my $scriptdir = dirname(abs_path($0));
+my $DelNonLatin = "$scriptdir/delete-nonlatin.sh";
+my $DeTok = "$scriptdir/lw_detokenize.pl";
+my $BleuTool ="$scriptdir/scoreTranslation";
 my $TmpDir ="/tmp";
 my @References = ();
 my $ID;

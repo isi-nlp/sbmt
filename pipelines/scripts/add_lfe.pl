@@ -16,7 +16,7 @@ use NLPTools qw(:all);
 use NLPRules qw(:all);
 
 use constant PENALTY => -20;	# worst cost for unknown
-use constant NULL => 'UNKNOWN_WORD'; 
+use constant NULL => 'NONE'; 
 
 my $verbose = 0; 
 
@@ -98,9 +98,9 @@ sub load_bilex(\%$) {
 
 ## start: code path 2
 #
-	    if ( $x[2] ne NULL ) {
-		$tref->{$x[1]}{$x[2]} = $x[0];
-		$group{$x[1]} += $x[0]; 
+	    if ( $x[0] ne NULL ) {
+		$tref->{$x[1]}{$x[0]} = $x[2];
+		$group{$x[1]} += $x[2]; 
 		++$n; 
 	    }
 #

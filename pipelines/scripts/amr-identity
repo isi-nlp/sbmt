@@ -6,10 +6,10 @@ okeeword = re.compile(r'^[a-zA-Z0-9_-]*$')
 digi = re.compile('^-?[0-9.]*[0-9][0-9.]*$')
 
 y = 870000000001
-unkstr = '%s(Sxyz("/xyz")) -> "%s" ### unknown=10^-1 id=%s headmarker={{{R(H)}}}'
+unkstr = '%s(Samr-unprocessed("/amr-unprocessed")) -> "%s" ### unknown=10^-1 id=%s headmarker={{{R(H)}}}'
 idstr = '%s(S%s("/%s")) -> "%s" ### identity=10^-1 id=%s headmarker={{{R(H)}}}'
 nmstr = 'Aop("`%s`") -> "%s" ### generic-name=10^-1 id=%s headmarker={{{R(H)}}}'
-aqstr = 'Aquant("%s") -> "%s" ### generic-quant=10^-1 id=%s headmarker={{{R(H)}}}' 
+aqstr = 'Aquant("`%s`") -> "%s" ### generic-quant=10^-1 id=%s headmarker={{{R(H)}}}' 
 
 xsym = []
 if len(sys.argv) > 1:
@@ -21,14 +21,26 @@ else:
 
 
 
-for wd in sys.stdin:
+puncset = set(['(',')','.','"','?',':',';','}','{','[',']','`','*'])
+while True:
+  wd = sys.stdin.readline()
+  wd = wd.decode('utf8').lower().encode('utf8')
+  if wd == '':
+    break
   wdv = wd.split()
   for w in wdv:
-    if w != '<foreign-sentence>' and w != '</foreign-sentence>' and w not in set(['(',')','.','"','?',':',';']):
-      for sym in xsym:
-        if okeeword.match(w):
-            print idstr % (sym,w,w,w,y)
-        y += 1
-      tg = w.replace("(","-lrb-").replace(")","-rrb-")
-      print nmstr % (tg,w,y)
-      y += 1
+    if w != '<foreign-sentence>' and w != '</foreign-sentence>' and w not in puncset:
+        if digi.match(w):
+            print aqstr % (w,w,y)
+            y += 1
+        elif okeeword.match(w):
+            for sym in xsym:
+                print idstr % (sym,w,w,w,y)
+                y += 1
+        else:
+            for sym in xsym:
+                print unkstr % (sym,w,y)
+                y += 1
+  sys.stdout.write('\n')
+  sys.stdout.flush()
+

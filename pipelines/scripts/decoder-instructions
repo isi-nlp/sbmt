@@ -39,6 +39,12 @@ segmenter = subprocess.Popen( '%s/scripts/last_resort_segment %s' % (args.rootdi
                             , stdout=subprocess.PIPE
                             , shell=True )
 
+def removepassthru(w):
+    if len(w) > 2 and w[:2] == "@@":
+        return w[2:]
+    else:
+        return w
+
 def allextras(line):
     extrasfile = tempfile.NamedTemporaryFile(delete=False)
     for extra in extras:
@@ -51,11 +57,12 @@ def allextras(line):
             print >> sys.stderr, 'RULE:', outline
             extrasfile.write(outline + '\n')
     extrasfile.close()
-    splitter.stdin.write(line + '\n')
+    unkline = ' '.join(removepassthru(w) for w in line.split())
+    splitter.stdin.write(unkline + '\n')
     splitline = splitter.stdout.readline().strip()
     print >> sys.stderr, 'split line:', splitline
-    print >> sys.stderr, 'line:', line
-    unkwords.stdin.write(line + ' ' + splitline + '\n')
+    print >> sys.stderr, 'line:', unkline
+    unkwords.stdin.write(unkline + ' ' + splitline + '\n')
     candunks = unkwords.stdout.readline().strip()
     print >> sys.stderr, 'candidate unks:', candunks
     if 'unknown-cmd' in args.config['rule-extraction']:
@@ -80,15 +87,18 @@ def allextras(line):
 latid = re.compile(r'lattice\s+id="\S+"')
 
 def latlines(line,lineno):
-    segmenter.stdin.write(line + '\n')
-    seg = ''
-    while True:
-        seg = segmenter.stdout.readline().strip()
-        if seg == '':
-            break
-        lattice.stdin.write('<foreign-sentence> %s </foreign-sentence>\n' % seg)
+    if line != '':
+        segmenter.stdin.write(line + '\n')
+        seg = ''
+        while True:
+            seg = segmenter.stdout.readline().strip()
+            if seg == '':
+                break
+            lattice.stdin.write('<foreign-sentence> %s </foreign-sentence>\n' % seg)
+            yield latid.sub('lattice id="%s"' % lineno, lattice.stdout.readline().strip())
+    else:
+        lattice.stdin.write('<foreign-sentence> </foreign-sentence>\n')
         yield latid.sub('lattice id="%s"' % lineno, lattice.stdout.readline().strip())
-
 def mainrun():
     lineno = 0
     while True:
@@ -101,11 +111,13 @@ def mainrun():
             lineno = int(vline[0])
             line = '\t'.join(vline[1:])
         line = line.strip()
-        if line == '':
-            continue
-        tokenizer.stdin.write(line + '\n')
-        line = tokenizer.stdout.readline().strip()
-        allrules = allextras(line)
+        #if line == '':
+        #    continue
+        allrules = []
+        if line != '':
+            tokenizer.stdin.write(line + '\n')
+            line = tokenizer.stdout.readline().strip()
+            allrules = allextras(line)
         sys.stdout.write('push-inline-rules\n')
         for rule in allrules:
             sys.stdout.write(rule + '\n')

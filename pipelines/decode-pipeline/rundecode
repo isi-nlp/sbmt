@@ -144,13 +144,23 @@ if not os.path.exists(bestNraw):
     if pbsfile is not None:
         for v,line in enumerate(open(pbsfile)):
             nodestr = nodestr + ' ' + line.strip()
-            mpisize = v + 1
+            mpisize = v + 2
         mpiscript = os.path.join(bindir,'mpiserv')
         decodefile = decodescript.write_script(d,'nbest',include_instruction_pipe=True,logfile=True)
         inputcmd = string.Template("cat $corpus | $bin/lc | $omitsc $omitfile")
         inputcmd = inputcmd.substitute(corpus=d.config['corpus'],omitfile=omitfile,omitsc=omitsc,bin=bindir)
-        scoopcmd = string.Template('python -m scoop -v -n$size --hostfile $nodefile /home/nlg-02/pust/scoopool $decoder')
-        scoopcmd = scoopcmd.substitute(size=max(1,mpisize),decoder=decodefile,nodefile=os.path.join(d.tmpdir,'nodefile'))
+        scoopcmd = string.Template('mpirun -v --mca mpi_warn_on_fork 0 \
+                                              --mca pml bfo \
+                                              --mca mtl self,tcp \
+                                              --mca btl self,tcp \
+                                              --oversubscribe \
+                                              --map-by node:PE=$$($bindir/numcpu) \
+                                              --bind-to none -x PYTHONPATH -x PATH -np $size \
+                                              /home/nlg-02/pust/mpipool $decoder')
+        scoopcmd = scoopcmd.substitute( size=max(2,mpisize)
+                                      , decoder=decodefile
+                                      , bindir=bindir
+                                      )
         cfg.execute(d,inputcmd + ' | ' + scoopcmd + ' >> ' + bestNraw)
     else:
         decodefile = decodescript.write_script(d,'nbest',include_instruction_pipe=True,logfile=False)

@@ -26,7 +26,10 @@ void gen_var_lengths(std::ostream& out, rule_data const& rd)
             istream_iterator<span_t> itr(sstr), end;
             int rl = 0;
             BOOST_FOREACH(rhs_node const& rnode, rd.rhs) {
-                if (itr == end) throw runtime_error("feature srcb too short");
+	        if (itr == end) {
+		    std::cerr << rd << '\n';
+		    throw runtime_error("feature srcb too short");
+		}
                 if (rnode.indexed) {
                     rl += len(*itr);
                     out << '(' << 1 << ',' << len(*itr) << ',' << len(*itr) * len(*itr) << ')' << ' ';

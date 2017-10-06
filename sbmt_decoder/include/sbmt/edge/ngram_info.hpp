@@ -611,7 +611,8 @@ public:
         copy(lmstr.begin(), lmstr.end(), std::ostream_iterator< lm_token<indexed_token> >(std::cerr,","));
         std::cerr << "] + [";
         BOOST_FOREACH(constituent<info_type> c,rng) {
-            std::cerr << hash_string(grammar,*c.info()) << ' ';
+	  if (c.info()) std::cerr << hash_string(grammar,*c.info()) << ' ';
+	  else std::cerr << '*' << ' ';
         }
         std::cerr << "] -> " << hash_string(grammar,boost::get<0>(ret)) << ' ' << boost::get<1>(ret) << ' ' << boost::get<2>(ret) << '\n';
 #endif

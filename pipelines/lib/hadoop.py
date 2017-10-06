@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import subprocess, sys, optparse, os, glob, re
+import subprocess, sys, optparse, os, glob, re, time
 
 class Hadoop:
     def syscall(self,command,echo=True):
@@ -180,8 +180,20 @@ class Hadoop:
     
     def hadoop_put(self,file,dest):
         self.fullstart()
-        self.syscall("%s fs -put %s %s >&2" % (self.hadoop_bin,file,dest))
-    
+        tries = 0
+        while True:
+            try:
+                self.syscall("%s fs -put %s %s >&2" % (self.hadoop_bin,file,dest))
+            except:
+                if self.file_exists(dest):
+                    self.remove(dest)
+                tries += 1
+                if tries >= 5:
+                    raise
+                time.sleep(60)
+                continue
+            break
+
     def serial_mapreduce( self
                         , mapper
                         , reducer

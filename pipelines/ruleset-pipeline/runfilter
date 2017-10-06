@@ -22,7 +22,8 @@ if not os.path.exists(os.path.join(tmpdir,'rules.filtered')):
                 , reducer=os.path.join(scriptdir,'topk','reducer') + \
                   ' --keep-min %(keep-min)s -k %(topk)s --non-lex-min %(non-lex-min)s' % opts
                 , input='rules'
-                , output='rules.ndwf' )
+                , output='rules.ndwf'
+                , options='-D mapred.reduce.tasks=100' )
     hp.remove('rules')
     hp.mapreduce( mapper=os.path.join(bindir,'new_decoder_weight_format')
                 , input='rules.ndwf'

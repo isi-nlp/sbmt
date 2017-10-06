@@ -77,6 +77,17 @@ unsigned count_foreign_lexicals(rule_data const& r)
     return ret;
 }
 
+float balance(rule_data const& r)
+{
+    int src = count_foreign_lexicals(r);
+    int trg = count_lexicals(r);
+    int n = std::max(src - trg,trg - src);
+    int d = std::min(src+1,trg+1);
+    float ret = float(n)/float(d);
+    //std::cerr << "src=" << src << " trg=" << trg << " n=" << n << " d=" << d << " balance=" << ret << '\n';
+    return ret;
+}
+
 template <class V>
 void set_feature(rule_data& r, string const& name, V const& value, bool overwrite = true)
 {
@@ -272,7 +283,7 @@ int main(int argc, char** argv)
             set_feature(r,"foreign-length",count_foreign_lexicals(r));
             set_feature(r,"derivation-size",1);
             set_feature(r,"productions",count_productions(r));
-            
+            set_feature(r,"balance",balance(r));
             BOOST_FOREACH(feature& f, r.features) {
                 string& key=f.key;
                 string& val=f.str_value;
@@ -367,8 +378,8 @@ int main(int argc, char** argv)
                          , add_headmarker
                          , false ); 
     }
-    if (use_maroon) 
-        max_id = maroon_rules(output, rhs_set, corpus_lines, max_id, add_headmarker);
+    //    if (use_maroon) 
+    //    max_id = maroon_rules(output, rhs_set, corpus_lines, max_id, add_headmarker);
 
     cerr << "new xrs rules written to " << output_file << endl;
     //<< " - time elapsed: "<< timer << endl;

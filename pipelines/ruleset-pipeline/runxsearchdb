@@ -50,7 +50,8 @@ hp.put(os.path.join(tmpdir,'topglue.rules'),'topglue.rules')
 
 hp.mapreduce( input=['rules','topglue.rules']
             , output='dict.rules'
-            , mapper=os.path.join(rhdir,'emitdict') )
+            , mapper=os.path.join(rhdir,'emitdict')
+            , options='-jobconf mapred.reduce.tasks=160' )
 
 steps = cfg.steps(d)
 dicts = [ 'dict.rules' ]
@@ -79,7 +80,7 @@ hp.mapreduce( mapper=string.Template('$bindir/xrsdb_assignkeys -dnsf $outdir/xse
             , compress=False
             , sortkeys=4
             , partitionkeys=1
-            , options='-jobconf mapred.reduce.tasks.speculative.execution=false ' ) 
+            , options='-jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.reduce.tasks=160' ) 
 
 hp.getmerge('index',os.path.join(tmpdir,'index'))
 cfg.execute(d,'$bindir/xrsdb_index -bd $outdir/xsearchdb < $tmpdir/index',tmpdir=tmpdir,bindir=rhdir,outdir=outdir)

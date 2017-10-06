@@ -59,7 +59,7 @@ if not d.progress:
     cfg.execute(d,'rm -f %s' % os.path.join(d.outdir,'mira.out'))
     cfg.execute(d,'rm -f %s' % os.path.join(d.outdir,'trainer.weights'))
 
-    capturecmd = "$scriptdir/capture-env $$(env | egrep '^(MPI|PBS)' | sed -e 's/=.*$$//' | tr '\\n' ' ') > $tmpdir/settings"
+    capturecmd = "$scriptdir/capture-env $$(env | egrep '^(MPI|PBS|OMPI)' | sed -e 's/=.*$$//' | tr '\\n' ' ') > $tmpdir/settings"
     capturecmd = cfg.PTemplate(capturecmd).substitute(mp)
     cfg.execute(d,capturecmd)
 
@@ -79,7 +79,7 @@ if not d.progress:
     cmd = cfg.PTemplate(cmd).substitute(mp)
     mp['cmd'] = cmd
 
-    mpirun = 'mpirun -v --mca mpi_warn_on_fork 0 --mca btl self,tcp --oversubscribe --map-by node:PE=$$($bindir/numcpu) --bind-to none -x PYTHONPATH -x PATH -np $nodes /bin/sh -c "$cmd" > $outdir/mira.out'
+    mpirun = 'mpirun -v --mca mpi_warn_on_fork 0 --mca pml bfo --mca mtl self,tcp --mca btl self,tcp --oversubscribe --map-by node:PE=$$($bindir/numcpu) --bind-to none -x PYTHONPATH -x PATH -np $nodes /bin/sh -c "$cmd" > $outdir/mira.out'
     mpirun = cfg.PTemplate(mpirun).substitute(mp)
     cfg.execute(d,mpirun)
 

@@ -298,6 +298,8 @@ template <class CRTP,class LMWord>
 struct fat_ngram_lm
 {
  protected:
+    boost::locale::generator gen;
+    std::locale loc;// = gen("en_US.utf-8");
     typedef CRTP C;
     typedef fat_ngram_lm<CRTP,LMWord> self_type;
  public:
@@ -625,6 +627,7 @@ struct fat_ngram_lm
       : type(type)
       , name("lm")
       , opt(opt)
+      , loc(gen("en_US.utf-8"))
     {
         opt.check();
         clear();
@@ -655,11 +658,8 @@ struct fat_ngram_lm
 
     void replace_digits(std::string & s) const
     {
-      //boost::locale::generator gen;
-      //std::locale loc = gen("en_US.utf-8");
-      //s = boost::locale::to_lower(s,loc);
-        if (opt.lm_at_numclass) replace_digits_with(s,'@');
-	
+	s = boost::locale::to_lower(s,loc);
+        if (opt.lm_at_numclass) replace_digits_with(s,'@');	
     }
 
 

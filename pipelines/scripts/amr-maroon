@@ -12,10 +12,19 @@ else:
 
 
 id = 3470020000
-for s in sys.stdin:
+while True:
+  s = sys.stdin.readline()
+  if s == '':
+      break
+  last = ''
+  s = s.decode('utf8').lower().encode('utf8')
   for w in s.split():
     if w != '<foreign-sentence>' and w != '</foreign-sentence>':
+      last = w
       for sym in xsym:
         print '%s(x0:%s) -> "%s" x0 ### maroon=10^-1 id=%s headmarker={{{R(H)}}}' % (sym,sym,w,id)
         id += 1
-
+  if last != '':
+      print '%s(x0:%s) -> x0 "%s" ### maroon=10^-1 id=%s headmarker={{{R(H)}}}' % (sym,sym,w,id)
+  sys.stdout.write('\n')
+  sys.stdout.flush()

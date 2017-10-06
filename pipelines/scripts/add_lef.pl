@@ -16,7 +16,7 @@ use NLPTools qw(:all);
 use NLPRules qw(:all);
 
 use constant PENALTY => -20;	# worst cost for unknown
-use constant NULL => 'UNKNOWN_WORD'; 
+use constant NULL => 'NULL'; 
 
 my $verbose = 0; 
 
@@ -55,7 +55,7 @@ sub load_bilex(\%$) {
     # purpose: load a possibly compress t-table into a hash
     # paramtr: %ttable (OUT): new t-table to put things into.
     #          The GIVEN-VAR is the 1st-level hash, the OF-VAR 2nd-level. 
-    #          e.g. input file <c,f,e> will create P(e|f) with f on 1st.
+    #          e.g. input file <e,f,c> will create P(e|f) with f on 1st.
     #          $fn (IN): name of the file to load t-table from
     # warning: levels are reversed for missing and spurious word
     # returns: number of valid elements processed.
@@ -98,9 +98,9 @@ sub load_bilex(\%$) {
 
 ## start: code path 2
 #
-	    if ( $x[2] ne NULL ) {
-		$tref->{$x[1]}{$x[2]} = $x[0];
-		$group{$x[1]} += $x[0]; 
+	    if ( $x[0] ne NULL ) {
+		$tref->{$x[1]}{$x[0]} = $x[2];
+		$group{$x[1]} += $x[2]; 
 		++$n; 
 	    }
 #

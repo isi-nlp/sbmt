@@ -12,6 +12,7 @@ using namespace std;
 
 struct options {
     fs::path ntfile;
+    fs::path probs;
     rule_data::rule_id_type id_start;
     bool add_headmarker;
     string exclude;
@@ -41,6 +42,10 @@ options parse_options(int argc, char** argv)
         , po::bool_switch(&opts.add_headmarker)
         , "if set, add the head markers to the maroon rules."
         )
+        ( "probs,p"
+	, po::value(&opts.probs)
+	, "table of probabilities p(NULL|word)"
+	)
         ;
 
     po::variables_map vm;
@@ -56,6 +61,11 @@ options parse_options(int argc, char** argv)
         cerr << "must provide nonterminal file" << endl;
         exit(1);
     }
+    if (!vm.count("probs")) {
+        cerr << desc << endl;
+        cerr << "must provide probabilities file" << endl;
+        exit(1);
+    }
     return opts;
 }
 
@@ -69,13 +79,23 @@ int main(int argc, char** argv)
         , inserter(ntset,ntset.begin())
         )
         ;
+    map<string,double> probmap;
+    fs::ifstream probin(opts.probs);
+    string wd;
+    double p;
+    while(probin >> wd >> p) {probmap[wd] = p;}
 
-    set<string> wdset;
-    copy( istream_iterator<string>(cin)
-        , istream_iterator<string>()
-        , inserter(wdset,wdset.begin())
-        )
-        ;
+    string line;
+    while (std::getline(cin,line)) {
+      set<string> wdset;
+      stringstream sin(line);
+      copy( istream_iterator<string>(sin)
+	  , istream_iterator<string>()
+	  , inserter(wdset,wdset.begin())
+	  )
+          ;
 
-    maroon_rules(cout,ntset,wdset,opts.id_start, opts.add_headmarker);
+      maroon_rules(cout,ntset,wdset,probmap,opts.id_start, opts.add_headmarker);
+      cout << endl;
+    }
 }

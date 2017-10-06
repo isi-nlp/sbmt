@@ -3,4 +3,5 @@
 TGT=$1
 SRC=$2
 BASE=$(dirname $BASH_SOURCE)
-paste <(cat $TGT | $BASE/tcidrepair | /home/nlg-03/mt-apps/tokenizers/lw_detokenize.pl) $SRC | $BASE/srcdetok
+PIPE=$(dirname $BASE)
+paste <(cat $TGT | $BASE/tcidrepair | $PIPE/bin/lw_detokenize.pl) <(tr '\t' ' ' < $SRC) | $BASE/srcdetok

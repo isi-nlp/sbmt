@@ -3,11 +3,13 @@
 # include <sstream>
 # include <string>
 # include <set>
+# include <map>
 # include <boost/regex.hpp>
 # include <boost/algorithm/string.hpp>
 # include <boost/foreach.hpp>
 # include <boost/lexical_cast.hpp>
 # include <string>
+# include <cmath>
 
 using namespace std;
 
@@ -155,6 +157,7 @@ rule_data::rule_id_type
 maroon_rules( ostream& out
             , set<string> const& rhs_set
             , set<string> const& corpus_lines 
+	    , map<string,double> const& probs
             , rule_data::rule_id_type max_id
             , bool add_headmarker )
 {
@@ -175,6 +178,8 @@ maroon_rules( ostream& out
                                  );
         sregex_token_iterator end;
         for (; itr != end; ++itr) if (*itr != "<foreign-sentence>") {
+	    map<string,double>::const_iterator ppos =probs.find(*itr);
+	    if (ppos != probs.end() and ppos->second > 0.0001) {
             set<string>::const_iterator symbol_itr = rhs_set.begin(),
                                         symbol_end = rhs_set.end();
 
@@ -182,8 +187,10 @@ maroon_rules( ostream& out
                 string rule = *symbol_itr + "(x0:" + *symbol_itr + ") -> \""
                     + itr->str() + "\" x0 ### maroon=10^-1 maroon-" + escape_feat(*symbol_itr) + "=10^-1 ";
                 if(add_headmarker){ rule += "headmarker={{{ R(H) }}} ";}
+		rule += "maroon-prob=10^" + boost::lexical_cast<string>(log10(ppos->second)) + " ";
                 rule_set.insert(rule);
             }
+	    }
         }
     }
 

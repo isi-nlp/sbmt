@@ -3,6 +3,7 @@ import sys
 
 for tgt,src in (line.rstrip('\n').split('\t') for line in sys.stdin):
     tgtv = tgt.decode('utf-8').split()
+    origsrc = src.decode('utf-8')
     src = src.decode('utf-8').lower()
     newtgtv = []
     curr = ''
@@ -13,11 +14,20 @@ for tgt,src in (line.rstrip('\n').split('\t') for line in sys.stdin):
             newtgtv.append(curr)
             curr = t
         elif src.find((curr+t).lower()) < 0:
+            spos = src.find(curr.lower())
+            send = spos + len(curr)
+            if spos >= 0 and (send >= len(src) or src[send] == ' ') and (spos == 0 or src[spos-1] == ' '):
+                curr = origsrc[spos:send]
+            #print sys.stderr, curr, '->', origsrc[spos:spos + len(curr)]
             newtgtv.append(curr)
             curr = t
         else:
             curr = curr + t
     if len(curr) > 0:
+        spos = src.find(curr.lower())
+        send = spos + len(curr)
+        if spos >= 0 and (send >= len(src) or src[send] == ' ') and (spos == 0 or src[spos-1] == ' '):
+            curr = origsrc[spos:send]
         newtgtv.append(curr)
     sys.stdout.write(' '.join(newtgtv).encode('utf-8') + '\n')
     sys.stdout.flush()

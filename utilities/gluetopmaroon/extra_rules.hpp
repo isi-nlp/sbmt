@@ -4,6 +4,7 @@
 # include <iosfwd>
 # include <string>
 # include <set>
+# include <map>
 # include <xrsparse/xrs.hpp>
 
 namespace {
@@ -41,6 +42,7 @@ rule_data::rule_id_type
 maroon_rules( std::ostream& out
             , std::set<std::string> const& rhs_set
             , std::set<std::string> const& corpus_lines 
+	    , std::map<std::string,double> const& probs
             , rule_data::rule_id_type max_id
             , bool add_headmarker );
 

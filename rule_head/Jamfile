@@ -52,7 +52,6 @@ exe rule_head_feature_mapper
 lib rule_head_info 
   : rule_head_info2.cpp 
     /sbmt_decoder//sbmt
-    /site-config//tbb
   ;
 
 sbmt-util.install install

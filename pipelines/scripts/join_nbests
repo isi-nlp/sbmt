@@ -69,6 +69,7 @@ def procline(line):
         sys.stderr.write('failed to process ' + line + '\n')
         raise
 
+
 def combine(ln1, ln2):
     ln = {}
     ln['combined'] = True
@@ -84,6 +85,17 @@ def combine(ln1, ln2):
     ln['derivation'] = concat_deriv(ln1['derivation'],ln2['derivation'])
     ln['tree'] = concat_tree(ln1['tree'],ln2['tree'])
     return ln
+
+def lazy_combine_all(*lines):
+    cost = 0
+    v = []
+    for ln in lines:
+        cost += ln['totalcost']
+        v.append(ln)
+    return cost,v
+
+def lazy_compare(ln1,ln2):
+    return cmp(ln1[0],ln2[0])
 
 def combine_all(*lines):
     ln = None
@@ -107,12 +119,14 @@ def write_line(ln):
     ln['features'] = ' '.join('%s=%g' % (key,val) for (key,val) in ln['features'].iteritems() )
     ln['usedrules'] = ln['used-rules']
     print string.Template(fmt).substitute(ln)
+    sys.stdout.flush()
 
 def write_all(lines,delay):
     combined = False
-    for n,ln in enumerate(lazy.product_heap(*lines,cmp=compare, map=combine_all)):
+    for n,lnn in enumerate(lazy.product_heap(*lines,cmp=lazy_compare, map=lazy_combine_all)):
         if n >= nbests:
             break
+        ln = combine_all(*lnn[1])
         if 'combined' in ln and ln['combined'] == True:
             combined = True
         ln['nbest'] = n

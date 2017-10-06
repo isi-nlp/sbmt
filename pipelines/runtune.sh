@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #PBS -l walltime=300:00:00
-#PBS -l nodes=20:ppn=12
+#PBS -l nodes=10:ppn=12:hexcore
 #PBS -N tune
 #PBS -q isi
 #PBS -n
@@ -42,9 +42,9 @@ mkdir -p $tunedir
 
 CAUX=""
 
-if $PIPELINE/util/findlocalpath aux.$1 ; then
-    CAUX="$($PIPELINE/util/findlocalpath aux.$1)"
-fi
+#if $PIPELINE/util/findlocalpath aux.$1 ; then
+#    CAUX="$($PIPELINE/util/findlocalpath aux.$1)"
+#fi
 
 set -e 
 

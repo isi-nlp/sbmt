@@ -11,6 +11,11 @@ for line in open(sys.argv[1]):
     v = [mm[1:-1] for mm in m.group(1).strip().split()]
     mp[' '.join(v)].append(line.strip())
 
+for k,v in mp.iteritems():
+    print >> sys.stderr, k
+    for vv in v: 
+        print >> sys.stderr, '\t', vv
+    print >> sys.stderr, '\n'
 #print >> sys.stderr, mp
 while True:
     line = sys.stdin.readline()
