@@ -40,7 +40,7 @@ while True:
             indict = (digit.sub('@',v) in dictionary)
             oldx = x
             vmv = morfessor.stdout.readline().strip().split()
-            if len(vmv) > 10 or (len(v) > 2 and v[0:2] == '@@'):
+            if len(vmv) > 10 or (len(v) > 2 and v[0:2] == '@@') or indict:
                 vmv = [ v ]
             if len(vmv) > 1:
                 for vm in vmv:

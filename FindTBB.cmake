@@ -141,7 +141,6 @@ getenv_path(TBB_ROOT)
 # construct search paths
 set(TBB_PREFIX_PATH ${TBB_ROOT} ${ENV_TBB_ROOT})
 create_search_paths(TBB)
-
 # get the arch, only used by windows
 if($ENV{TBB_ARCH_PLATFORM})
     set(TBB_ARCH_PLATFORM $ENV{TBB_ARCH_PLATFORM})
@@ -191,23 +190,33 @@ foreach (dir ${TBB_PREFIX_PATH})
   list(APPEND TBB_LIB_SEARCH_PATH ${dir}/lib)
 endforeach ()
 
-
 set(TBB_LIBRARY_NAMES tbb)
 get_debug_names(TBB_LIBRARY_NAMES)
 
-
-find_path(TBB_INCLUDE_DIR
-          NAMES tbb/tbb.h
+find_path(TBB_INCLUDE_DIR NO_DEFAULT_PATH
+          NAMES tbb/mutex.h
           PATHS ${TBB_INC_SEARCH_PATH})
+find_path(TBB_INCLUDE_DIR
+          NAMES tbb/mutex.h
+          PATHS ${TBB_INC_SEARCH_PATH})
+message("TBB_INCLUDE_DIR " ${TBB_INCLUDE_DIR})
 
+find_library(TBB_LIBRARY_RELEASE NO_DEFAULT_PATH
+             NAMES ${TBB_LIBRARY_NAMES}
+             PATHS ${TBB_LIB_SEARCH_PATH})
 find_library(TBB_LIBRARY_RELEASE
              NAMES ${TBB_LIBRARY_NAMES}
+             PATHS ${TBB_LIB_SEARCH_PATH})
+
+find_library(TBB_LIBRARY_DEBUG NO_DEFAULT_PATH
+             NAMES ${TBB_LIBRARY_NAMES_DEBUG}
              PATHS ${TBB_LIB_SEARCH_PATH})
 find_library(TBB_LIBRARY_DEBUG
              NAMES ${TBB_LIBRARY_NAMES_DEBUG}
              PATHS ${TBB_LIB_SEARCH_PATH})
-make_library_set(TBB_LIBRARY)
 
+make_library_set(TBB_LIBRARY)
+message("TBB_LIBRARY " ${TBB_LIBRARY})
 findpkg_finish(TBB)
 
 #on unix we need to also link to rt
@@ -225,10 +234,19 @@ endif ()
 set(TBB_MALLOC_LIBRARY_NAMES tbbmalloc)
 get_debug_names(TBB_MALLOC_LIBRARY_NAMES)
 
+find_path(TBB_MALLOC_INCLUDE_DIR NO_DEFAULT_PATH
+          NAMES tbb/tbb_allocator.h
+          PATHS ${TBB_INC_SEARCH_PATH})
 find_path(TBB_MALLOC_INCLUDE_DIR
-          NAMES tbb/tbb.h
+          NAMES tbb/tbb_allocator.h
           PATHS ${TBB_INC_SEARCH_PATH})
 
+find_library(TBB_MALLOC_LIBRARY_RELEASE NO_DEFAULT_PATH
+             NAMES ${TBB_MALLOC_LIBRARY_NAMES}
+             PATHS ${TBB_LIB_SEARCH_PATH})
+find_library(TBB_MALLOC_LIBRARY_DEBUG NO_DEFAULT_PATH
+             NAMES ${TBB_MALLOC_LIBRARY_NAMES_DEBUG}
+             PATHS ${TBB_LIB_SEARCH_PATH})
 find_library(TBB_MALLOC_LIBRARY_RELEASE
              NAMES ${TBB_MALLOC_LIBRARY_NAMES}
              PATHS ${TBB_LIB_SEARCH_PATH})
@@ -241,22 +259,6 @@ findpkg_finish(TBB_MALLOC)
 
 #=============================================================================
 # Look for TBB's malloc proxy package
-set(TBB_MALLOC_PROXY_LIBRARY_NAMES tbbmalloc_proxy)
-get_debug_names(TBB_MALLOC_PROXY_LIBRARY_NAMES)
-
-find_path(TBB_MALLOC_PROXY_INCLUDE_DIR
-          NAMES tbb/tbbmalloc_proxy.h
-          PATHS ${TBB_INC_SEARCH_PATH})
-
-find_library(TBB_MALLOC_PROXY_LIBRARY_RELEASE
-             NAMES ${TBB_MALLOC_PROXY_LIBRARY_NAMES}
-             PATHS ${TBB_LIB_SEARCH_PATH})
-find_library(TBB_MALLOC_PROXY_LIBRARY_DEBUG
-             NAMES ${TBB_MALLOC_PROXY_LIBRARY_NAMES_DEBUG}
-             PATHS ${TBB_LIB_SEARCH_PATH})
-make_library_set(TBB_MALLOC_PROXY_LIBRARY)
-
-findpkg_finish(TBB_MALLOC_PROXY)
 
 #-----------------------------------------------------------------------------
 # setup timing libs we need to link too

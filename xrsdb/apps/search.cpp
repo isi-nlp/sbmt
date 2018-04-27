@@ -3590,14 +3590,14 @@ void decode( gusc::lattice_ast const& lat
         if (not dd.chrt[topspn].empty()) rootequiv = dd.chrt[topspn][0][0];
         dd.chrt.clear();
         SBMT_INFO_STREAM(decoder_domain, "printing results for sentence " << id);
-        print_results(rootequiv,id,dd,opts,h);
+        print_results(rootequiv,id,dd,opts,h,weights);
     } catch(std::exception const& exptn) {
         SBMT_INFO_STREAM(decoder_domain, "printing results for sentence " << id << " after exception: " << exptn.what());
-        print_results(rootequiv,id,dd,opts,h,exptn.what());
+        print_results(rootequiv,id,dd,opts,h,weights,exptn.what());
         throw;
     } catch(...) {
         SBMT_INFO_STREAM(decoder_domain, "printing results for sentence " << id << " after unknown exception");
-        print_results(rootequiv,id,dd,opts,h,"unknown error");
+        print_results(rootequiv,id,dd,opts,h,weights,"unknown error");
         throw;
     }
 }
