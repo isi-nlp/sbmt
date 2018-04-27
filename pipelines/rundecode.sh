@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-#PBS -l walltime=12:00:00                                                                                                                 
-#PBS -l nodes=10:ppn=12:hexcore
-#PBS -n
-#PBS -N decode
-#PBS -q isi
+
+#SBATCH --time=48:00:00 --ntasks=10 --cpus-per-task=12 --mem=18g --ntasks-per-node=1 --job-name=decode -p isi
+#PBS -l walltime=48:00:00 -l nodes=10:ppn=12:hexcore -n -N decode -q isi
+
 #
 # convenience wrapper for the decode-pipeline
 # useful for running a directory-based set of experiments, where contrastive 
@@ -31,9 +30,9 @@ weightno=$3
 cmd=""
 ext=""
 
-if [ "x$PBS_O_WORKDIR" != "x" ]; then
-    cd $PBS_O_WORKDIR
-fi
+#if [ "x$PBS_O_WORKDIR" != "x" ]; then
+#    cd $PBS_O_WORKDIR
+#fi
 
 if [ "x$weightno" != "x" ]; then
     cmd="-w $($PIPELINE/util/findlocalpath tune-$tune)/weights.$weightno"
@@ -41,9 +40,9 @@ if [ "x$weightno" != "x" ]; then
 fi
 
 CAUX=""
-#if $PIPELINE/util/findlocalpath aux.$1 ; then
-#    CAUX="-m $($PIPELINE/util/findlocalpath aux.$1)"
-#fi
+if $PIPELINE/util/findlocalpath aux.$1 ; then
+    CAUX="-m $($PIPELINE/util/findlocalpath aux.$1)"
+fi
 
 set -e
 
@@ -52,6 +51,8 @@ cd $(dirname $decodedir)
 decodedir=$(basename $decodedir)
 mkdir -p $decodedir
 
+srun cp -r $($PIPELINE/util/findlocalpath ruleset)/xsearchdb $TMPDIR
+export XSEARCHDB=$TMPDIR/xsearchdb
 $PIPESTEP/run.sh $($PIPELINE/util/findlocalpath ruleset) \
                 -s $($PIPELINE/util/findlocalpath $corpus.pipeline.resource) \
                 -u $($PIPELINE/util/findlocalpath tune-$tune) $cmd $CAUX \

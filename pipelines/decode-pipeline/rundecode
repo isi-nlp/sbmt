@@ -90,12 +90,14 @@ d = cfg.parse_args( parser
                    , modeldir=True )
 
 nodes = 1
+nodes = int(os.getenv('SLURM_NTASKS','1'))
+print >> sys.stderr, nodes, "nodes"
 nodefile = os.getenv('PBS_NODEFILE')
 nodeset = set()
 if nodefile:
     for v,line in enumerate(open(nodefile)):
         nodeset.add(line.rstrip())
-nodes = max(len(nodeset),1)
+#nodes = max(len(nodeset),1)
 unodesfile = open(os.path.join(d.tmpdir,'nodefile'),'w')
 print >> unodesfile, socket.gethostname()
 for f in nodeset:
@@ -141,10 +143,11 @@ if not os.path.exists(bestNraw):
             pass # if no decodes have occurred, then no matches, then fail
     pbsfile = os.path.join(d.tmpdir,'nodefile')
     nodestr = ''
-    if pbsfile is not None:
-        for v,line in enumerate(open(pbsfile)):
-            nodestr = nodestr + ' ' + line.strip()
-            mpisize = v + 2
+    if nodes > 1:
+        mpisize = nodes + 2
+        #for v,line in enumerate(open(pbsfile)):
+        #    nodestr = nodestr + ' ' + line.strip()
+        #    mpisize = v + 2
         mpiscript = os.path.join(bindir,'mpiserv')
         decodefile = decodescript.write_script(d,'nbest',include_instruction_pipe=True,logfile=True)
         inputcmd = string.Template("cat $corpus | $bin/lc | $omitsc $omitfile")
@@ -162,6 +165,7 @@ if not os.path.exists(bestNraw):
                                       , bindir=bindir
                                       )
         cfg.execute(d,inputcmd + ' | ' + scoopcmd + ' >> ' + bestNraw)
+        #cfg.execute(d,inputcmd + ' | ' + decodefile + ' >> ' + bestNraw)
     else:
         decodefile = decodescript.write_script(d,'nbest',include_instruction_pipe=True,logfile=False)
         cfg.execute(d , r"cat $corpus | $bin/lc -f'%id\t%line' | $omitsc $omitfile | $decoder >> $nbest 2> >(tee -a $outdir/logs/decoder.log | grep -o 'sentence .* processed' 1>&2)"
@@ -190,14 +194,17 @@ scoreargmap = { 'decodehyp': best1hyp
               , 'nbestraw':bestNraw
               , 'corpus':d.config['corpus'] 
               }
-if 'origcorpus' in d.config and d.config['origcorpus']:
-    scoreargmap['origcorpus'] = d.config['origcorpus']
 
 extract = os.path.join(d.scriptdir,'extract-hypothesis.pl')
 if not os.path.exists(best1hyp):
     best1hyptmp = best1hyp + '.tmp'
     cfg.execute(d,extract + ' ' + best1raw + ' > ' + best1hyptmp)
     cfg.execute(d,'mv %s %s' % (best1hyptmp,best1hyp))
+
+if 'origcorpus' in d.config and d.config['origcorpus']:
+    scoreargmap['origcorpus'] = d.config['origcorpus']
+    cfg.execute(d,"$scriptdir/detok $best $origcorpus > $outdir/1best.hyp.detok",best=best1hyp,scriptdir=d.scriptdir,outdir=d.outdir,origcorpus=d.config['origcorpus'])
+
 
 if 'tstmaster' in d.config and d.config['tstmaster']:
     scoreargmap['origcorpus'] = d.config['origcorpus']

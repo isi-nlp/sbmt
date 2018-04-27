@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-#PBS -l nodes=20:ppn=8:quadcore
-#PBS -l walltime=96:00:00
-#PBS -n
-#PBS -N rules
-#PBS -q isi
+#SBATCH --ignore-pbs --mem-per-cpu=1250m --ntasks=20 --ntasks-per-node=1 --cpus-per-task=8 --job-name=rules --time=96:00:00 -p isi 
+#PBS -l nodes=20:ppn=8:quadcore -l walltime=96:00:00 -n -N rules -q isi
 #
 # convenience wrapper for the ruleset-pipeline
 # useful for running a directory-based set of experiments, where contrastive 
@@ -26,7 +23,7 @@ PIPELINE=$(dirname $(readlink -f $BASH_SOURCE))
 PIPESTEP=$PIPELINE/ruleset-pipeline
 RULESET=${1:-ruleset}
 
-cd $PBS_O_WORKDIR
+#cd $PBS_O_WORKDIR
 cd $(dirname $RULESET)
 RULESET=$(basename $RULESET)
 mkdir -p $RULESET

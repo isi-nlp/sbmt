@@ -319,18 +319,19 @@ private:
 
 void word_trie_data_impl::load()
 {
+    // 2018-04-27 changing cache mechanism to move over entire blocks, compressed
     fs::path tmpdir, cpath;
     if (operate_cache) {
         tmpdir = fs::temp_directory_path();
-        cpath = tmpdir / fs::path(fname) / boost::lexical_cast<std::string>(foffset);
+        cpath = tmpdir / fs::path(fname) ; // / boost::lexical_cast<std::string>(foffset); 
     }
     bool using_cache = operate_cache and fs::exists(cpath);
     if (cache->size()) throw std::runtime_error("cache non-empty while word_trie reloading");
     uint64_t sz;
     if (using_cache) {
-        SBMT_VERBOSE_STREAM(decoder_domain, "loading from " << cpath);
+        SBMT_VERBOSE_STREAM(decoder_domain, "loading from " << cpath << ":" << foffset);
         std::ifstream ifs(cpath.native().c_str());
-        boost::tie(data,sz) = load_word_trie(ifs,0);
+        boost::tie(data,sz) = load_word_trie(ifs,foffset);
     } else {
         std::ifstream ifs(fname.c_str());
         SBMT_VERBOSE_STREAM(decoder_domain,"loading from " << fname << ":" << foffset);
@@ -342,10 +343,7 @@ void word_trie_data_impl::load()
                 fs::create_directories(cpath.parent_path());
                 SBMT_VERBOSE_STREAM(decoder_domain, "writing cache " << cpath);
                 fs::path rndm = fs::unique_path(tmpdir / "%%%%%%%%");
-                std::ofstream ofs(rndm.native().c_str());
-                boost::iostreams::write(ofs,(char*)(&sz),sizeof(uint64_t));
-                boost::iostreams::write(ofs,data.get(),sz);
-                ofs.close();
+		fs::copy_file(fs::path(fname),rndm);
                 fs::rename(rndm,cpath);
             }
         } 

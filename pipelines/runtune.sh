@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-#PBS -l walltime=300:00:00
-#PBS -l nodes=10:ppn=12:hexcore
-#PBS -N tune
-#PBS -q isi
-#PBS -n
+#SBATCH --time=300:00:00 --ntasks=10 --cpus-per-task=12 --ntasks-per-node=1 --mem=18G --job-name=tune -p isi
+#PBS -l walltime=300:00:00 -l nodes=10:ppn=12:hexcore -N tune -q isi -n
 #
 # convenience wrapper for the tune-pipeline
 # useful for running a directory-based set of experiments, where contrastive 
@@ -28,14 +25,14 @@
 #  $PIPELINE/tune-pipeline/run.sh -po tune-$corpus
 # 
 # execute within a pbs multi-node job
-
+echo pwd is $PWD
 
 PIPELINE=$(dirname $(readlink -f $0))
 PIPESTEP=$PIPELINE/tune-pipeline
 corpus=$1
 tunedir=${2:-tune-$corpus}
 
-cd $PBS_O_WORKDIR
+
 cd $(dirname $tunedir)
 tunedir=$(basename $tunedir)
 mkdir -p $tunedir
@@ -48,6 +45,8 @@ CAUX=""
 
 set -e 
 
+cp -r $($PIPELINE/util/findlocalpath ruleset)/xsearchdb $SCRATCHDIR
+export XSEARCHDB=$SCRATCHDIR/xsearchdb
 $PIPESTEP/run.sh $($PIPELINE/util/findlocalpath ruleset) \
   -s $($PIPELINE/util/findlocalpath $corpus.pipeline.resource) \
   -c $($PIPELINE/util/gatherconfig) \

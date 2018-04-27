@@ -1,11 +1,21 @@
 #!/usr/bin/env python
 
-import subprocess, os, sys, re
+import subprocess, os, sys, re, argparse
+
+
+argparser = argparse.ArgumentParser()
+
+argparser.add_argument('dict')
+argparser.add_argument('--morfessor-command',dest='mcmd')
+argparser.add_argument('--w2voov-command',dest='wcmd')
+
+args = argparser.parse_args(sys.argv[1:])
 
 digit = re.compile(r'\d+')
 
-dictionary = set((v.strip() for v in open(sys.argv[1])))
-morfessor = subprocess.Popen(' '.join(sys.argv[2:]),shell=True,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+dictionary = set((v.strip() for v in open(args.dict)))
+morfessor = subprocess.Popen(args.mcmd,shell=True,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+w2voov = subprocess.Popen(args.wcmd,shell=True,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
 
 sentence_boundaries = set(['<foreign-sentence>', '</foreign-sentence>'])
 escs = set(['"','\\'])
@@ -40,7 +50,7 @@ while True:
             indict = (digit.sub('@',v) in dictionary)
             oldx = x
             vmv = morfessor.stdout.readline().strip().split()
-            if len(vmv) > 10 or (len(v) > 2 and v[0:2] == '@@') or indict:
+            if len(vmv) > 10:
                 vmv = [ v ]
             if len(vmv) > 1:
                 for vm in vmv:
@@ -53,13 +63,21 @@ while True:
                 if indict:
                     print 'orig-in-dict="10^-1" ',
                 print ';',
+                if not indict:
+                    w2voov.stdin.write(v+'\n')
+                    ln = w2voov.stdout.readline().strip().split('\t')
+                    if len(ln) == 3 and ln[0] != ln[2]:
+                        print '[%s,%s] "%s" w2voov="10^-%s" ;' % (oldx,x,cstr(ln[2]),ln[1]), 
             else:
-                if len(v) > 2 and v[0:2] == '@@':
-                    print '[%s,%s] "%s" orig-token="10^-1" morf-token="10^-1" ignore-dnt="10^-1" ; ' % (x,x+1,cstr(v[2:])),
                 print '[%s,%s] "%s" orig-token="10^-1" morf-token="10^-1" ' % (x,x+1,cstr(v)),
                 if indict:
                     print 'morf-in-dict="10^-1" orig-in-dict="10^-1" ',
                 print ';',
+                if not indict:
+                    w2voov.stdin.write(v+'\n')
+                    ln = w2voov.stdout.readline().strip().split('\t')
+                    if len(ln) == 3 and ln[0] != ln[2]:
+                        print '[%s,%s] "%s" w2voov="10^-%s" ;' % (x,x+1,cstr(ln[2]),ln[1]),
                 x += 1
     print '};'
     sys.stdout.flush()

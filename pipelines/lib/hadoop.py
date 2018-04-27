@@ -93,7 +93,8 @@ class Hadoop:
         if os.getenv('HADOOP_CONF_DIR','') != '':
             opts += '-R '
         else:
-            os.environ['HADOOP_CONF_DIR'] = '/scratch/hadoop/conf'
+            scratchdir=os.getenv('SCRATCHDIR','/scratch')
+            os.environ['HADOOP_CONF_DIR'] = '%s/hadoop/conf'%scratchdir
         if not self.serial:
             self.syscall('/home/nlg-02/pust/bin/pbs_hadoop_nologs2.py %s >&2' % opts)
         else:

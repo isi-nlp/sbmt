@@ -9,19 +9,19 @@ parser.add_argument('-j','--tune',action='store_true')
 parser.add_argument('-S','--stop',action='store_true')
 d = cfg.parse_args(parser,config='$outdir/tune.config')
 
-nodes = 3
-nodefile = os.getenv('PBS_NODEFILE')
-nodeset = set()
-if nodefile:
-    for v,line in enumerate(open(nodefile)):
-        nodeset.add(line.rstrip())
-nodes = max(len(nodeset),1) + 2
-unodesfile = open(os.path.join(d.tmpdir,'nodefile'),'w')
-print >> unodesfile, socket.gethostname()
-for f in nodeset:
-    if f != socket.gethostname():
-    	print >> unodesfile, f
-unodesfile.close()
+nodes = int(os.getenv('SLURM_NTASKS','1')) + 2
+#nodefile = os.getenv('PBS_NODEFILE')
+#nodeset = set()
+#if nodefile:
+#    for v,line in enumerate(open(nodefile)):
+#        nodeset.add(line.rstrip())
+#nodes = max(len(nodeset),1) + 2
+#unodesfile = open(os.path.join(d.tmpdir,'nodefile'),'w')
+#print >> unodesfile, socket.gethostname()
+#for f in nodeset:
+#    if f != socket.gethostname():
+#    	print >> unodesfile, f
+#unodesfile.close()
 
 mp = {}
 
