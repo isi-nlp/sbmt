@@ -54,10 +54,12 @@ struct ngram_options
     // or the feature weight defaults to 0 just like any other feature. this is critical to
     // tuning systems like mira --michael
     ngram_options( bool lm_at_numclass = true
+		 , bool mixed_case = false
                  , bool openclass_lm = true
                  , score_t unknown_word_prob = 1.0
                  , bool extra_open_unk_prob = false )
         : lm_at_numclass(lm_at_numclass)
+        , mixed_case(mixed_case)
         , openclass_lm(openclass_lm)
         , unknown_word_prob(unknown_word_prob)
         , check_unks(!openclass_lm || extra_open_unk_prob)
@@ -77,6 +79,8 @@ struct ngram_options
         o << "[";
         if (lm_at_numclass)
             o << "@";
+        if(mixed_case) 
+            o << "m";
         if (is_open())
             o << 'o';
         else if (is_closed())
@@ -156,6 +160,7 @@ struct ngram_options
         set_defaults();
         set_closed();
         lm_at_numclass=false;
+        mixed_case=false;
         char c;
         if (!(i >> c)) return;
         if (c!='[') {
@@ -164,9 +169,10 @@ struct ngram_options
         }
         while (i >> c) {
             switch(c) {
-            case ']': return;
-            case ',': break;
-            case '@': lm_at_numclass=true;break;
+            case ']' : return;
+            case ',' : break;
+            case '@' : lm_at_numclass=true;break;
+	    case 'm' : mixed_case=true;break;
             case 'c' : set_closed();break;
             case 'o' : set_open();break;
             case 'u' : set_open_plus_unk();break;
@@ -187,6 +193,7 @@ struct ngram_options
     { n.read(i);return i;}
 
     bool lm_at_numclass;
+    bool mixed_case;
     bool openclass_lm;
     score_t unknown_word_prob;
     bool check_unks;
@@ -658,10 +665,9 @@ struct fat_ngram_lm
 
     void replace_digits(std::string & s) const
     {
-	s = boost::locale::to_lower(s,loc);
+        if (not opt.mixed_case) s = boost::locale::to_lower(s,loc);
         if (opt.lm_at_numclass) replace_digits_with(s,'@');	
     }
-
 
     score_t
     prob_unmixed(const_iterator ctx,unsigned len) const

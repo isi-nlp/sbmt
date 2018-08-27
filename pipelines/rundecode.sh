@@ -51,8 +51,8 @@ cd $(dirname $decodedir)
 decodedir=$(basename $decodedir)
 mkdir -p $decodedir
 
-srun cp -r $($PIPELINE/util/findlocalpath ruleset)/xsearchdb $TMPDIR
-export XSEARCHDB=$TMPDIR/xsearchdb
+#srun cp -r $($PIPELINE/util/findlocalpath ruleset)/xsearchdb $TMPDIR
+#export XSEARCHDB=$TMPDIR/xsearchdb
 $PIPESTEP/run.sh $($PIPELINE/util/findlocalpath ruleset) \
                 -s $($PIPELINE/util/findlocalpath $corpus.pipeline.resource) \
                 -u $($PIPELINE/util/findlocalpath tune-$tune) $cmd $CAUX \

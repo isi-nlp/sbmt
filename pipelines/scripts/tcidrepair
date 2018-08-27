@@ -2,7 +2,10 @@
 
 import sys
 
-for line in sys.stdin:
+while True:
+    line = sys.stdin.readline()
+    if len(line) == 0:
+        break
     v = line.rstrip('\n').split('\t')
     tgt = v[0]
     rcmp = {}
@@ -26,6 +29,7 @@ for line in sys.stdin:
             r = r[0].upper() + r[1:]
             rctgt[-1] = r.encode('utf-8')
             capnext = False
-        #if t in sntmrk:
-        #    capnext = True
+        if t in sntmrk:
+            capnext = True
     print ' '.join(rctgt)
+    sys.stdout.flush()

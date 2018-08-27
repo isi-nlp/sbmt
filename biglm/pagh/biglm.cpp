@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 
-#if 0
+#if 1
 #include <unistd.h>
 #include <sys/mman.h>
 #endif
@@ -89,6 +89,7 @@ lm::~lm() {
   for (size_type i=0; i<values.size(); i++) {
     delete values[i];
   }
+  for (int o=1; o<=order; o++) { munmap(save_start[o],save_length[o]);}
 }
 
 void lm::read_mph(FILE *fp) {
@@ -151,12 +152,12 @@ void lm::read_values(FILE *fp, std::string const& filename) {
     
     cerr << "mmapping " << len << " bytes at offset " << offset << endl;
     
-    boost::iostreams::mapped_file_source mfile(filename,len+residue, offset-residue);
-    //char *buf = reinterpret_cast<char *>(mmap(NULL, len+residue, PROT_READ, MAP_PRIVATE, fileno(fp), offset-residue));
-    //save_start.push_back(buf);
-    //save_length.push_back(len+residue);
-    save_maps.push_back(mfile);
-    char const* buf = mfile.data();
+    //boost::iostreams::mapped_file_source mfile(filename,len+residue, offset-residue);
+    char *buf = reinterpret_cast<char *>(mmap(NULL, len+residue, PROT_READ, MAP_SHARED|MAP_LOCKED|MAP_POPULATE, fileno(fp), offset-residue));
+    save_start.push_back(buf);
+    save_length.push_back(len+residue);
+    //save_maps.push_back(mfile);
+    //char const* buf = mfile.data();
     buf += residue;
 
     values.push_back(new sliceable_bitset(reinterpret_cast<block_type *>(const_cast<char*>(buf)), n_keys(o)*value_bits(o)));

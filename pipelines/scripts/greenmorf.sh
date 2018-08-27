@@ -6,6 +6,7 @@ if test "x$SOURCELANG" == "xil3"; then USOURCELANG="uig"; fi
 if test "x$SOURCELANG" == "xil5"; then USOURCELANG="tir"; fi
 if test "x$SOURCELANG" == "xil6"; then USOURCELANG="orm"; fi
 if test "x$SOURCELANG" == "xil4"; then USOURCELANG="ukr"; fi
+if test "x$SOURCELANG" == "xil10"; then USOURCELANG="sin"; fi
 OTMPDIR=$3
 MORFTBL=$4
 SCRIPTDIR=$(dirname $BASH_SOURCE)

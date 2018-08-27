@@ -213,9 +213,7 @@ if __name__ == '__main__':
             trainingint = trainingtmp + '.int'
             trainingsc = trainingtmp + '.sc'
             ranges = os.path.join(dir,'ranges') + ' -i ' + trainingtmp + ' -o ' + trainingint + ' -r'
-            for sc in scfgc:
-                name = sc['name']
-                linestr = sc['lines']
+            for name, linestr in scfgc.iteritems():
                 ln = linecount(linestr)
                 hp.syscall(ranges + linestr)
                 tsc = open(trainingsc,'w')

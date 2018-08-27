@@ -47,7 +47,8 @@ class lm : boost::noncopyable {
 
   std::vector<boost::iostreams::mapped_file_source>
 	save_maps;
-
+  std::vector<char*> save_start;
+  std::vector<size_t> save_length;
   size_type n_keys(int o) const {
     if (o == 1)
       return vocab_mph->size();

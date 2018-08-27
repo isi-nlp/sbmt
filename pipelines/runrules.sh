@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --ignore-pbs --mem-per-cpu=1250m --ntasks=20 --ntasks-per-node=1 --cpus-per-task=8 --job-name=rules --time=96:00:00 -p isi 
+#SBATCH --ignore-pbs --mem-per-cpu=1250m --ntasks=40 --ntasks-per-node=1 --cpus-per-task=8 --job-name=rules --time=96:00:00 -p isi 
 #PBS -l nodes=20:ppn=8:quadcore -l walltime=96:00:00 -n -N rules -q isi
 #
 # convenience wrapper for the ruleset-pipeline

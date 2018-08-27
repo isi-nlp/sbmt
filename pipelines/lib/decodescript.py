@@ -55,7 +55,10 @@ def write_script(d, stage, weightstring=None, logfile=True, include_instruction_
         if logfile:
             print >> decodescript, ' 2> $INSLOG \\'
         print >> decodescript, ' | \\' 
-    print >> decodescript, d.config['decoder']['exec'], "%s" % os.getenv('XSEARCHDB',os.path.join(ruledir,'xsearchdb')) , '--multi-thread \\'
+    ncpu = os.getenv('SLURM_CPUS_PER_TASK','-1')
+    print >> decodescript, d.config['decoder']['exec'], "%s" % os.getenv('XSEARCHDB',os.path.join(ruledir,'xsearchdb')) , '--cache-grammars --multi-thread \\'
+    if ncpu != '-1':
+        print >> decodescript, '  --num-threads %s \\' % ncpu
     if 'weights' in d.config:
         weightstring = d.config['weights'] 
     if weightstring:
@@ -63,7 +66,11 @@ def write_script(d, stage, weightstring=None, logfile=True, include_instruction_
     if 'nbests' not in d.config['decoder']['options']:
         d.config['decoder']['options']['nbests'] = 10
     for k,v in d.config['decoder']['options'].iteritems():
-        print >> decodescript,'  --%s %s \\' % (k,v)
+        if type(v) == dict and 'flag' in v:
+            if v['flag']:
+                print >> decodescript, ' --%s \\' % k
+        else:
+            print >> decodescript,'  --%s %s \\' % (k,v)
     for step in cfg.steps(d):
         if step.stage == 'decode':
             print >> decodescript, '  %s \\' % step.options

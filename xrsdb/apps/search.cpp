@@ -262,8 +262,10 @@ struct word_trie_data_impl {
     boost::shared_mutex mtx;
     std::vector<boost::shared_ptr<sorttdata> > smtx;
     static bool operate_cache;
+    static void cache_async(fs::path,fs::path,fs::path,uint64_t);
+    static boost::shared_ptr<sbmt::thread_pool> cachepool;
 };
-
+boost::shared_ptr<sbmt::thread_pool> word_trie_data_impl::cachepool;
 bool word_trie_data_impl::operate_cache = false;
 
 struct word_trie_data {
@@ -317,6 +319,19 @@ private:
     signature_trie* ptr;
 };
 
+void word_trie_data_impl::cache_async(fs::path tmpdir, fs::path cpath, fs::path fname, uint64_t sz)
+{
+  uint64_t avail = space(tmpdir).available;
+  if ((avail > 1024 * 1024 * 1024) and (10 * sz < avail) and not fs::exists(cpath)) {
+    SBMT_VERBOSE_STREAM(decoder_domain, "creating cache location " << cpath.parent_path());
+    fs::create_directories(cpath.parent_path());
+    SBMT_VERBOSE_STREAM(decoder_domain, "writing cache " << cpath);
+    fs::path rndm = fs::unique_path(tmpdir / "%%%%%%%%");
+    fs::copy_file(fname,rndm);
+    fs::rename(rndm,cpath);
+  }
+}
+
 void word_trie_data_impl::load()
 {
     // 2018-04-27 changing cache mechanism to move over entire blocks, compressed
@@ -337,15 +352,8 @@ void word_trie_data_impl::load()
         SBMT_VERBOSE_STREAM(decoder_domain,"loading from " << fname << ":" << foffset);
         boost::tie(data,sz) = load_word_trie(ifs,foffset);
         if (operate_cache) {
-            uint64_t avail = space(tmpdir).available;
-            if ((avail > 1024 * 1024 * 1024) and (10 * sz < avail)) {
-                SBMT_VERBOSE_STREAM(decoder_domain, "creating cache location " << cpath.parent_path());
-                fs::create_directories(cpath.parent_path());
-                SBMT_VERBOSE_STREAM(decoder_domain, "writing cache " << cpath);
-                fs::path rndm = fs::unique_path(tmpdir / "%%%%%%%%");
-		fs::copy_file(fs::path(fname),rndm);
-                fs::rename(rndm,cpath);
-            }
+	  if (not cachepool) cachepool.reset(new sbmt::thread_pool(1));
+	  cachepool->add(boost::bind(word_trie_data_impl::cache_async, tmpdir,cpath,fs::path(fname),sz));
         } 
     }
     ptr = external_buffer_type(ip::open_only,data.get(),sz).find<word_trie>("root").first;
@@ -752,7 +760,7 @@ struct options {
     , keep_align(false)
     , rule_dump(false)
     , tee_weights(false)
-    , num_threads(numproc_online())
+    , num_threads(2*numproc_online())
     , histogram(1000)
     , nbests(10)
     , estring_copies(0)
@@ -3879,6 +3887,7 @@ int main(int argc, char** argv)
         }
         SBMT_INFO_STREAM(decoder_domain, "\ndecoder ready");
         reader.read(fin);
+	word_trie_data_impl::cachepool.reset();
         return 0;
     } catch(std::exception& e) {
         SBMT_ERROR_STREAM(decoder_domain, "abnormal exit: " << e.what());

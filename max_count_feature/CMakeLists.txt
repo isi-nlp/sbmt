@@ -87,8 +87,8 @@ target_link_libraries(lex_mapper1 xrsparse sbmt)
 add_executable(ruleviz ruleviz.cpp)
 target_link_libraries(ruleviz xrsparse sbmt)
 
-add_executable(substrsearch substrsearch.cpp)
-target_link_libraries(substrsearch gusc ${Boost_REGEX_LIBRARY})
+#add_executable(substrsearch substrsearch.cpp)
+#target_link_libraries(substrsearch gusc ${Boost_REGEX_LIBRARY} ${Boost_THREAD_LIBRARY})
 
 add_executable(lower lower.cpp)
 target_link_libraries(lower ${Boost_LOCALE_LIBRARY})
@@ -120,7 +120,7 @@ install(TARGETS remove_internals
                 idfirst
                 rule_training_length_mapper
                 ruleviz
-                substrsearch
+ #               substrsearch
                 taglex
                 lower
         DESTINATION bin

@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+#SBATCH -p isi --time=12:00:00
 #PBS -l walltime=5:00:00
 #PBS -N rerank
 #PBS -q isi

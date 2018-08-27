@@ -27,10 +27,14 @@ else:
     tmpdir = '/tmp'
 
 at_replace = '@'
+mixed_case = ''
 extre = '\\b%s$' % extension
 #print >> sys.stderr, '$$$$', extre
 if re.search(extre,d.file):
     conf = yaml.load(open(d.file))
+    if 'mixed-case' in conf:
+        if conf['mixed-case']:
+            mixed_case='m'
     if 'at-replace' in conf:
         if not conf['at-replace']:
             at_replace=''
@@ -60,6 +64,7 @@ for n,f in enumerate(d.file.split(',')):
         sys.exit(1)
     bname = os.path.basename(f)
     newf = "$TMPDIR/%s" % bname
-    sys.stdout.write('$(cp -u %s %s) ' % (os.path.abspath(f),newf))
-    narg.append('%slm%s=%s[%s][%s]' % (d.prefix,str(n+1),lbl,oc,newf))    
-sys.stdout.write('multi[%s][%s]\n' % (at_replace,','.join(narg)))
+    #sys.stdout.write('$(cp -u %s %s) ' % (os.path.abspath(f),newf))
+    #narg.append('%slm%s=%s[%s%s][%s]' % (d.prefix,str(n+1),lbl,oc,mixed_case,newf))    
+    narg.append('%slm%s=%s[%s%s][%s]' % (d.prefix,str(n+1),lbl,oc,mixed_case,os.path.abspath(f)))
+sys.stdout.write('multi[%s%s][%s]\n' % (at_replace,mixed_case,','.join(narg)))
