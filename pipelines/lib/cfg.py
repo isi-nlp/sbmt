@@ -427,7 +427,10 @@ def load_config_raw(filestrs,vars={},default=None,omit_sys_default=False):
     #print >> sys.stderr,'config files:',files
     for x in files:
         x = os.path.abspath(x)
-        conf = merge_configs(yaml.load(open(x)),conf)
+        d = os.path.dirname(x)
+        y = yaml.load(open(x))
+        y = expand(y,{'confdir':d})
+        conf = merge_configs(y,conf)
         conffiles_list.append(x)
     for k,v in vars.iteritems():
         if k in conf:
