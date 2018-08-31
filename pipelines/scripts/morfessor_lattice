@@ -5,6 +5,7 @@ import subprocess, os, sys, re
 digit = re.compile(r'\d+')
 
 dictionary = set((v.strip() for v in open(sys.argv[1])))
+sys.stderr.write("segmentation command: %s\n" % ' '.join(('"%s"' % w for w in sys.argv[2:])))
 morfessor = subprocess.Popen(' '.join(sys.argv[2:]),shell=True,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
 
 sentence_boundaries = set(['<foreign-sentence>', '</foreign-sentence>'])

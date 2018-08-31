@@ -156,7 +156,7 @@ if __name__ == '__main__':
     os.putenv('LC_ALL','C')
     d = cfg.parse_args(parser,write='$outdir/rules.config',modeldir=True)
     cfgf = open(os.path.join(d.outdir,'rules.config'),'a')
-    print >> cfgf, '\nrules:', '$confdir'
+    print >> cfgf, '\nrules:', '$configdir'
     cfgf.close()
     dir = os.path.abspath(os.path.dirname(__file__))
     finp = os.path.join(dir,'ghkm','filterbadinput')
