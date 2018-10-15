@@ -28,7 +28,7 @@ void lattice_read(lattice_ast &lat, PyObject *file) {
     //PyErr_SetString(PyExc_EOFError, "end of file or error parsing lattice");
     throw_error_already_set();
   }
-  if (is.eof()) {
+  if (is.eof() || is.fail()) {
     PyErr_SetString(PyExc_EOFError, "end of file"); // this is not the normal semantics of EOFError
     throw_error_already_set();
   }
@@ -81,7 +81,7 @@ lattice_line& new_block(T &c) {
 // typedef pair<lattice_ast::const_vertex_info_iterator,lattice_ast::const_vertex_info_iterator> vertex_info_range;
 // etc.
 
-BOOST_PYTHON_MODULE(_lattice) {
+BOOST_PYTHON_MODULE(lattice) {
   //// properties
 
   class_<property_container_interface::key_value_pair>("Property", no_init)

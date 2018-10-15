@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-# need to set PYTHONPATH to point to this file and _lattice.so
+# need to set PYTHONPATH to point to this file and lattice.so
 # need to set LD_LIBRARY_PATH to point to your Boost library directory and to libgusc.so
 
 #import gusc
-import _lattice
+import lattice
 
 def LatticeReader(f):
     """Iterate through the lattices contained in a file.
@@ -13,7 +13,7 @@ def LatticeReader(f):
     Output: an iterator over the lattices (type Lattice) contained in the file.
     """
     while True:
-        lat = _lattice.AST()
+        lat = lattice.AST()
         try:
             lat.read(f)
             yield Lattice(ast=lat)
@@ -41,7 +41,7 @@ class Block(object):
 
     def ast(self, past=None):
         if past is None:
-            ast = _lattice.AST()
+            ast = lattice.AST()
         else:
             ast = past.new_block()
         _add_properties(ast, self.properties)
@@ -124,6 +124,7 @@ class Edge(object):
 
 if __name__ == "__main__":
     import sys
-    for lat in LatticeReader(file(sys.argv[1])):
+    for lat in LatticeReader(sys.stdin):
         print lat
+        sys.stdout.flush()
 

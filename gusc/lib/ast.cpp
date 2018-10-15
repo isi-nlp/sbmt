@@ -502,7 +502,7 @@ istream& getlattice(istream& in, lattice_ast& lat)
 
     iterator_t first(mp_first,mp_last);
     iterator_t last;
-
+    
     if (first == last) {
       in.setstate(ios::eofbit);
       //std::cerr << "eofbit set\n";
@@ -510,16 +510,30 @@ istream& getlattice(istream& in, lattice_ast& lat)
       return in;
     }
     
+    parse_info<iterator_t> preinfo
+        = parse(
+	    first
+	  , last
+	  , end_p >> flush_multi_pass_p
+	  , space_p | comment_p("//") | comment_p("/*","*/") | comment_p("#")
+	  )
+          ;
+
+    if (first == last) {
+      in.setstate(ios::eofbit);
+      //std::cerr << "eofbit set\n";                                                                                                                                                       
+      in.setstate(ios::failbit);
+      return in;
+    }
+
     lattice_grammar<lattice_ast_construct> ast;
     parse_info<iterator_t> info 
         = parse( 
             first
           , last
           , ast[ var(lat) = get_ast_(arg1) ] 
-            >> (!ch_p(';')) 
             >> eps_p 
             >> flush_multi_pass_p
-	    >> !end_p // consume trailing whitespace
           , space_p | comment_p("//") | comment_p("/*","*/") | comment_p("#")
           )
           ;

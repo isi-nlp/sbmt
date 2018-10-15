@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --time=300:00:00 --ntasks=20 --cpus-per-task=12 --ntasks-per-node=1 --mem=18G --job-name=tune -p isi
+#SBATCH --time=48:00:00 --ntasks=20 --cpus-per-task=12 --ntasks-per-node=1 --mem=18G --job-name=tune -p isi
 #PBS -l walltime=300:00:00 -l nodes=10:ppn=12:hexcore -N tune -q isi -n
 #
 # convenience wrapper for the tune-pipeline

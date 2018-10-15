@@ -41,11 +41,16 @@ int main(int argc, char** argv)
       //cerr << "begin" << argv[1] <<endl;
         rule_data rd;
         feature val;
+        int step = 0;
         try {
             rd = parse_xrs(line);
+	    ++step;
             val = find_feature(rd,lbl);
-        } catch(...) { continue; }
-        try {
+        } catch(...) { 
+	  if (step) cerr << "could not retrieve feature "<< lbl << " in rule:\n" << line << '\n';
+	  else cerr << "could not parse rule:\n" << line << '\n';
+	  continue; 
+	} try {
         cout << rd << '\t' << val << '\t';
         size_t rpos = get_feature(rd,"cwt");
         if (rpos != rd.features.size() and rd.features[rpos].str_value.size() > 0) cout << rd.features[rpos].str_value;

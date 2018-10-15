@@ -356,7 +356,7 @@ def merge_configs(user, default):
                 user[k] = merge_configs(user[k],v)
     return user
 
-def expand(config,mp):
+def expand(config,mp,explicit_only=False):
     def join(prefix,suffix):
         if prefix == '':
             return str(suffix)
@@ -400,7 +400,8 @@ def expand(config,mp):
     subbed = True
     while subbed:
         nmp = dict(mpp for mpp in mp.iteritems() if mpp[1] is not None)
-        flatten_vars(config,nmp)
+        if not explicit_only:
+            flatten_vars(config,nmp)
         subbed,config = substitute(config,nmp)
     return config
             
@@ -429,7 +430,7 @@ def load_config_raw(filestrs,vars={},default=None,omit_sys_default=False):
         x = os.path.abspath(x)
         d = os.path.dirname(x)
         y = yaml.load(open(x))
-        y = expand(y,{'configdir':d,'config':x})
+        y = expand(y,{'configdir':d,'config':x},explicit_only=True)
         conf = merge_configs(y,conf)
         conffiles_list.append(x)
     for k,v in vars.iteritems():

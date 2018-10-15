@@ -296,7 +296,7 @@ int fwrite_lattice(FILE* file, lat_t* lattice)
 {
     syncbuf buf(file);
     std::ostream str(&buf);
-    str << *lat_(lattice);
+    str << *lat_(lattice) << std::flush;
     return ferror(file);
 }
 
