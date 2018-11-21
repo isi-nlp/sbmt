@@ -89,7 +89,7 @@ lm::~lm() {
   for (size_type i=0; i<values.size(); i++) {
     delete values[i];
   }
-  for (int o=1; o<=order; o++) { munmap(save_start[o],save_length[o]);}
+  for (int o=1; o<=save_start.size(); o++) { munmap(save_start[o],save_length[o]);}
 }
 
 void lm::read_mph(FILE *fp) {

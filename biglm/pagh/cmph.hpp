@@ -120,7 +120,12 @@ namespace cmph {
 
       config = cmph_config_new(source.m_source);
       cmph_config_set_algo(config, CMPH_BRZ);
-      cmph_config_set_tmp_dir(config, reinterpret_cast<cmph_uint8 *>(const_cast<char *>("/tmp")));  // safe?
+      setenv("TMPDIR","/tmp",0);
+      std::string tmptemplate = std::string(getenv("TMPDIR")) + "/cmphXXXXXX";
+      std::vector<char> tmptemplatemod(tmptemplate.length()+1);
+      std::strcpy(&tmptemplatemod[0],tmptemplate.c_str());
+      mkdtemp(&tmptemplatemod[0]);
+      cmph_config_set_tmp_dir(config, reinterpret_cast<cmph_uint8 *>(&tmptemplatemod[0]));  // safe?
       cmph_config_set_memory_availability(config, 2048); // 2 GB
       cmph_config_set_b(config, b);
       cmph_config_set_mphf_fd(config, fp);

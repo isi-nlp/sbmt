@@ -17,7 +17,7 @@ target_link_libraries(gusc ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} $
 target_include_directories(gusc PUBLIC ../gusc)
 
 add_library( lattice SHARED lib/lattice_py.cpp )
-target_link_libraries( lattice gusc ${Boost_PYTHON_LIBRARY})
+target_link_libraries(lattice gusc ${Boost_PYTHON_LIBRARY})
 set_target_properties(lattice PROPERTIES SUFFIX .so)
 set_target_properties(lattice PROPERTIES PREFIX "")
 
@@ -33,4 +33,4 @@ add_executable(digits apps/digits.cpp)
 target_link_libraries(digits gusc ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 install(TARGETS fuzzycube digits makedirs DESTINATION bin)
-install(PROGRAMS lib/lattice.py DESTINATION lib)
+install(PROGRAMS lib/sbmtlattice.py DESTINATION lib)

@@ -43,6 +43,7 @@ brz_config_data_t *brz_config_new()
 	brz->tmp_dir = (cmph_uint8 *)calloc((size_t)10, sizeof(cmph_uint8));
 	brz->mphf_fd = NULL;
 	strcpy((char *)(brz->tmp_dir), "/var/tmp/");
+	fprintf(stderr, "brz->tmp_dir = %s\n", brz->tmp_dir);
 	assert(brz);
 	return brz;
 }
@@ -274,6 +275,7 @@ static int brz_gen_mphf(cmph_config_t *mph)
 			}
 			filename = (char *)calloc(strlen((char *)(brz->tmp_dir)) + 11, sizeof(char));
 			sprintf(filename, "%s%u.cmph",brz->tmp_dir, nflushes);
+			fprintf(stderr, "tmp file %s opening\n", filename);
 			tmp_fd = fopen(filename, "wb");
 			free(filename);
 			filename = NULL;
@@ -334,6 +336,7 @@ static int brz_gen_mphf(cmph_config_t *mph)
 		}
 		filename = (char *)calloc(strlen((char *)(brz->tmp_dir)) + 11, sizeof(char));
 		sprintf(filename, "%s%u.cmph",brz->tmp_dir, nflushes);
+		fprintf(stderr, "open tmpfile %s\n", filename);
 		tmp_fd = fopen(filename, "wb");
 		free(filename);
 		filename = NULL;
@@ -379,6 +382,7 @@ static int brz_gen_mphf(cmph_config_t *mph)
 	{
 		filename = (char *)calloc(strlen((char *)(brz->tmp_dir)) + 11, sizeof(char));
 		sprintf(filename, "%s%u.cmph",brz->tmp_dir, i);
+		fprintf(stderr,"buffer opened at %s\n",filename);
 		buffer_manager_open(buff_manager, i, filename);
 		free(filename);
 		filename = NULL;

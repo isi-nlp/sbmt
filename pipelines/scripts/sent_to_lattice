@@ -100,7 +100,7 @@ while (<>) {
 		$right++;
 	    }
 	}
-	print "};\n";
+	print "}\n";
 	STDOUT->flush();
     } else {
 	warn "Warning: $.: Unable to produce a lattice for this sentence!\n";

@@ -449,11 +449,11 @@ ostream& operator << (ostream& out, lattice_ast::line const& bl)
     print_properties(out,bl);
 
     if (isblock) {
-        out << " {" << endl;
+        out << " { ";
         lattice_ast::const_line_iterator li, le; 
         tie(li,le) = bl.lines();
-        for_each(li, le, out << arg1 << ";" << endl);
-        out << "}";
+        for_each(li, le, out << arg1 << "; ");
+        out << "} ";
     }
     return out;
 }
@@ -469,17 +469,17 @@ ostream& operator << (ostream& out, lattice_ast const& lat)
     
     print_properties(out,lat);
     
-    out << " {" << endl;
+    out << " { ";
     
     lattice_ast::const_vertex_info_iterator vi,ve;
     tie(vi,ve) = lat.vertex_infos();
-    for_each(vi, ve, out << arg1 << ';' << endl);
+    for_each(vi, ve, out << arg1 << "; ");
     
     lattice_ast::const_line_iterator li,le;
     tie(li,le) = lat.lines();
-    for_each(li, le, out << arg1 << ";" << endl);
+    for_each(li, le, out << arg1 << "; ");
             
-    out << "}";
+    out << "} ";
     return out;
 }
 

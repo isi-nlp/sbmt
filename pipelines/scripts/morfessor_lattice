@@ -62,7 +62,7 @@ while True:
                     print 'morf-in-dict="10^-1" orig-in-dict="10^-1" ',
                 print ';',
                 x += 1
-    print '};'
+    print '}'
     sys.stdout.flush()
     n += 1
 morfessor.stdin.close()
